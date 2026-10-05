@@ -1,0 +1,95 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAgent API",
+    "description": "Fast, cheap, safe AI scheduling & email assistant cascade backend",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/webhooks/evolution": {
+      "post": {
+        "summary": "Receive Evolution Go WhatsApp Webhook",
+        "description": "Receives real-time incoming WhatsApp messages, validates signature/token, and invokes cascade.",
+        "responses": {
+          "200": { "description": "Webhook received and processed" },
+          "401": { "description": "Unauthorized webhook token" }
+        }
+      }
+    },
+    "/api/approvals": {
+      "get": {
+        "summary": "List Pending Approvals",
+        "parameters": [
+          { "name": "user_id", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of pending approval requests" }
+        }
+      }
+    },
+    "/api/approvals/{approval_id}/resolve": {
+      "post": {
+        "summary": "Approve, Edit, or Reject Action",
+        "parameters": [
+          { "name": "approval_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["decision"],
+                "properties": {
+                  "decision": { "type": "string", "enum": ["approve", "edit", "reject"] },
+                  "edited_payload": { "type": "object" },
+                  "user_feedback": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Approval decision applied and logged to learning dataset" },
+          "404": { "description": "Approval request not found" }
+        }
+      }
+    },
+    "/api/audit-logs": {
+      "get": {
+        "summary": "Retrieve Audit and Action Logs",
+        "parameters": [
+          { "name": "user_id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50 } }
+        ],
+        "responses": {
+          "200": { "description": "Action log history" }
+        }
+      }
+    },
+    "/api/metrics": {
+      "get": {
+        "summary": "System Metrics & Stage Latencies",
+        "responses": {
+          "200": { "description": "Per-stage latency breakdown (rules, laya, llm, policy, tool) and cost counters" }
+        }
+      }
+    },
+    "/api/auth/google/url": {
+      "get": {
+        "summary": "Get Google OAuth Login URL",
+        "responses": { "200": { "description": "OAuth URL" } }
+      }
+    },
+    "/api/auth/google/callback": {
+      "get": {
+        "summary": "Google OAuth Callback",
+        "parameters": [
+          { "name": "code", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OAuth success and tokens encrypted" } }
+      }
+    }
+  }
+}

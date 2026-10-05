@@ -1,0 +1,21 @@
+﻿=====================================================================================
+>> FastAgent Latency Benchmark: 10 Warm Requests Matrix (Excluding 5 Warmup)
+>> Host CPU:  Intel64 Family 6 Model 142 Stepping 12, GenuineIntel (8 logical cores)
+>> System RAM: 7.1 GB available / 15.81 GB total
+=====================================================================================
+>> Benchmarking Embed Classifier (1-Question, 10 requests)...
+>> Training EmbedRouter on E:\Inovvate\eval\dataset\train.jsonl...
+>> EmbedRouter trained successfully on 45 samples across 9 classes.
+>> Benchmarking PyTorch fp32 Laya (1-Question Intent Only, 10 requests)...
+>> Initializing native in-process Laya Router (default=english, preload=False)...
+>> Benchmarking PyTorch fp32 Laya (2-Questions Intent + Risk, 10 requests)...
+>> Initializing native in-process Laya Router (default=english, preload=False)...
+
+===============================================================================================
+Configuration                          | Questions              | p50 (ms)   | p95 (ms)   | p99 (ms)  
+-----------------------------------------------------------------------------------------------
+Embed Classifier (TF-IDF + LogReg)     | 1-Question (Intent only) | 3.08       | 4.50       | 4.50      
+PyTorch fp32 Laya (convaiinnovations/laya) | 1-Question (Intent only) | 2138.86    | 2427.23    | 2427.23   
+PyTorch fp32 Laya (convaiinnovations/laya) | 2-Questions (Intent + Risk) | 4026.48    | 7776.57    | 7776.57   
+===============================================================================================
+Note on ONNX INT8: Laya ModernBERT split architecture export requires custom onnxscript graph export.

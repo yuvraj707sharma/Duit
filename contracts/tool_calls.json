@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fastagent.dev/schemas/tool_calls.json",
+  "title": "ToolCalls",
+  "description": "Schemas for tools invoked by FastAgent with mandatory idempotency keys on side effects.",
+  "definitions": {
+    "SendEmail": {
+      "type": "object",
+      "required": ["idempotency_key", "recipient", "subject", "body"],
+      "properties": {
+        "idempotency_key": {
+          "type": "string",
+          "description": "Unique client-side/session UUID preventing double execution."
+        },
+        "recipient": {
+          "type": "string",
+          "format": "email",
+          "description": "Recipient email address."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject line of the email."
+        },
+        "body": {
+          "type": "string",
+          "description": "Body text of the email."
+        },
+        "thread_id": {
+          "type": "string",
+          "description": "Optional Gmail thread ID if replying."
+        }
+      }
+    },
+    "CreateCalendarEvent": {
+      "type": "object",
+      "required": ["idempotency_key", "title", "start_time", "end_time"],
+      "properties": {
+        "idempotency_key": {
+          "type": "string",
+          "description": "Unique UUID preventing duplicate calendar bookings."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title or summary of the meeting."
+        },
+        "start_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 start timestamp."
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 end timestamp."
+        },
+        "attendees": {
+          "type": "array",
+          "items": { "type": "string", "format": "email" },
+          "description": "List of attendee emails."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional agenda/description."
+        }
+      }
+    },
+    "RescheduleCalendarEvent": {
+      "type": "object",
+      "required": ["idempotency_key", "event_id", "new_start_time", "new_end_time"],
+      "properties": {
+        "idempotency_key": { "type": "string" },
+        "event_id": { "type": "string" },
+        "new_start_time": { "type": "string", "format": "date-time" },
+        "new_end_time": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CancelCalendarEvent": {
+      "type": "object",
+      "required": ["idempotency_key", "event_id"],
+      "properties": {
+        "idempotency_key": { "type": "string" },
+        "event_id": { "type": "string" },
+        "reason": { "type": "string" }
+      }
+    },
+    "ListCalendarEvents": {
+      "type": "object",
+      "required": ["time_min", "time_max"],
+      "properties": {
+        "time_min": { "type": "string", "format": "date-time" },
+        "time_max": { "type": "string", "format": "date-time" },
+        "max_results": { "type": "integer", "default": 10 }
+      }
+    },
+    "FetchEmails": {
+      "type": "object",
+      "properties": {
+        "query": { "type": "string" },
+        "max_results": { "type": "integer", "default": 5 }
+      }
+    }
+  }
+}

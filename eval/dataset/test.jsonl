@@ -1,0 +1,20 @@
+{"text": "Schedule a sync with Rahul tomorrow at 4pm", "expected_intent": "schedule_meeting", "language": "en"}
+{"text": "Kal subah 10 baje Amit ke saath meeting fix kar do", "expected_intent": "schedule_meeting", "language": "hi-Latn"}
+{"text": "Move my 3pm call to 5pm", "expected_intent": "reschedule_meeting", "language": "en"}
+{"text": "Don't cancel my 3pm, but move my 5pm with Rahul to tomorrow at 4pm", "expected_intent": "reschedule_meeting", "language": "en"}
+{"text": "Kal ki meeting cancel mat karo bas shift kar do", "expected_intent": "reschedule_meeting", "language": "hi-Latn"}
+{"text": "Cancel tomorrow's sync with design team", "expected_intent": "cancel_meeting", "language": "en"}
+{"text": "Kal ki 4 baje wali call cancel kar do please", "expected_intent": "cancel_meeting", "language": "hi-Latn"}
+{"text": "Am I free between 2pm and 4pm today?", "expected_intent": "check_calendar", "language": "en"}
+{"text": "Aaj ka schedule kya hai?", "expected_intent": "check_calendar", "language": "hi-Latn"}
+{"text": "Send an email to alex@example.com with the budget sheet", "expected_intent": "send_email", "language": "en"}
+{"text": "Rahul ko mail bhej do ki proposal ready hai", "expected_intent": "send_email", "language": "hi-Latn"}
+{"text": "Reply yes to Rahul's email about the roadmap", "expected_intent": "reply_email", "language": "en"}
+{"text": "Unke email par reply kar do ki hum ready hain", "expected_intent": "reply_email", "language": "hi-Latn"}
+{"text": "Summarize my unread emails from this morning", "expected_intent": "summarize_email", "language": "en"}
+{"text": "Mera inbox summarize kar do", "expected_intent": "summarize_email", "language": "hi-Latn"}
+{"text": "Book an Uber to the airport for 6pm", "expected_intent": "book_something", "language": "en"}
+{"text": "Dinner ke liye table reserve karo", "expected_intent": "book_something", "language": "hi-Latn"}
+{"text": "What is the weather in Delhi?", "expected_intent": "other", "language": "en"}
+{"text": "Tell me a joke", "expected_intent": "other", "language": "en"}
+{"text": "Tum kaun ho aur kya kar sakte ho?", "expected_intent": "other", "language": "hi-Latn"}

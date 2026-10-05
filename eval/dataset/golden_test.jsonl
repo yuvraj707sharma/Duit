@@ -1,0 +1,14 @@
+{"text": "Schedule a meeting with Rahul tomorrow at 4pm", "expected_intent": "schedule_meeting", "language": "en"}
+{"text": "Move my 3pm call to 5pm", "expected_intent": "reschedule_meeting", "language": "en"}
+{"text": "Don't cancel my 3pm, but move my 5pm with Rahul to tomorrow at 4pm", "expected_intent": "reschedule_meeting", "language": "en"}
+{"text": "Cancel tomorrow's sync with design team", "expected_intent": "cancel_meeting", "language": "en"}
+{"text": "Am I free between 2pm and 4pm today?", "expected_intent": "check_calendar", "language": "en"}
+{"text": "Reply yes to Rahul's email about the roadmap", "expected_intent": "reply_email", "language": "en"}
+{"text": "Summarize my unread emails from this morning", "expected_intent": "summarize_email", "language": "en"}
+{"text": "Send an email to alex@example.com with the budget sheet", "expected_intent": "send_email", "language": "en"}
+{"text": "Book an Uber to the airport for 6pm", "expected_intent": "book_something", "language": "en"}
+{"text": "Kal subah 10 baje Amit ke saath meeting fix kar do", "expected_intent": "schedule_meeting", "language": "hi-Latn"}
+{"text": "Rahul ko mail bhej do ki proposal ready hai", "expected_intent": "send_email", "language": "hi-Latn"}
+{"text": "Kal ki meeting cancel mat karo bas shift kar do", "expected_intent": "reschedule_meeting", "language": "hi-Latn"}
+{"text": "Aaj ka schedule kya hai?", "expected_intent": "check_calendar", "language": "hi-Latn"}
+{"text": "Tell me a joke", "expected_intent": "other", "language": "en"}

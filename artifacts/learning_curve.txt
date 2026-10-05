@@ -1,0 +1,17 @@
+﻿================================================================================
+>> FastAgent Active Learning Curve Evaluation (kNN Semantic Correction Loop)
+================================================================================
+Test Dataset:   E:\Inovvate\eval\dataset\test.jsonl (held-out test split)
+Train Dataset:  E:\Inovvate\eval\dataset\train.jsonl (source of logged corrections)
+Method: Base router augmented with kNN semantic retrieval over user corrections.
+================================================================================
+Corrections (N)  | Logged Corrections | Auto-Approve Thresh  | Test Accuracy   
+--------------------------------------------------------------------------------
+0                | 0                  | None (Safe Gate)     | 80.0% (16/20) [kNN matches: 0]
+5                | 5                  | 0.92                 | 80.0% (16/20) [kNN matches: 0]
+10               | 10                 | 0.92                 | 80.0% (16/20) [kNN matches: 1]
+20               | 20                 | 0.92                 | 80.0% (16/20) [kNN matches: 2]
+40               | 40                 | 0.92                 | 80.0% (16/20) [kNN matches: 5]
+================================================================================
+Summary: Test accuracy remained steady at 80.0%. (Base model was already optimal or test set has no overlapping failure modes).
+================================================================================

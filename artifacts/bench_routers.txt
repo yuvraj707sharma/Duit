@@ -1,0 +1,58 @@
+﻿===========================================================================
+>> FastAgent Router Benchmark Suite
+>> Active Router:    EMBED
+>> Question Mode:    Single Question (Intent Only - Risk in Code)
+>> Host Platform:    Windows 11
+>> CPU Specs:        Intel64 Family 6 Model 142 Stepping 12, GenuineIntel (8 logical cores)
+>> System RAM:       5.18 GB available / 15.81 GB total
+>> Dataset Path:     E:\Inovvate\eval\dataset\test.jsonl
+>> Running EMBED router (Sentence/TF-IDF vectorizer + Logistic Regression).
+>> Training EmbedRouter on E:\Inovvate\eval\dataset\train.jsonl...
+>> EmbedRouter trained successfully on 45 samples across 9 classes.
+===========================================================================
+[PASS] [en     ] 'Schedule a sync with Rahul tomorro' -> Predicted: schedule_meeting   (Ckpt: embed-tfidf-logreg, Conf: 0.46, Latency: 12.4ms)
+[PASS] [hi-Latn] 'Kal subah 10 baje Amit ke saath me' -> Predicted: schedule_meeting   (Ckpt: embed-tfidf-logreg, Conf: 0.60, Latency: 4.7ms)
+[PASS] [en     ] 'Move my 3pm call to 5pm           ' -> Predicted: reschedule_meeting (Ckpt: embed-tfidf-logreg, Conf: 0.68, Latency: 4.0ms)
+[PASS] [en     ] 'Don't cancel my 3pm, but move my 5' -> Predicted: reschedule_meeting (Ckpt: embed-tfidf-logreg, Conf: 0.68, Latency: 4.8ms)
+[PASS] [hi-Latn] 'Kal ki meeting cancel mat karo bas' -> Predicted: reschedule_meeting (Ckpt: embed-tfidf-logreg, Conf: 0.73, Latency: 6.2ms)
+[PASS] [en     ] 'Cancel tomorrow's sync with design' -> Predicted: cancel_meeting     (Ckpt: embed-tfidf-logreg, Conf: 0.58, Latency: 4.7ms)
+[FAIL] [hi-Latn] 'Kal ki 4 baje wali call cancel kar' -> Predicted: reschedule_meeting (Ckpt: embed-tfidf-logreg, Conf: 0.42, Latency: 4.3ms)
+[PASS] [en     ] 'Am I free between 2pm and 4pm toda' -> Predicted: check_calendar     (Ckpt: embed-tfidf-logreg, Conf: 0.39, Latency: 5.5ms)
+[PASS] [hi-Latn] 'Aaj ka schedule kya hai?          ' -> Predicted: check_calendar     (Ckpt: embed-tfidf-logreg, Conf: 0.40, Latency: 3.9ms)
+[PASS] [en     ] 'Send an email to alex@example.com ' -> Predicted: send_email         (Ckpt: embed-tfidf-logreg, Conf: 0.46, Latency: 4.7ms)
+[PASS] [hi-Latn] 'Rahul ko mail bhej do ki proposal ' -> Predicted: send_email         (Ckpt: embed-tfidf-logreg, Conf: 0.37, Latency: 4.8ms)
+[PASS] [en     ] 'Reply yes to Rahul's email about t' -> Predicted: reply_email        (Ckpt: embed-tfidf-logreg, Conf: 0.35, Latency: 4.5ms)
+[PASS] [hi-Latn] 'Unke email par reply kar do ki hum' -> Predicted: reply_email        (Ckpt: embed-tfidf-logreg, Conf: 0.34, Latency: 6.0ms)
+[PASS] [en     ] 'Summarize my unread emails from th' -> Predicted: summarize_email    (Ckpt: embed-tfidf-logreg, Conf: 0.60, Latency: 4.3ms)
+[PASS] [hi-Latn] 'Mera inbox summarize kar do       ' -> Predicted: summarize_email    (Ckpt: embed-tfidf-logreg, Conf: 0.24, Latency: 4.8ms)
+[PASS] [en     ] 'Book an Uber to the airport for 6p' -> Predicted: book_something     (Ckpt: embed-tfidf-logreg, Conf: 0.56, Latency: 5.6ms)
+[PASS] [hi-Latn] 'Dinner ke liye table reserve karo ' -> Predicted: book_something     (Ckpt: embed-tfidf-logreg, Conf: 0.31, Latency: 5.1ms)
+[PASS] [en     ] 'What is the weather in Delhi?     ' -> Predicted: other              (Ckpt: embed-tfidf-logreg, Conf: 0.20, Latency: 5.0ms)
+[PASS] [en     ] 'Tell me a joke                    ' -> Predicted: other              (Ckpt: embed-tfidf-logreg, Conf: 0.20, Latency: 4.3ms)
+[PASS] [hi-Latn] 'Tum kaun ho aur kya kar sakte ho? ' -> Predicted: other              (Ckpt: embed-tfidf-logreg, Conf: 0.20, Latency: 5.2ms)
+
+===========================================================================
+BENCHMARK RESULTS: EMBED
+- Router Under Test:    embed
+- Total Samples:        20
+- Overall Accuracy:     95.00% (19/20)
+- en      Accuracy:    100.0% (11/11)
+- hi-Latn Accuracy:    88.9% (8/9)
+- Checkpoints Served:   {'embed-tfidf-logreg': 20}
+- p50 Latency:          4.82 ms
+- p95 Latency:          12.42 ms
+- p99 Latency:          12.42 ms
+- Avg Latency:          5.24 ms
+===========================================================================
+
+HINGLISH SAMPLES BREAKDOWN:
+  [PASS] [embed-tfidf-logreg] 'Kal subah 10 baje Amit ke saath meeting fix kar do' -> Pred: schedule_meeting (Exp: schedule_meeting, Conf: 0.60)
+  [PASS] [embed-tfidf-logreg] 'Kal ki meeting cancel mat karo bas shift kar do' -> Pred: reschedule_meeting (Exp: reschedule_meeting, Conf: 0.73)
+  [FAIL] [embed-tfidf-logreg] 'Kal ki 4 baje wali call cancel kar do please' -> Pred: reschedule_meeting (Exp: cancel_meeting, Conf: 0.42)
+  [PASS] [embed-tfidf-logreg] 'Aaj ka schedule kya hai?' -> Pred: check_calendar (Exp: check_calendar, Conf: 0.40)
+  [PASS] [embed-tfidf-logreg] 'Rahul ko mail bhej do ki proposal ready hai' -> Pred: send_email (Exp: send_email, Conf: 0.37)
+  [PASS] [embed-tfidf-logreg] 'Unke email par reply kar do ki hum ready hain' -> Pred: reply_email (Exp: reply_email, Conf: 0.34)
+  [PASS] [embed-tfidf-logreg] 'Mera inbox summarize kar do' -> Pred: summarize_email (Exp: summarize_email, Conf: 0.24)
+  [PASS] [embed-tfidf-logreg] 'Dinner ke liye table reserve karo' -> Pred: book_something (Exp: book_something, Conf: 0.31)
+  [PASS] [embed-tfidf-logreg] 'Tum kaun ho aur kya kar sakte ho?' -> Pred: other (Exp: other, Conf: 0.20)
+===========================================================================

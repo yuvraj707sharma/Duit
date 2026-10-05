@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fastagent.dev/schemas/decision.json",
+  "title": "Decision",
+  "description": "Output schema for FastAgent's System 1 Decision Layer (Laya/Router)",
+  "type": "object",
+  "required": [
+    "intent",
+    "risk",
+    "needs_confirmation",
+    "confidence",
+    "detected_language",
+    "reasoning_tag"
+  ],
+  "properties": {
+    "intent": {
+      "$ref": "./intent.json"
+    },
+    "risk": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Calculated risk of the intended action."
+    },
+    "needs_confirmation": {
+      "type": "boolean",
+      "description": "Whether the policy or confidence requires human confirmation before executing."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Calibrated probability score of the intent classification."
+    },
+    "detected_language": {
+      "type": "string",
+      "description": "Language code detected (e.g., 'en', 'hi', 'hi-Latn' for Hinglish)."
+    },
+    "model_used": {
+      "type": "string",
+      "description": "Checkpoint or router branch used (e.g. convaiinnovations/laya-multilingual)."
+    },
+    "reasoning_tag": {
+      "type": "string",
+      "description": "Short internal classifier tag or rule explaining why confirmation is needed."
+    }
+  },
+  "additionalProperties": false
+}

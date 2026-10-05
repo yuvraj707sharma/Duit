@@ -1,0 +1,45 @@
+{"text": "Schedule a team sync tomorrow at 3pm", "expected_intent": "schedule_meeting", "language": "en"}
+{"text": "Set up a 1-on-1 with Sarah on Monday at 10am", "expected_intent": "schedule_meeting", "language": "en"}
+{"text": "Book a meeting room for our product review at 2pm", "expected_intent": "schedule_meeting", "language": "en"}
+{"text": "Kal subah 11 baje client ke saath meeting schedule kar do", "expected_intent": "schedule_meeting", "language": "hi-Latn"}
+{"text": "Amit ke saath call fix karo kal shaam 5 baje", "expected_intent": "schedule_meeting", "language": "hi-Latn"}
+{"text": "Somwar ko 2 baje discussion rakh do", "expected_intent": "schedule_meeting", "language": "hi-Latn"}
+{"text": "Can you reschedule my 4pm meeting to 6pm?", "expected_intent": "reschedule_meeting", "language": "en"}
+{"text": "Shift the product sync from Tuesday to Wednesday 11am", "expected_intent": "reschedule_meeting", "language": "en"}
+{"text": "Move my 10am call with Alex to 11:30am", "expected_intent": "reschedule_meeting", "language": "en"}
+{"text": "Kal ki meeting cancel mat karo bas shift kar do", "expected_intent": "reschedule_meeting", "language": "hi-Latn"}
+{"text": "Aaj ki 3 baje wali call ko aage badha kar 5 baje kar do", "expected_intent": "reschedule_meeting", "language": "hi-Latn"}
+{"text": "Meeting ka time change karo kal 4 baje", "expected_intent": "reschedule_meeting", "language": "hi-Latn"}
+{"text": "Cancel tomorrow's sync with the engineering leads", "expected_intent": "cancel_meeting", "language": "en"}
+{"text": "Please delete the 4pm marketing review event", "expected_intent": "cancel_meeting", "language": "en"}
+{"text": "Remove the Friday catchup from my calendar", "expected_intent": "cancel_meeting", "language": "en"}
+{"text": "Kal ki design review meeting cancel kar do", "expected_intent": "cancel_meeting", "language": "hi-Latn"}
+{"text": "3 baje wali sync hata do", "expected_intent": "cancel_meeting", "language": "hi-Latn"}
+{"text": "Am I free between 2pm and 5pm this afternoon?", "expected_intent": "check_calendar", "language": "en"}
+{"text": "What do I have scheduled for tomorrow morning?", "expected_intent": "check_calendar", "language": "en"}
+{"text": "Check if I have any conflicts on Thursday", "expected_intent": "check_calendar", "language": "en"}
+{"text": "Aaj ka mera pura schedule batao", "expected_intent": "check_calendar", "language": "hi-Latn"}
+{"text": "Kal subah mere paas kaunse slots free hain?", "expected_intent": "check_calendar", "language": "hi-Latn"}
+{"text": "Send an email to john@example.com with the quarterly deck", "expected_intent": "send_email", "language": "en"}
+{"text": "Draft and send an email to the client confirming the contract", "expected_intent": "send_email", "language": "en"}
+{"text": "Forward the invoice to payments@company.com", "expected_intent": "send_email", "language": "en"}
+{"text": "Rahul ko email bhej do ki report attach kar di hai", "expected_intent": "send_email", "language": "hi-Latn"}
+{"text": "Client ko mail kar do details ke saath", "expected_intent": "send_email", "language": "hi-Latn"}
+{"text": "Reply yes to Michael's email about the budget", "expected_intent": "reply_email", "language": "en"}
+{"text": "Send a reply to the interview invite saying I can attend", "expected_intent": "reply_email", "language": "en"}
+{"text": "Unke email ka jawab de do ki hum agree karte hain", "expected_intent": "reply_email", "language": "hi-Latn"}
+{"text": "Give me a summary of my unread emails from today", "expected_intent": "summarize_email", "language": "en"}
+{"text": "Summarize the thread from the architecture team", "expected_intent": "summarize_email", "language": "en"}
+{"text": "Aaj ke sabhi unread emails ka summary bata do", "expected_intent": "summarize_email", "language": "hi-Latn"}
+{"text": "Book an Uber to Bangalore airport for 7pm", "expected_intent": "book_something", "language": "en"}
+{"text": "Reserve a table for 2 at Olive Garden at 8pm", "expected_intent": "book_something", "language": "en"}
+{"text": "Airport ke liye cab book kar do shaam 6 baje", "expected_intent": "book_something", "language": "hi-Latn"}
+{"text": "What is the capital of France?", "expected_intent": "other", "language": "en"}
+{"text": "Write a short poem about coding", "expected_intent": "other", "language": "en"}
+{"text": "How are you doing today?", "expected_intent": "other", "language": "en"}
+{"text": "Mausam kaisa hai aaj?", "expected_intent": "other", "language": "hi-Latn"}
+{"text": "Ek achha joke sunao", "expected_intent": "other", "language": "hi-Latn"}
+{"text": "Don't cancel my 3pm, but move my 5pm with Rahul to tomorrow at 4pm", "expected_intent": "reschedule_meeting", "language": "en"}
+{"text": "Meeting delete mat karna bas Monday ko daal do", "expected_intent": "reschedule_meeting", "language": "hi-Latn"}
+{"text": "Send an update to team@startup.io regarding launch dates", "expected_intent": "send_email", "language": "en"}
+{"text": "Check when I am free next Tuesday morning", "expected_intent": "check_calendar", "language": "en"}
