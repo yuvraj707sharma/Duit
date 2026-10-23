@@ -124,10 +124,10 @@ async function initAuthSession() {
       const settingsEmail = document.getElementById('settings-current-email');
       const avatarElem = document.getElementById('user-avatar-initials');
 
-      if (emailElem) emailElem.textContent = u.email || 'admin@fastagent.ai';
-      if (settingsEmail) settingsEmail.textContent = u.email || 'admin@fastagent.ai';
+      if (emailElem) emailElem.textContent = u.email || 'admin@zoro.ai';
+      if (settingsEmail) settingsEmail.textContent = u.email || 'admin@zoro.ai';
       if (avatarElem) {
-        const initials = (u.name || u.email || 'FA').substring(0, 2).toUpperCase();
+        const initials = (u.name || u.email || 'ZR').substring(0, 2).toUpperCase();
         avatarElem.textContent = initials;
       }
     }
@@ -167,7 +167,7 @@ function switchTab(tabId) {
 // Socket.io Listeners
 function setupSocketListeners() {
   socket.on('connect', () => {
-    console.log('[Socket] Connected to FastAgent WhatsApp gateway');
+    console.log('[Socket] Connected to ZORO WhatsApp gateway');
   });
 
   socket.on('status_update', (data) => {
@@ -216,7 +216,7 @@ function updateWhatsAppUI(waData) {
     if (healthText) healthText.textContent = 'Action Required: Scan QR';
     if (botDot) botDot.className = 'pulsing-dot action-needed';
     if (qrContainer) {
-      qrContainer.innerHTML = `<img src="${qr}" alt="FastAgent WhatsApp Pairing QR Code">`;
+      qrContainer.innerHTML = `<img src="${qr}" alt="ZORO WhatsApp Pairing QR Code">`;
     }
   } else {
     if (healthText) healthText.textContent = 'Bot Disconnected';

@@ -3,7 +3,7 @@ import { query, logActivity } from '../database/db.js';
 
 const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@fastagent.ai';
 const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-const DEFAULT_ADMIN_NAME = 'FastAgent Admin';
+const DEFAULT_ADMIN_NAME = 'ZORO Admin';
 
 /**
  * Hash a password using scrypt with a unique salt

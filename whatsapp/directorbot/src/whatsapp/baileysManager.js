@@ -57,8 +57,8 @@ function emitStatus() {
 // ── User State Machine ───────────────────────────────────────────────────────
 // States: NEW | ONBOARDING_NAME | ONBOARDING_USE_CASE | ONBOARDING_AUTH | ACTIVE | BLOCKED
 const ONBOARDING_QUESTIONS = [
-  { field: 'name',     prompt: '👋 Welcome to *FastAgent*! I\'m your personal AI assistant.\n\nTo get started, what\'s your name?' },
-  { field: 'use_case', prompt: '✨ Nice to meet you, {name}!\n\nHow do you plan to use FastAgent? Pick a number:\n\n1️⃣  Personal productivity (calendar, emails, reminders)\n2️⃣  Business & work tasks\n3️⃣  Research & learning\n4️⃣  Just exploring\n\nReply with 1, 2, 3, or 4.' },
+  { field: 'name',     prompt: '👋 Welcome to *ZORO*! I\'m your personal AI assistant.\n\nTo get started, what\'s your name?' },
+  { field: 'use_case', prompt: '✨ Nice to meet you, {name}!\n\nHow do you plan to use ZORO? Pick a number:\n\n1️⃣  Personal productivity (calendar, emails, reminders)\n2️⃣  Business & work tasks\n3️⃣  Research & learning\n4️⃣  Just exploring\n\nReply with 1, 2, 3, or 4.' },
   { field: 'google_auth', prompt: '🔗 Almost done! To unlock your Google Calendar & Gmail superpowers, tap the link below and sign in with Google:\n\n{auth_link}\n\n_(You can also skip this and use text-only features for now — reply "skip")_' }
 ];
 
@@ -220,7 +220,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     if (lower === 'skip' || lower === 'later' || lower === 'no') {
       await updateUser(cleanPhone, { state: 'ACTIVE' });
       await sendMessage(jid,
-        `✅ *You're all set, ${user.name || 'there'}!*\n\nYou can connect Google later by typing *"connect google"*.\n\n🤖 FastAgent is ready. Just text me anything — I can help with tasks, questions, scheduling, and more!\n\nType *"help"* anytime to see what I can do.`
+        `✅ *You're all set, ${user.name || 'there'}!*\n\nYou can connect Google later by typing *"connect google"*.\n\n🤖 ZORO is ready. Just text me anything — I can help with tasks, questions, scheduling, and more!\n\nType *"help"* anytime to see what I can do.`
       );
     } else {
       // User might have already authenticated via the link and come back
@@ -229,7 +229,7 @@ async function handleFastAgentMessage(jid, phone, text) {
       if (tokenRow.length > 0) {
         await updateUser(cleanPhone, { state: 'ACTIVE', google_connected: 1 });
         await sendMessage(jid,
-          `🎉 *Google connected successfully, ${user.name || 'there'}!*\n\n✅ Calendar & Gmail are now live.\n🤖 FastAgent is ready — text me anything!\n\nType *"help"* to see what I can do.`
+          `🎉 *Google connected successfully, ${user.name || 'there'}!*\n\n✅ Calendar & Gmail are now live.\n🤖 ZORO is ready — text me anything!\n\nType *"help"* to see what I can do.`
         );
       } else {
         const authLink = generateAuthLink(cleanPhone);
@@ -255,7 +255,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     // Help command
     if (lower === 'help' || lower === '/help') {
       await sendMessage(jid,
-        `🤖 *FastAgent — What I can do:*\n\n📅 *Calendar* — "Schedule a meeting tomorrow at 3pm"\n📧 *Email* — "Draft an email to John about the project"\n⚡ *Skills* — Type *"skills"* to view and add modular agent skills\n✅ *Tasks* — "Remind me to call Dr. Sharma at 6pm"\n🔍 *Research* — Ask me anything\n📊 *Summarise* — "Summarise my emails from today"\n\n⚙️ Commands:\n• *skills* — View active skills & templates\n• *add skill: <Name> — <Prompt>* — Create custom skill\n• *connect google* — Link your Google account\n• *status* — Check your account status\n• *help* — Show this menu\n\n_Powered by FastAgent AI_ 🚀`
+        `🤖 *ZORO — What I can do:*\n\n📅 *Calendar* — "Schedule a meeting tomorrow at 3pm"\n📧 *Email* — "Draft an email to John about the project"\n⚡ *Skills* — Type *"skills"* to view and add modular agent skills\n✅ *Tasks* — "Remind me to call Dr. Sharma at 6pm"\n🔍 *Research* — Ask me anything\n📊 *Summarise* — "Summarise my emails from today"\n\n⚙️ Commands:\n• *skills* — View active skills & templates\n• *add skill: <Name> — <Prompt>* — Create custom skill\n• *connect google* — Link your Google account\n• *status* — Check your account status\n• *help* — Show this menu\n\n_Powered by ZORO AI_ ⚔️`
       );
       return;
     }
@@ -263,7 +263,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     // Skills hub command
     if (lower === 'skills' || lower === '/skills' || lower === 'my skills') {
       const skills = await listSkills(cleanPhone);
-      let msg = `⚡ *FastAgent Skills Hub*\n\nHere are your active agent skills:\n`;
+      let msg = `⚡ *ZORO Skills Hub*\n\nHere are your active agent skills:\n`;
       skills.forEach((s, i) => {
         msg += `\n${i + 1}. *${s.name}*\n   • Trigger: _${s.trigger_keywords || s.slug}_\n   • ${s.description || 'Specialized agent prompt'}\n`;
       });
@@ -335,7 +335,7 @@ async function handleFastAgentMessage(jid, phone, text) {
       const googleStatus = user.google_connected ? '✅ Connected' : '❌ Not connected';
       const skills = await listSkills(cleanPhone);
       await sendMessage(jid,
-        `📊 *Your FastAgent Status:*\n\n👤 Name: ${user.name || 'Not set'}\n📱 Phone: +${cleanPhone}\n🎯 Use case: ${user.use_case || 'Not set'}\n🧩 Active Skills: ${skills.length}\n🔗 Google: ${googleStatus}\n✨ Account: Active\n\n_Type "skills" to manage skills or "help" for options._`
+        `📊 *Your ZORO Status:*\n\n👤 Name: ${user.name || 'Not set'}\n📱 Phone: +${cleanPhone}\n🎯 Use case: ${user.use_case || 'Not set'}\n🧩 Active Skills: ${skills.length}\n🔗 Google: ${googleStatus}\n✨ Account: Active\n\n_Type "skills" to manage skills or "help" for options._`
       );
       return;
     }
@@ -350,7 +350,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     } else {
       // Fallback — basic Gemini-less reply
       await sendMessage(jid,
-        `🤔 I'm having trouble reaching the FastAgent brain right now. Please try again in a moment.\n\n_If this persists, type "status" to check your connection._`
+        `🤔 I'm having trouble reaching the ZORO brain right now. Please try again in a moment.\n\n_If this persists, type "status" to check your connection._`
       );
     }
 
@@ -404,7 +404,7 @@ export async function startBotSession() {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, authLogger)
     },
-    browser: Browsers.ubuntu('Chrome'),
+    browser: ['ZORO', 'Chrome', '120.0.0'],
     syncFullHistory: false,
     markOnlineOnConnect: true,
     getMessage: async (key) => {
@@ -576,7 +576,7 @@ export async function sendTestPing(targetJid) {
     return { success: false, error: 'Bot not connected' };
   }
   try {
-    await botSock.sendMessage(targetJid, { text: '🏓 *FastAgent ping!* Bot is alive and connected.' });
+    await botSock.sendMessage(targetJid, { text: '🏓 *ZORO ping!* Bot is alive and connected.' });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };

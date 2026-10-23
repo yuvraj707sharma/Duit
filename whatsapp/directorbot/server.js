@@ -654,7 +654,7 @@ const PORT = process.env.PORT || 5122;
 
 async function bootstrap() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('   🤖  FastAgent WhatsApp Bot  —  Starting up   ');
+  console.log('   ⚔️  ZORO WhatsApp Bot  —  Starting up   ');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   // 1. Init Database (auto-creates all tables)
@@ -665,7 +665,7 @@ async function bootstrap() {
   }
 
   // 2. Start WhatsApp Bot Session
-  console.log('[WhatsApp] Starting FastAgent bot session...');
+  console.log('[WhatsApp] Starting ZORO bot session...');
   startBotSession().catch(err => console.error('[Bot WA Error]:', err.message));
 
   // 3. Start Web Server
