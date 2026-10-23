@@ -346,8 +346,32 @@ async function handleFastAgentMessage(jid, phone, text) {
   await sendMessage(jid, '👋 Let\'s start fresh! ' + ONBOARDING_QUESTIONS[0].prompt);
 }
 
+function clearAuthDir() {
+  const authDir = path.join(__dirname, '../../storage/auth_bot');
+  try {
+    if (fs.existsSync(authDir)) {
+      const files = fs.readdirSync(authDir);
+      for (const file of files) {
+        fs.rmSync(path.join(authDir, file), { recursive: true, force: true });
+      }
+      console.log('[FastAgent Bot] Stale auth credentials cleared from storage/auth_bot');
+    }
+  } catch (err) {
+    console.error('[FastAgent Bot] Error clearing auth_bot dir:', err.message);
+  }
+}
+
 // ── BOT SESSION ───────────────────────────────────────────────────────────────
 export async function startBotSession() {
+  // If an existing socket is active, clean it up before re-creating
+  if (botSock) {
+    try {
+      botSock.ev.removeAllListeners();
+      botSock.end?.();
+    } catch (e) {}
+    botSock = null;
+  }
+
   const authDir = path.join(__dirname, '../../storage/auth_bot');
   if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
 
@@ -357,9 +381,9 @@ export async function startBotSession() {
   botSock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
-    printQRInTerminal: false,
+    printQRInTerminal: true,
     auth: state,
-    browser: ['FastAgent', 'Chrome', '1.0.0']
+    browser: ['FastAgent', 'Chrome', '120.0.0']
   });
 
   botSock.ev.on('creds.update', saveCreds);
@@ -368,8 +392,9 @@ export async function startBotSession() {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      botQR = await QRCode.toDataURL(qr);
+      botQR = await QRCode.toDataURL(qr, { margin: 2, scale: 8 });
       botStatus = 'SCAN_QR';
+      console.log('[FastAgent Bot] 📱 New QR code generated! Scan via Dashboard or Terminal.');
       emitStatus();
     }
 
@@ -384,15 +409,28 @@ export async function startBotSession() {
 
     if (connection === 'close') {
       if (isManualDisconnect) return;
-      const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
+      const statusCode = (lastDisconnect?.error)?.output?.statusCode;
+      const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+
       botStatus = 'DISCONNECTED';
       emitStatus();
-      if (shouldReconnect) {
-        console.log('[FastAgent Bot] Reconnecting in 5s...');
-        setTimeout(startBotSession, 5000);
+
+      if (isLoggedOut) {
+        console.log('[FastAgent Bot] Session logged out or expired. Resetting credentials and generating a fresh QR code...');
+        await logActivity('FASTAGENT_WA', 'Bot session expired or logged out. Resetting credentials for fresh QR pairing.', 'WARN');
+        clearAuthDir();
+        botQR = null;
+        botPhoneNumber = null;
+        botStatus = 'AWAITING_QR';
+        emitStatus();
+        setTimeout(() => {
+          startBotSession().catch(err => console.error('[FastAgent Bot] Restart error:', err.message));
+        }, 1200);
       } else {
-        console.log('[FastAgent Bot] Logged out. Please rescan QR from dashboard.');
-        await logActivity('FASTAGENT_WA', 'Bot logged out. Manual QR rescan required.', 'WARN');
+        console.log(`[FastAgent Bot] Connection closed (${statusCode || 'unknown'}). Reconnecting in 5s...`);
+        setTimeout(() => {
+          startBotSession().catch(err => console.error('[FastAgent Bot] Reconnect error:', err.message));
+        }, 5000);
       }
     }
   });
@@ -472,15 +510,32 @@ export function getWhatsAppStatus() {
 
 export async function disconnectBotSession() {
   isManualDisconnect = true;
-  if (botSock) {
-    await botSock.logout().catch(() => {});
-    botSock = null;
+  try {
+    if (botSock) {
+      botSock.ev.removeAllListeners();
+      await botSock.logout().catch(() => {});
+      botSock.end?.();
+      botSock = null;
+    }
+  } catch (err) {
+    console.error('[Bot Disconnect Warning]:', err.message);
   }
-  botStatus = 'DISCONNECTED';
+
+  // Wipe stale auth credentials so a fresh QR is generated
+  clearAuthDir();
+
+  botStatus = 'AWAITING_QR';
   botQR = null;
+  botPhoneNumber = null;
   emitStatus();
   isManualDisconnect = false;
-  await logActivity('FASTAGENT_WA', 'Bot manually disconnected', 'INFO');
+
+  await logActivity('FASTAGENT_WA', 'Bot disconnected by admin. Generating fresh QR code.', 'INFO');
+  console.log('[FastAgent Bot] Session wiped. Initializing fresh session for new QR scan...');
+
+  setTimeout(() => {
+    startBotSession().catch(err => console.error('[FastAgent Bot] Rescan start error:', err.message));
+  }, 600);
 }
 
 export async function sendTestPing(targetJid) {
