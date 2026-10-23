@@ -1,7 +1,9 @@
 import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore,
+  Browsers
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
@@ -13,7 +15,7 @@ import { query, logActivity, listSkills, createSkill, deleteSkill } from '../dat
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ── Single Bot Session ──────────────────────────────────────────────────────
+// ── Single Bot Session & Message Cache ───────────────────────────────────────
 let botSock = null;
 let botQR = null;
 let botStatus = 'DISCONNECTED';
@@ -21,6 +23,17 @@ let botPhoneNumber = null;
 let isManualDisconnect = false;
 let ioInstance = null;
 const processedMessageIds = new Set();
+const messageStore = new Map();
+
+function saveMessageToStore(key, message) {
+  if (key?.id && message) {
+    messageStore.set(key.id, message);
+    if (messageStore.size > 2000) {
+      const oldestKey = messageStore.keys().next().value;
+      messageStore.delete(oldestKey);
+    }
+  }
+}
 
 export function setSocketIO(io) {
   ioInstance = io;
@@ -124,7 +137,11 @@ function generateAuthLink(phone) {
 async function sendMessage(jid, text) {
   try {
     if (!botSock) throw new Error('Bot socket not connected');
-    await botSock.sendMessage(jid, { text });
+    const sent = await botSock.sendMessage(jid, { text });
+    if (sent?.key && sent.message) {
+      saveMessageToStore(sent.key, sent.message);
+    }
+    return sent;
   } catch (err) {
     console.error(`[Bot Send Error] jid=${jid}:`, err.message);
   }
@@ -378,12 +395,22 @@ export async function startBotSession() {
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
   const { version } = await fetchLatestBaileysVersion();
 
+  const authLogger = pino({ level: 'silent' });
   botSock = makeWASocket({
     version,
-    logger: pino({ level: 'silent' }),
+    logger: authLogger,
     printQRInTerminal: true,
-    auth: state,
-    browser: ['FastAgent', 'Chrome', '120.0.0']
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, authLogger)
+    },
+    browser: Browsers.ubuntu('Chrome'),
+    syncFullHistory: false,
+    markOnlineOnConnect: true,
+    getMessage: async (key) => {
+      const msg = messageStore.get(key.id);
+      return msg || undefined;
+    }
   });
 
   botSock.ev.on('creds.update', saveCreds);
@@ -438,6 +465,10 @@ export async function startBotSession() {
   // ── Handle incoming messages ──────────────────────────────────────────────
   botSock.ev.on('messages.upsert', async ({ messages, type }) => {
     for (const msg of messages) {
+      if (msg.key?.id && msg.message) {
+        saveMessageToStore(msg.key, msg.message);
+      }
+
       // Ignore own messages
       if (!msg.message || msg.key.fromMe) continue;
 
@@ -456,28 +487,30 @@ export async function startBotSession() {
       if (!rawJid) continue;
       if (rawJid.endsWith('@g.us') || rawJid.endsWith('@broadcast') || rawJid.endsWith('@newsletter') || rawJid === 'status@broadcast') continue;
 
-      // Extract original phone number
+      // CRITICAL: Always reply to rawJid so the active Signal ratchet/LID decrypts immediately
+      const replyJid = rawJid;
       let phone = '';
-      let replyJid = rawJid;
 
       if (rawJid.endsWith('@s.whatsapp.net')) {
         phone = rawJid.split('@')[0].split(':')[0];
-      } else if (msg.key.participant?.includes('@s.whatsapp.net')) {
-        phone = msg.key.participant.split('@')[0].split(':')[0];
-        replyJid = msg.key.participant;
       } else if (rawJid.endsWith('@lid')) {
-        // Resolve internal LID to the user's real phone number
+        // Resolve internal LID to the user's real phone number for DB identification
         try {
           const pn = await botSock.signalRepository?.lidMapping?.getPNForLID(rawJid);
           if (pn && pn.includes('@s.whatsapp.net')) {
             phone = pn.split('@')[0].split(':')[0];
-            replyJid = pn;
           }
         } catch {}
+
+        if (!phone) {
+          phone = rawJid.split('@')[0].split(':')[0];
+        }
+      } else if (msg.key.participant?.includes('@s.whatsapp.net')) {
+        phone = msg.key.participant.split('@')[0].split(':')[0];
       }
 
-      // Guard: strictly ignore invalid internal IDs or unresolvable LIDs
-      if (!phone || phone.length < 8 || phone.length > 15) {
+      // Guard: strictly ignore invalid internal IDs or empty phone
+      if (!phone || phone.length < 5) {
         continue;
       }
 
