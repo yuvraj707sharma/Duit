@@ -173,13 +173,68 @@ class CascadeOrchestrator:
         metrics_collector.record_intent(decision.intent)
 
         # -------------------------------------------------------------
-        # STAGE 3: Targeted LLM Argument Extraction & 'other' Response
+        # STAGE 3: Targeted LLM Argument Extraction & 'other' / Skills
         # -------------------------------------------------------------
         extracted_args: Dict[str, Any] = {}
         t0 = time.perf_counter()
 
-        # Fix 9: "other" intent goes to LLM for conversational reply (unless trust-tainted or third-party)
+        # Fix 9: "other" intent goes to dynamic skills or LLM conversational reply (unless trust-tainted or third-party)
         if decision.intent == "other" and not trust_taint and not source_is_third_party:
+            # Check for matching custom or global agent skill
+            matching_skill = await self.repo.find_matching_skill(user_id, message_text)
+            if matching_skill:
+                t_skill = time.perf_counter()
+                skill_name = matching_skill.get("name", "Custom Skill")
+                system_prompt = matching_skill.get("system_prompt", "")
+                webhook_url = matching_skill.get("webhook_url")
+
+                skill_reply = ""
+                if webhook_url:
+                    try:
+                        import httpx
+                        async with httpx.AsyncClient(timeout=10.0) as client:
+                            resp = await client.post(webhook_url, json={"user_id": user_id, "message": message_text, "skill": matching_skill})
+                            if resp.status_code == 200:
+                                data = resp.json()
+                                skill_reply = data.get("response") or data.get("reply") or str(data)
+                    except Exception as e:
+                        skill_reply = f"Error communicating with skill webhook: {str(e)}"
+
+                if not skill_reply:
+                    skill_reply = await self.llm_provider.generate_response(
+                        system_prompt=system_prompt,
+                        user_message=message_text,
+                        context={"user_id": user_id, "skill": matching_skill}
+                    )
+
+                stage_latencies["skill_execution"] = (time.perf_counter() - t_skill) * 1000
+                await self.messaging_channel.send_text(user_id, skill_reply)
+
+                resp_obj = OrchestratorResponse(
+                    request_id=request_id,
+                    user_id=user_id,
+                    intent=f"skill_{matching_skill.get('slug', 'custom')}",
+                    risk="low",
+                    confidence=1.0,
+                    status="executed",
+                    response_text=skill_reply,
+                    stage_latencies_ms=stage_latencies
+                )
+                await self.repo.insert_audit_log({
+                    "request_id": request_id,
+                    "user_id": user_id,
+                    "raw_intent": f"skill_{matching_skill.get('slug', 'custom')}",
+                    "risk_level": "low",
+                    "confidence": 1.0,
+                    "tools_called": [f"skill:{skill_name}"],
+                    "was_confirmed": False,
+                    "status": "executed",
+                    "stage_latencies_ms": stage_latencies
+                })
+                if inbound_message_id:
+                    await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())
+                return resp_obj
+
             with StageTimer("stage_3_llm_extraction"):
                 llm_res = await self.llm_provider.extract_arguments(
                     user_message=message_text,
@@ -246,6 +301,27 @@ class CascadeOrchestrator:
             if inbound_message_id:
                 await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())
             return resp_obj
+
+        # Requirement 6: Cross-channel desktop target check (if laptop offline -> reply 'laptop offline')
+        desktop_intents = {"open_app", "open_url", "create_note", "type_text", "set_volume", "search_files", "clear_history"}
+        if decision.intent in desktop_intents:
+            from backend.app.desktop.presence import presence_manager
+            if not presence_manager.is_online(user_id):
+                offline_reply = "laptop offline"
+                await self.messaging_channel.send_text(user_id, offline_reply)
+                resp_obj = OrchestratorResponse(
+                    request_id=request_id,
+                    user_id=user_id,
+                    intent=decision.intent,
+                    risk=policy_eval.risk_level,
+                    confidence=decision.confidence,
+                    status="offline",
+                    response_text=offline_reply,
+                    stage_latencies_ms=stage_latencies
+                )
+                if inbound_message_id:
+                    await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())
+                return resp_obj
 
         # Fix 8: Idempotency key derived from message_id + action
         idempotency_key = self.derive_idempotency_key(msg_id, decision.intent)
@@ -356,6 +432,25 @@ class CascadeOrchestrator:
                 success=True,
                 data={"status": "confirmed", "booking_id": "bk_mock_101", "details": args.get("details", "")}
             )
+        elif intent in ("open_app", "open_url", "create_note", "type_text", "set_volume", "search_files", "clear_history"):
+            from backend.app.desktop.presence import presence_manager
+            from backend.app.desktop.skills import skill_executor
+            if presence_manager.is_online(user_id):
+                res = await presence_manager.send_command_to_desktop(
+                    user_id=user_id,
+                    command_payload={"intent": intent, "arguments": args}
+                )
+                return ToolResult(
+                    success=res.get("success", False),
+                    data=res.get("result", res),
+                    error=res.get("error")
+                )
+            else:
+                try:
+                    res = skill_executor.execute_skill(intent, args)
+                    return ToolResult(success=True, data=res)
+                except Exception as e:
+                    return ToolResult(success=False, error=str(e))
         else:
             # Fix 9: Unimplemented tools return explicit error result, never fake success
             return ToolResult(

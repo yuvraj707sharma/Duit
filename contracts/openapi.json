@@ -16,6 +16,33 @@
         }
       }
     },
+    "/api/webhooks/whatsapp": {
+      "post": {
+        "summary": "Receive FastAgent WhatsApp Gateway Message",
+        "description": "Receives incoming message forwarded by WhatsApp bot gateway (Baileys), processes through cascade, and returns assistant reply.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["from", "text"],
+                "properties": {
+                  "from": { "type": "string" },
+                  "text": { "type": "string" },
+                  "channel": { "type": "string", "default": "whatsapp" },
+                  "idempotency_key": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Processed message response" },
+          "400": { "description": "Invalid payload format" }
+        }
+      }
+    },
     "/api/approvals": {
       "get": {
         "summary": "List Pending Approvals",
@@ -90,6 +117,146 @@
         ],
         "responses": { "200": { "description": "OAuth success and tokens encrypted" } }
       }
+    },
+    "/connect": {
+      "get": {
+        "summary": "Mobile Onboarding Web Portal",
+        "description": "User-facing responsive 1-click Google OAuth connection page for WhatsApp users",
+        "parameters": [
+          { "name": "phone", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "HTML onboarding portal with 1-click Google OAuth" } }
+      }
+    },
+    "/api/desktop/presence": {
+      "get": {
+        "summary": "Check Desktop Executor Presence",
+        "description": "Returns online/offline presence status for a user's desktop sidecar",
+        "parameters": [
+          { "name": "user_id", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "User desktop presence status (online/offline, last_heartbeat)" }
+        }
+      },
+    "/api/desktop/voice/transcribe": {
+      "post": {
+        "summary": "Ultra-Low-Latency Local Voice STT Transcription",
+        "description": "Transcribes push-to-talk audio chunks via local faster-whisper INT8 engine with Silero VAD",
+        "parameters": [
+          { "name": "user_id", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Transcription result with text, latency_ms, and confidence" }
+        }
+      }
+    },
+    "/api/desktop/ws": {
+      "get": {
+        "summary": "Desktop Executor Outbound WebSocket Tunnel",
+        "description": "WebSocket connection endpoint for local desktop python sidecar with heartbeats and shared secret auth",
+        "parameters": [
+          { "name": "user_id", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "101": { "description": "Switching protocols to WebSocket tunnel" },
+          "401": { "description": "Unauthorized shared secret" }
+        }
+      }
+    },
+    "/api/whatsapp/status": {
+      "get": {
+        "summary": "WhatsApp Session Status",
+        "description": "Returns current WhatsApp connection state (open, connecting, close) and instance name",
+        "responses": {
+          "200": { "description": "WhatsApp session status" }
+        }
+      }
+    },
+    "/api/whatsapp/qr": {
+      "get": {
+        "summary": "WhatsApp Pairing QR Code",
+        "description": "Returns pairing QR code (data URL or base64) for scanning",
+        "responses": {
+          "200": { "description": "QR code for pairing" },
+          "404": { "description": "Session already connected or QR unavailable" }
+        }
+      }
+    },
+    "/api/users/onboard": {
+      "post": {
+        "summary": "Register or Onboard User Phone Number",
+        "description": "Registers a phone number and maps it to a unique user UUID with initial policy settings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["phone_number"],
+                "properties": {
+                  "phone_number": { "type": "string" },
+                  "email": { "type": "string" },
+                  "display_name": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "User successfully registered with tenant UUID" }
+        }
+      }
+    },
+    "/api/skills": {
+      "get": {
+        "summary": "List Available and Installed Skills",
+        "description": "Lists global skill templates and user-specific skills",
+        "parameters": [
+          { "name": "user_id", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of active and available skills" }
+        }
+      },
+      "post": {
+        "summary": "Create or Install a Skill",
+        "description": "Registers a new prompt-based or webhook-based skill for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "system_prompt"],
+                "properties": {
+                  "user_id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "system_prompt": { "type": "string" },
+                  "trigger_keywords": { "type": "string" },
+                  "webhook_url": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Skill successfully registered" }
+        }
+      }
+    },
+    "/api/skills/{skill_id}": {
+      "delete": {
+        "summary": "Delete or Deactivate a Skill",
+        "parameters": [
+          { "name": "skill_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Skill deleted" }
+        }
+      }
     }
   }
 }
+

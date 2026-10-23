@@ -21,6 +21,13 @@ INTENT_RISK_MAP = {
     "send_email": ("high", True),
     "reply_email": ("medium", True),
     "book_something": ("high", True),
+    "open_app": ("medium", True),
+    "open_url": ("low", False),
+    "create_note": ("low", False),
+    "type_text": ("medium", True),
+    "set_volume": ("low", False),
+    "search_files": ("low", False),
+    "clear_history": ("low", True),
     "other": ("low", False)
 }
 
@@ -64,4 +71,12 @@ def build_confirmation_prompt(intent: str, args: Dict[str, Any]) -> str:
     elif intent == "book_something":
         details = args.get("details", args.get("raw_text", "booking request"))
         return f"Confirm booking for: *{details}*?"
+    elif intent == "open_app":
+        app_name = args.get("app_name", "app")
+        return f"Open application *'{app_name}'* on your laptop?"
+    elif intent == "type_text":
+        char_count = len(args.get("text", ""))
+        return f"Type {char_count} characters into the currently focused window?"
+    elif intent == "clear_history":
+        return "Clear all stored desktop operation history and reset encrypted context?"
     return "Confirm execution of this action?"

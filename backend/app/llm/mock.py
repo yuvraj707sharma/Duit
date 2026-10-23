@@ -52,6 +52,27 @@ class MockLLMProvider(LLMProvider):
                 "query": "is:unread",
                 "max_results": 5
             }
+        elif intent == "open_app":
+            app = "notepad"
+            for candidate in ("notepad", "calculator", "terminal", "code", "browser", "slack", "spotify", "files"):
+                if candidate in msg_lower:
+                    app = candidate
+                    break
+            args = {"app_name": app}
+        elif intent == "open_url":
+            url_match = re.search(r"https?://[^\s]+", user_message)
+            args = {"url": url_match.group(0) if url_match else "https://fastagent.dev"}
+        elif intent == "create_note":
+            args = {"title": "quick_note", "content": user_message}
+        elif intent == "type_text":
+            args = {"text": user_message}
+        elif intent == "set_volume":
+            vol_match = re.search(r"\b(\d{1,3})\b", user_message)
+            args = {"level": int(vol_match.group(1)) if vol_match else 50}
+        elif intent == "search_files":
+            args = {"query": "invoice"}
+        elif intent == "clear_history":
+            args = {}
         else:
             args = {"raw_text": user_message}
 
@@ -61,3 +82,46 @@ class MockLLMProvider(LLMProvider):
             raw_response="{}",
             tokens_used=42
         )
+
+    async def generate_response(
+        self,
+        system_prompt: str,
+        user_message: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> str:
+        prompt_lower = (system_prompt or "").lower()
+        msg_lower = (user_message or "").lower()
+
+        if "expense" in prompt_lower or "receipt" in prompt_lower:
+            return (
+                "🧾 *Expense Analysis*\n"
+                "• *Category*: Business / Office\n"
+                "• *Details*: Extracted from entry\n"
+                "• *Raw Note*: " + user_message[:60] + "\n"
+                "• *Status*: ✅ Logged & Categorized"
+            )
+        elif "action" in prompt_lower or "meeting" in prompt_lower or "staff" in prompt_lower:
+            return (
+                "📋 *Action Items Extracted*\n"
+                "1. [Urgent] " + user_message[:50] + "\n"
+                "2. [Normal] Confirm deliverables with team\n"
+                "3. [Next Step] Track completion in sprint log"
+            )
+        elif "copywriter" in prompt_lower or "sales" in prompt_lower or "email" in prompt_lower:
+            return (
+                "💼 *Drafted Outreach Copy*\n"
+                "Subject: Quick idea for your workflow\n\n"
+                "Hi there,\n"
+                f"I noticed your interest regarding '{user_message[:40]}...'. "
+                "We help automate this in seconds without manual overhead.\n\n"
+                "Would you be open to a 5-minute chat this Thursday?\n"
+                "Best,\nFastAgent"
+            )
+        elif "debugger" in prompt_lower or "code" in prompt_lower or "software" in prompt_lower:
+            return (
+                "🛠️ *Code Review & Solution*\n"
+                "• *Issue*: Syntax or logic exception detected in user snippet.\n"
+                "• *Diagnosis*: Parameter verification needed.\n"
+                "• *Fix*:\n```python\n# Cleaned fix\nresult = process_safe(data)\n```"
+            )
+        return f"✨ *Skill Execution Output*:\n{user_message}\n\n_Applied Prompt:_ {system_prompt[:60]}..."

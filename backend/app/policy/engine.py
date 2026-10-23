@@ -57,6 +57,47 @@ class PolicyEngine:
                 reasoning="User rate limit exceeded (maximum 30 actions/min)."
             )
 
+        # 1.1 Desktop Disallowed Skills Check (No shell, no delete)
+        if intent in ("shell", "exec", "delete", "rm", "delete_file", "drop"):
+            return PolicyEvaluation(
+                allowed=False,
+                requires_confirmation=False,
+                risk_level="high",
+                reasoning="Disallowed skill: shell execution and file deletion are strictly prohibited."
+            )
+
+        # 1.2 Desktop Skills Allowlist & Security Checks
+        if intent == "open_app":
+            app_name = str(arguments.get("app_name", "")).strip().lower()
+            allowed_apps = {"notepad", "calculator", "terminal", "code", "browser", "slack", "spotify", "files"}
+            if app_name not in allowed_apps:
+                return PolicyEvaluation(
+                    allowed=False,
+                    requires_confirmation=False,
+                    risk_level="high",
+                    reasoning=f"Application '{app_name}' is not in the desktop allowlist."
+                )
+
+        if intent == "open_url":
+            url = str(arguments.get("url", "")).strip().lower()
+            if not (url.startswith("http://") or url.startswith("https://")):
+                return PolicyEvaluation(
+                    allowed=False,
+                    requires_confirmation=False,
+                    risk_level="high",
+                    reasoning="Only HTTP and HTTPS URLs are permitted."
+                )
+
+        if intent == "type_text":
+            target = str(arguments.get("target_control_type", "")).strip().lower()
+            if any(p in target for p in ("password", "passcode", "secret", "pin")):
+                return PolicyEvaluation(
+                    allowed=False,
+                    requires_confirmation=False,
+                    risk_level="high",
+                    reasoning="Typing into password or secure entry fields is strictly prohibited."
+                )
+
         # 2. Rule: Inbound 3rd-party trigger or trust-tainted content ALWAYS requires primary user confirmation
         if trust_taint or source_is_third_party:
             prompt = build_confirmation_prompt(intent, arguments)

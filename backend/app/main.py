@@ -7,6 +7,9 @@ from backend.app.api.approvals import router as approvals_router
 from backend.app.api.auth import router as auth_router
 from backend.app.api.metrics import router as metrics_router
 from backend.app.api.logs import router as logs_router
+from backend.app.api.desktop import router as desktop_router
+from backend.app.api.whatsapp import router as whatsapp_router
+from backend.app.api.skills import router as skills_router
 
 app = FastAPI(
     title="FastAgent API",
@@ -29,6 +32,10 @@ app.include_router(approvals_router)
 app.include_router(auth_router)
 app.include_router(metrics_router)
 app.include_router(logs_router)
+app.include_router(desktop_router)
+app.include_router(whatsapp_router)
+app.include_router(skills_router)
+
 
 
 @app.get("/")

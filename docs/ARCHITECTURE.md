@@ -117,16 +117,23 @@ sequenceDiagram
 ## Component Architecture
 
 1. **Backend Service (`backend/app`)**:
-   - **`api/`**: FastAPI REST endpoints for WhatsApp webhooks, OAuth2 flows, approvals API, and Prometheus `/metrics`.
-   - **`channels/`**: `MessagingChannel` interface isolating `EvolutionChannel` and `MockChannel`.
-   - **`cascade/`**: The 4-stage orchestrator coordinating hard rules, Laya System 1 predictions, and LLM extractions.
-   - **`llm/`**: `LLMProvider` interface implementing `GeminiProvider` (with sanitized/synthetic data), `OllamaProvider` (local Qwen), and `MockLLMProvider`.
-   - **`tools/`**: Side-effecting adapters (`GmailToolAdapter`, `CalendarToolAdapter`, `MockTools`) with mandatory idempotency keys.
+   - **`api/`**: FastAPI REST endpoints for WhatsApp webhooks, OAuth2 flows, approvals API, desktop WebSocket, WhatsApp status/QR, and `/metrics`.
+   - **`channels/`**: `MessagingChannel` interface isolating `EvolutionChannel` and `MockChannel` with sender whitelist and onboarding gate.
+   - **`cascade/`**: The 4-stage orchestrator coordinating hard rules, Laya System 1 predictions, LLM extractions, and policy gates.
+   - **`desktop/`**: Presence manager, SQLite WAL Write-Ahead Journal, encrypted context store, and typed desktop skills.
+   - **`llm/`**: `LLMProvider` interface implementing `GeminiProvider`, `OllamaProvider` (local Qwen), and `MockLLMProvider`.
+   - **`tools/`**: Side-effecting adapters (`GmailAdapter`, `CalendarAdapter`, `ContactsAdapter`, `DailyAutomator`) with mandatory idempotency keys.
    - **`policy/`**: Strict in-code safety engine handling tenant isolation, allowlists, rate limiting, and third-party trigger gates.
-   - **`learning/`**: Append-only log recording all user decisions/corrections, powering pgvector few-shot retrieval and automated confidence threshold tuning.
+   - **`learning/`**: Append-only log recording all user decisions/corrections, powering few-shot retrieval and automated confidence threshold tuning.
    - **`security/`**: AES-256-GCM token encryption and OAuth2 state verification.
-2. **Frontend (`web/`)**:
-   - React + Vite + TypeScript web dashboard and Capacitor Android mobile app.
+2. **Desktop Executor (`desktop/`)**:
+   - Electron + React + TypeScript frameless sidebar widget.
+   - Global emergency kill-switch hotkey (`Ctrl+Shift+K` / `Cmd+Shift+K`).
+   - Push-to-Talk microphone control with live status overlay (`Heard: ... -> Doing: ...`) and 2-second cancellation countdown window.
+   - Local sidecar connecting outbound via WebSocket with 5-second heartbeats.
+3. **Frontend (`web/`)**:
+   - React + Vite + TypeScript web dashboard and Capacitor mobile app.
    - Live approval queue, action log, per-stage latency telemetry, and learning curve tracker.
-3. **Infrastructure**:
+4. **Infrastructure**:
    - Docker Compose orchestrating PostgreSQL 16 with pgvector, Redis, Evolution Go, Laya Serve, Backend API, and Worker.
+

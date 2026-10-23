@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastAgent | WhatsApp Agent Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="socket.io/socket.io.js"></script>
+  <style>
+    * { font-family: 'Times New Roman', Times, serif !important; }
+    .badge-active { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .badge-onboarding { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; } /* Minimal yellow element */
+    .badge-blocked { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .badge-google { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  </style>
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="brand-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1 id="nav-org-title">FASTAGENT</h1>
+        <span class="brand-subtitle">WhatsApp AI Agent Hub • Multi-User Command Center</span>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <div class="status-badge" id="system-health-pill">
+        <span class="pulsing-dot online" id="bot-dot"></span>
+        <span id="health-text">Checking Bot...</span>
+      </div>
+
+      <!-- User Profile Badge & Logout -->
+      <div class="user-profile-badge" id="nav-user-badge">
+        <div class="user-avatar" id="user-avatar-initials">FA</div>
+        <div class="user-info">
+          <span class="user-email" id="user-display-email">admin@fastagent.ai</span>
+          <span class="user-role">Administrator</span>
+        </div>
+        <a href="logout" id="btn-logout" class="btn-logout" onclick="executeLogout(event)" title="Sign Out">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <nav class="sidebar-menu">
+        <button class="menu-item active" data-tab="tab-overview" id="nav-tab-overview">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Overview
+        </button>
+
+        <button class="menu-item" data-tab="tab-connectors" id="nav-tab-connectors">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          WhatsApp Pairing (QR)
+        </button>
+
+        <button class="menu-item" data-tab="tab-users" id="nav-tab-users">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Users & Onboarding
+          <span class="badge" id="users-count-badge">0</span>
+        </button>
+
+        <button class="menu-item" data-tab="tab-skills" id="nav-tab-skills">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Agent Skills
+          <span class="badge" id="skills-count-badge">4</span>
+        </button>
+
+        <button class="menu-item" data-tab="tab-logs" id="nav-tab-logs">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Activity Logs
+        </button>
+
+        <button class="menu-item" data-tab="tab-settings" id="nav-tab-settings">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          System Settings
+        </button>
+      </nav>
+
+      <!-- System Quick Health Indicator in Sidebar -->
+      <div class="sidebar-footer">
+        <div class="connector-mini-card">
+          <div class="connector-header">
+            <span>MySQL Database</span>
+            <span class="dot-online" id="dot-db"></span>
+          </div>
+          <div class="connector-desc" id="db-desc">fastagent_wa (Ready)</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- ==================== TAB 1: OVERVIEW ==================== -->
+      <section class="tab-content active" id="tab-overview">
+        <div class="page-header">
+          <div>
+            <h2>FastAgent WhatsApp Overview</h2>
+            <p class="subtitle">Multi-user autonomous AI assistant running on a single dedicated WhatsApp number</p>
+          </div>
+          <div class="date-display" id="current-date-display">Today: ...</div>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-icon-wrapper chat">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">Total Users</span>
+              <span class="stat-value" id="stat-total-users">0</span>
+              <span class="stat-sub text-info">Registered on WhatsApp</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrapper cal">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">Active Users</span>
+              <span class="stat-value" id="stat-active-users">0</span>
+              <span class="stat-sub text-success">Onboarding completed</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrapper mail">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">Google Linked</span>
+              <span class="stat-value" id="stat-google-connected">0</span>
+              <span class="stat-sub text-success">Calendar & Gmail live</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrapper warn">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">New Users Today</span>
+              <span class="stat-value" id="stat-new-today">0</span>
+              <span class="stat-sub text-warning">Joined last 24h</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connectors Status Row -->
+        <div class="section-title">
+          <h3>Bot & Pipeline Status</h3>
+          <span class="section-sub">Live health of FastAgent components</span>
+        </div>
+
+        <div class="connectors-grid">
+          <!-- WhatsApp Bot Session -->
+          <div class="connector-card">
+            <div class="connector-top">
+              <div class="connector-info">
+                <span class="connector-tag">SINGLE BOT SESSION</span>
+                <h4>FastAgent WhatsApp Number</h4>
+                <p>One active number serving all users concurrently via Baileys WebSocket.</p>
+              </div>
+              <span class="status-indicator-pill" id="bot-status-pill">Checking...</span>
+            </div>
+            <div class="connector-footer">
+              <button class="btn btn-sm btn-outline" onclick="switchTab('tab-connectors')">View Pairing QR</button>
+            </div>
+          </div>
+
+          <!-- FastAgent Python Backend -->
+          <div class="connector-card">
+            <div class="connector-top">
+              <div class="connector-info">
+                <span class="connector-tag">CASCADE BRAIN</span>
+                <h4>FastAgent AI Backend</h4>
+                <p id="backend-status-text">4-Stage Cascade (Hard Rules, Laya Classifier, LLM, Policy Engine).</p>
+              </div>
+              <span class="status-indicator-pill" id="backend-status-pill">Checking...</span>
+            </div>
+            <div class="connector-footer">
+              <button class="btn btn-sm btn-outline" onclick="switchTab('tab-settings')">Configure Backend</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Split View: Quick Ping Test & Live Activity -->
+        <div class="grid-two-col mt-4">
+          <!-- Left: WhatsApp Test Ping Sandbox -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Send Test WhatsApp Ping
+              </div>
+            </div>
+            <div class="panel-body">
+              <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">
+                Send a direct ping message from the FastAgent bot number to verify outbound delivery.
+              </p>
+              <div style="display:flex; gap:10px;">
+                <input type="text" id="ping-phone-input" class="form-input" placeholder="e.g. 919876543210 (with country code)" style="flex:1;">
+                <button class="btn btn-primary" id="btn-send-ping" onclick="sendTestPingFromUI()">Send Ping</button>
+              </div>
+              <div id="ping-result-msg" style="margin-top:12px; font-size:13px;"></div>
+            </div>
+          </div>
+
+          <!-- Right: Live Activity Logs -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Live Bot Activity Feed
+              </div>
+              <span class="badge" id="log-count-badge">Live</span>
+            </div>
+            <div class="panel-body">
+              <div id="live-activity-feed" class="activity-feed">
+                <div class="empty-state">Awaiting system events...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 2: WHATSAPP CONNECTORS ==================== -->
+      <section class="tab-content" id="tab-connectors">
+        <div class="page-header">
+          <div>
+            <h2>FastAgent WhatsApp Bot Pairing</h2>
+            <p class="subtitle">Single dedicated WhatsApp session powering the 24/7 autonomous multi-user assistant</p>
+          </div>
+        </div>
+
+        <div class="qr-single-container">
+          <div class="qr-badge badge-accent">PRIMARY BOT NUMBER • 24/7 DEDICATED</div>
+          <h3 style="margin-top:10px; font-size:1.25rem;">Scan with FastAgent Bot Number</h3>
+          <p style="color:var(--text-muted); font-size:0.85rem; margin-top:6px;">
+            Open WhatsApp on the phone number you want users to text → <b>Linked Devices</b> → <b>Link a Device</b> → Scan the QR below:
+          </p>
+
+          <div class="qr-single-box" id="bot-qr-container">
+            <div class="qr-loading">
+              <div class="spinner" style="display:inline-block; border-color:var(--accent-indigo);"></div>
+              <p style="color:#64748b; font-size:0.85rem; margin-top:10px;">Waiting for QR code...</p>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <span class="status-indicator-pill" id="bot-qr-status-pill">Status: Checking...</span>
+          </div>
+
+          <div style="margin-top:18px;">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-disconnect-bot-wa" onclick="disconnectBotSession()">
+              Disconnect & Rescan QR
+            </button>
+          </div>
+
+          <p style="font-size:0.75rem; color:var(--text-sub); margin-top:16px;">
+            🔒 All inbound messages from any user are safely processed through FastAgent's deterministic policy & security gates.
+          </p>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 3: USERS & ONBOARDING ==================== -->
+      <section class="tab-content" id="tab-users">
+        <div class="page-header">
+          <div>
+            <h2>Registered WhatsApp Users</h2>
+            <p class="subtitle">Multi-user state registry tracking onboarding progress, Google OAuth tokens, and conversation volume</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="loadUsersTable()">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            Refresh Users
+          </button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">User Directory</div>
+            <span class="badge" id="table-user-count">0 Users</span>
+          </div>
+          <div class="panel-body no-padding">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Phone</th>
+                    <th>Name</th>
+                    <th>Use Case</th>
+                    <th>Onboarding State</th>
+                    <th>Google Account</th>
+                    <th>Messages</th>
+                    <th>Last Active</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="users-table-body">
+                  <tr>
+                    <td colspan="8" class="empty-state">Loading users...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB: AGENT SKILLS ==================== -->
+      <section class="tab-content" id="tab-skills">
+        <div class="page-header">
+          <div>
+            <h2>Agent Skills & Capabilities Hub</h2>
+            <p class="subtitle">Deploy modular AI skills, configure personas, and establish custom task instructions for WhatsApp users</p>
+          </div>
+          <div style="display:flex; gap: 10px;">
+            <button class="btn btn-outline btn-sm" onclick="loadSkillsTable()">Refresh Skills</button>
+            <button class="btn btn-primary btn-sm" onclick="scrollToSkillForm()">+ Add Custom Skill</button>
+          </div>
+        </div>
+
+        <!-- Skills Overview Table Panel -->
+        <div class="panel" style="margin-bottom: 24px;">
+          <div class="panel-header">
+            <div class="panel-title">Active AI Skills Library</div>
+          </div>
+          <div class="panel-body no-padding">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Skill Name & Scope</th>
+                    <th>Trigger Keywords</th>
+                    <th>System Instructions & Prompt</th>
+                    <th>Integration Webhook</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="skills-table-body">
+                  <tr>
+                    <td colspan="5" class="empty-state">Loading skills...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Custom Skill Card -->
+        <div class="panel" id="add-skill-card">
+          <div class="panel-header">
+            <div class="panel-title">Create / Deploy Custom AI Skill</div>
+          </div>
+          <div class="panel-body">
+            <form id="create-skill-form" onsubmit="handleCreateSkill(event)" style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+              <div class="form-group">
+                <label>Skill Name *</label>
+                <input type="text" id="skill-name" class="form-control" placeholder="e.g. Diet & Nutrition Coach" required>
+              </div>
+              <div class="form-group">
+                <label>Trigger Keywords (comma-separated)</label>
+                <input type="text" id="skill-keywords" class="form-control" placeholder="e.g. food, diet, calories, nutrition, meal">
+              </div>
+              <div class="form-group" style="grid-column: span 2;">
+                <label>Description (Short summary for users)</label>
+                <input type="text" id="skill-description" class="form-control" placeholder="e.g. Analyzes meal descriptions, estimates calories, and suggests healthy alternatives.">
+              </div>
+              <div class="form-group" style="grid-column: span 2;">
+                <label>System Prompt & Persona Instructions *</label>
+                <textarea id="skill-prompt" class="form-control" rows="4" placeholder="You are an expert Certified Clinical Nutritionist. Analyze the user's meal notes. Extract ingredients, estimate calories/macros, and provide 2 actionable recommendations." required></textarea>
+              </div>
+              <div class="form-group" style="grid-column: span 2;">
+                <label>Optional Webhook URL (for external APIs)</label>
+                <input type="url" id="skill-webhook" class="form-control" placeholder="https://your-api.com/webhooks/skill">
+              </div>
+              <div style="grid-column: span 2; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="submit" class="btn btn-primary">Deploy Skill</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 4: ACTIVITY LOGS ==================== -->
+      <section class="tab-content" id="tab-logs">
+        <div class="page-header">
+          <div>
+            <h2>System Audit & Activity Logs</h2>
+            <p class="subtitle">Complete audit trail of inbound WhatsApp messages, OAuth connections, and security events</p>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="loadActivityLogsTable()">Refresh Logs</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Audit Log History</div>
+          </div>
+          <div class="panel-body no-padding">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Category</th>
+                    <th>Level</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="logs-full-table-body">
+                  <tr>
+                    <td colspan="4" class="empty-state">Loading activity logs...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 5: SETTINGS ==================== -->
+      <section class="tab-content" id="tab-settings">
+        <div class="page-header">
+          <div>
+            <h2>System Configuration</h2>
+            <p class="subtitle">Configure Google OAuth keys, FastAgent backend URL, and administrative credentials</p>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <!-- Change Password Section -->
+          <div class="form-section" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 12px; padding: 22px; margin-bottom: 28px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+              <h4 style="color: #a5b4fc; display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1rem;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Admin Security Passcode
+              </h4>
+              <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.76rem; padding: 4px 10px;">
+                Logged in as: <strong id="settings-current-email">admin@fastagent.ai</strong>
+              </span>
+            </div>
+
+            <p class="text-muted" style="font-size: 13px; margin-bottom: 18px; line-height: 1.5;">
+              Update your administrator login password. Credentials are encrypted with salted scrypt hashing.
+            </p>
+
+            <form id="form-change-password">
+              <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                <div class="form-group">
+                  <label for="pwd-current">Current Password</label>
+                  <input type="password" id="pwd-current" class="form-input" placeholder="Current passcode" required autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                  <label for="pwd-new">New Password</label>
+                  <input type="password" id="pwd-new" class="form-input" placeholder="Min. 6 characters" minlength="6" required autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                  <label for="pwd-confirm">Confirm New Password</label>
+                  <input type="password" id="pwd-confirm" class="form-input" placeholder="Repeat new passcode" minlength="6" required autocomplete="new-password">
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 14px; margin-top: 16px;">
+                <button type="submit" id="btn-change-pwd" class="btn btn-primary">Update Passcode</button>
+                <span id="pwd-change-msg" class="save-status-msg"></span>
+              </div>
+            </form>
+          </div>
+
+          <!-- Configuration Form -->
+          <form id="settings-form">
+            <div class="form-section">
+              <h4>1. FastAgent Python Backend Connection</h4>
+              <div class="form-group">
+                <label for="setting-backend-url">Backend URL</label>
+                <input type="text" id="setting-backend-url" class="form-input" placeholder="http://localhost:8000">
+                <span class="form-hint">FastAgent FastAPI backend URL that processes active messages through the cascade.</span>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>2. Google Cloud OAuth (Per-User Calendar & Gmail)</h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="setting-google-id">Google Client ID</label>
+                  <input type="text" id="setting-google-id" class="form-input" placeholder="xxxx.apps.googleusercontent.com">
+                </div>
+                <div class="form-group">
+                  <label for="setting-google-secret">Google Client Secret</label>
+                  <input type="password" id="setting-google-secret" class="form-input" placeholder="GOCSPX-xxxx">
+                </div>
+              </div>
+              <div class="form-hint">
+                Add this Authorized Redirect URI in Google Cloud Console:
+                <code>http://localhost:5122/auth/google/callback</code>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Save Configuration</button>
+              <span id="settings-save-status" class="save-status-msg"></span>
+            </div>
+          </form>
+
+          <!-- Danger Zone: Reset Data -->
+          <div class="form-section mt-5" style="border-top: 1px solid var(--border-color); padding-top: 24px;">
+            <h4 style="color: var(--accent-rose);">3. System Data Management</h4>
+            <p class="text-muted" style="font-size: 13px; margin-bottom: 16px;">
+              Manage stored users, Google tokens, and audit logs.
+            </p>
+
+            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+              <button type="button" class="btn btn-warning" onclick="resetUsersData()">
+                Clear All Registered Users
+              </button>
+              <button type="button" class="btn btn-outline" onclick="disconnectBotSession()">
+                Disconnect WhatsApp Session
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 """Evolution Go WhatsApp Webhook Ingestion Endpoint with Constant-Time Shared Secret Auth."""
 import hmac
 from typing import Dict, Any, Optional
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Request, HTTPException, Header
 from backend.app.channels.evolution import EvolutionChannel
 from backend.app.channels.mock import MockChannel
@@ -9,7 +10,8 @@ from backend.app.config import settings
 
 router = APIRouter(prefix="/api/webhooks", tags=["Webhooks"])
 
-channel = EvolutionChannel() if settings.MESSAGING_CHANNEL == "evolution" else MockChannel()
+evolution_channel = EvolutionChannel()
+outbound_channel = EvolutionChannel() if settings.MESSAGING_CHANNEL == "evolution" else MockChannel()
 
 
 @router.post("/evolution")
@@ -31,9 +33,41 @@ async def receive_evolution_webhook(
     raw_body = await request.json()
     headers = dict(request.headers)
 
-    inbound = channel.parse_webhook_payload(raw_body, headers)
+    inbound = evolution_channel.parse_webhook_payload(raw_body, headers)
     if not inbound:
         return {"status": "ignored", "reason": "non_message_or_non_individual_event"}
+
+
+    # 1. Whitelist Security Gate (protects against unauthorized external numbers)
+    from backend.app.db.repository import repository
+    phone = inbound.user_phone_or_id
+    clean_phone = phone.strip().lstrip("+")
+    is_whitelisted = (
+        "*" in settings.WHATSAPP_AUTHORIZED_NUMBERS or
+        clean_phone in settings.WHATSAPP_AUTHORIZED_NUMBERS or
+        phone in settings.WHATSAPP_AUTHORIZED_NUMBERS
+    )
+    if not is_whitelisted:
+        return {"status": "dropped", "reason": "unauthorized_phone_whitelist"}
+
+    # 2. Registration / Onboarding Gate
+    if settings.WHATSAPP_REQUIRE_REGISTRATION:
+        is_registered = await repository.is_user_registered(clean_phone)
+        if not is_registered:
+            onboarding_url = f"{settings.APP_WEB_URL}/connect?phone={clean_phone}"
+            onboarding_msg = (
+                f"👋 Welcome to *FastAgent*!\n\n"
+                f"Your phone number (+{clean_phone}) is not yet connected.\n\n"
+                f"🔗 Click here to link your Google Calendar, Email, and Desktop apps:\n"
+                f"{onboarding_url}\n\n"
+                f"Once connected, you can manage your daily schedule, emails, and workstation instantly from here."
+            )
+            await outbound_channel.send_text(phone, onboarding_msg)
+            return {
+                "status": "onboarding_prompt_sent",
+                "phone": clean_phone,
+                "reason": "new_unregistered_user"
+            }
 
     # Process message through FastAgent 4-stage cascade with message_id for deduplication
     res = await cascade_orchestrator.handle_message(
@@ -43,6 +77,7 @@ async def receive_evolution_webhook(
         inbound_message_id=inbound.message_id
     )
 
+
     return {
         "status": "processed",
         "request_id": res.request_id,
@@ -50,3 +85,37 @@ async def receive_evolution_webhook(
         "result_status": res.status,
         "response_text": res.response_text
     }
+
+
+class WhatsAppGatewayMessage(BaseModel):
+    from_phone: str = Field(..., alias="from")
+    text: str
+    channel: Optional[str] = "whatsapp"
+    idempotency_key: Optional[str] = None
+
+
+@router.post("/whatsapp")
+async def receive_whatsapp_gateway_message(payload: WhatsAppGatewayMessage):
+    """Direct webhook endpoint for FastAgent WhatsApp bot gateway (Baileys)."""
+    clean_phone = payload.from_phone.strip().lstrip("+")
+    if not clean_phone:
+        raise HTTPException(status_code=400, detail="Invalid phone number.")
+
+    res = await cascade_orchestrator.handle_message(
+        user_id=clean_phone,
+        message_text=payload.text,
+        source_is_third_party=False,
+        inbound_message_id=payload.idempotency_key
+    )
+
+    return {
+        "status": "processed",
+        "reply": res.response_text,
+        "text": res.response_text,
+        "message": res.response_text,
+        "intent": res.intent,
+        "result_status": res.status,
+        "request_id": res.request_id,
+        "stage_latencies_ms": res.stage_latencies_ms
+    }
+

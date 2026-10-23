@@ -47,3 +47,18 @@ Return ONLY valid JSON matching the schema. No markdown backticks, no conversati
             return ExtractionResult(success=True, arguments=data, raw_response=text)
         except Exception as e:
             return ExtractionResult(success=False, arguments={}, error=str(e))
+
+    async def generate_response(
+        self,
+        system_prompt: str,
+        user_message: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> str:
+        if not self.model:
+            return f"Skill triggered, but Gemini API key is not configured.\n\nInput: {user_message}"
+        full_prompt = f"{system_prompt}\n\nUser Message:\n{user_message}"
+        try:
+            response = self.model.generate_content(full_prompt)
+            return response.text.strip()
+        except Exception as e:
+            return f"Error executing skill with Gemini: {str(e)}"

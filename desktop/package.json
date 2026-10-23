@@ -1,0 +1,26 @@
+{
+  "name": "fastagent-desktop",
+  "version": "1.0.0",
+  "description": "FastAgent Desktop Executor Widget with Status Overlay and Kill-Switch",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "electron:dev": "concurrently \"vite\" \"electron .\"",
+    "build:exe": "npm run build && electron-builder --win",
+    "build:sidecar": "pyinstaller --onefile --name FastAgentSidecar sidecar/runner.py"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "^0.344.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "electron": "^30.0.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}

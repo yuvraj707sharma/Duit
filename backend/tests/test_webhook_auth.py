@@ -92,3 +92,20 @@ def test_webhook_accepts_valid_individual_jid():
     inbound = channel.parse_webhook_payload(payload, {})
     assert inbound is not None
     assert inbound.user_phone_or_id == "919876543210"
+
+
+def test_whatsapp_gateway_webhook_success():
+    client = TestClient(app)
+    payload = {
+        "from": "919876543210",
+        "text": "What meetings do I have tomorrow?",
+        "channel": "whatsapp",
+        "idempotency_key": "test_key_123"
+    }
+    res = client.post("/api/webhooks/whatsapp", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "processed"
+    assert "reply" in data
+    assert data["reply"] is not None
+

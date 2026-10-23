@@ -13,6 +13,13 @@
     "summarize_email",
     "send_email",
     "book_something",
+    "open_app",
+    "open_url",
+    "create_note",
+    "type_text",
+    "set_volume",
+    "search_files",
+    "clear_history",
     "other"
   ]
 }

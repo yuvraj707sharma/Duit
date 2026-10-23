@@ -98,6 +98,68 @@
         "query": { "type": "string" },
         "max_results": { "type": "integer", "default": 5 }
       }
+    },
+    "OpenApp": {
+      "type": "object",
+      "required": ["idempotency_key", "app_name"],
+      "properties": {
+        "idempotency_key": { "type": "string" },
+        "app_name": {
+          "type": "string",
+          "enum": ["notepad", "calculator", "terminal", "code", "browser", "slack", "spotify", "files"]
+        }
+      }
+    },
+    "OpenUrl": {
+      "type": "object",
+      "required": ["idempotency_key", "url"],
+      "properties": {
+        "idempotency_key": { "type": "string" },
+        "url": {
+          "type": "string",
+          "pattern": "^https?://"
+        }
+      }
+    },
+    "CreateNote": {
+      "type": "object",
+      "required": ["idempotency_key", "title", "content"],
+      "properties": {
+        "idempotency_key": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" }
+      }
+    },
+    "TypeText": {
+      "type": "object",
+      "required": ["idempotency_key", "text"],
+      "properties": {
+        "idempotency_key": { "type": "string" },
+        "text": { "type": "string" }
+      }
+    },
+    "SetVolume": {
+      "type": "object",
+      "required": ["idempotency_key", "level"],
+      "properties": {
+        "idempotency_key": { "type": "string" },
+        "level": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "SearchFiles": {
+      "type": "object",
+      "required": ["query"],
+      "properties": {
+        "query": { "type": "string" },
+        "directory": { "type": "string" }
+      }
+    },
+    "ClearHistory": {
+      "type": "object",
+      "required": ["idempotency_key"],
+      "properties": {
+        "idempotency_key": { "type": "string" }
+      }
     }
   }
 }

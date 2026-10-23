@@ -1,0 +1,40 @@
+:root {
+  --bg-widget: rgba(15, 23, 42, 0.94);
+  --border-color: rgba(51, 65, 85, 0.8);
+  --accent-red: #ef4444;
+  --accent-red-hover: #dc2626;
+  --accent-blue: #3b82f6;
+  --accent-green: #10b981;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --font: 'Plus Jakarta Sans', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font);
+}
+
+body {
+  background: transparent;
+  color: var(--text-main);
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
+
+.drag-handle {
+  -webkit-app-region: drag;
+}
+
+/* Animations */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.pulsing-mic {
+  animation: pulseGlow 1.2s infinite ease-in-out;
+}

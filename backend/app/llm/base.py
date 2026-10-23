@@ -23,3 +23,12 @@ class LLMProvider(ABC):
     ) -> ExtractionResult:
         """Extracts structured tool arguments conforming to the JSON schema."""
         pass
+
+    async def generate_response(
+        self,
+        system_prompt: str,
+        user_message: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """Generates conversational or task-specific response based on prompt."""
+        return f"Processed request according to skill instructions:\n{user_message}"

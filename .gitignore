@@ -61,3 +61,10 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 .cache/
+storage/
+**/storage/
+auth_info_baileys/
+auth_bot/
+auth_director/
+whatsapp/evolution-go/evolution-go
+*.exe

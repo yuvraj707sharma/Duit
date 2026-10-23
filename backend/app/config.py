@@ -47,12 +47,20 @@ class Settings(BaseSettings):
     EVOLUTION_GLOBAL_API_KEY: str = "evolution_dev_api_key_12345"
     EVOLUTION_INSTANCE_NAME: str = "fastagent-primary"
     EVOLUTION_WEBHOOK_SECRET: str = "webhook_secret_key_fastagent_2026"
+    WHATSAPP_REQUIRE_REGISTRATION: bool = False  # Set True for strict pilot/production registration gate
+    WHATSAPP_AUTHORIZED_NUMBERS: List[str] = ["*"]  # List of allowed phone numbers or ["*"] for public self-registration
+    APP_WEB_URL: str = "http://localhost:5173"
+
 
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/auth/google/callback"
     USE_MOCK_TOOLS: bool = False
+
+    # Desktop Executor
+    DESKTOP_SHARED_SECRET: str = "fastagent_desktop_secret_2026_dev"
+    DESKTOP_HEARTBEAT_TIMEOUT_SECONDS: float = 30.0
 
 
 settings = Settings()
