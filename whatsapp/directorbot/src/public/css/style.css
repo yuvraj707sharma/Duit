@@ -7,7 +7,7 @@
   --border-color: #cbd5e1;
   --border-light: #e2e8f0;
   
-  /* Text: Deep Black Times New Roman */
+  /* Text: Clean Deep Black */
   --text-main: #000000;
   --text-muted: #1e293b;
   --text-sub: #334155;
@@ -31,16 +31,16 @@
   --glow-indigo: rgba(29, 78, 216, 0.15);
   --glass-bg: rgba(255, 255, 255, 0.95);
 
-  --font-sans: 'Times New Roman', Times, serif;
-  --font-serif: 'Times New Roman', Times, serif;
-  --font-mono: 'Times New Roman', Times, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Times New Roman', Times, serif !important;
+  font-family: var(--font-sans);
 }
 
 body.dark-theme,
@@ -48,7 +48,7 @@ body.light-theme,
 body {
   background-color: var(--bg-dark);
   color: var(--text-main);
-  font-family: 'Times New Roman', Times, serif;
+  font-family: var(--font-sans);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -197,7 +197,7 @@ body {
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-main);
-  font-family: 'Times New Roman', Times, serif;
+  font-family: var(--font-sans);
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
@@ -688,7 +688,7 @@ body {
   border-radius: 6px;
   border: 1px solid transparent;
   cursor: pointer;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: var(--font-sans);
   transition: all 0.2s;
   text-decoration: none;
 }
@@ -793,7 +793,7 @@ body {
   color: var(--text-main);
   padding: 10px 14px;
   border-radius: 6px;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: var(--font-sans);
   font-size: 0.95rem;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;

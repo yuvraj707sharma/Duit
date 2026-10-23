@@ -676,7 +676,7 @@ window.loadSkillsTable = async function() {
           </td>
           <td>${keywords}</td>
           <td>
-            <div style="font-size:12px; color:#1e293b; max-height:60px; overflow-y:auto; background:#f8fafc; padding:6px; border:1px solid #e2e8f0; border-radius:4px; font-family:'Times New Roman', serif;">
+            <div style="font-size:12px; color:#1e293b; max-height:60px; overflow-y:auto; background:#f8fafc; padding:6px; border:1px solid #e2e8f0; border-radius:4px; font-family:inherit;">
               ${promptSnippet}
             </div>
           </td>
