@@ -48,6 +48,14 @@ class HardRulesEngine:
                 reason="greeting"
             )
 
+        # 3.5. Google Connect Command
+        if cleaned in ("connect google", "connect to google", "link google", "link to google", "google connect", "link my google", "connect my google"):
+            return RuleResult(
+                matched=True,
+                direct_response="🔗 *Link your Google Account:*\nPlease tap the authentication link sent to you on WhatsApp or type *'connect google'* to authorize your Google Calendar and Gmail.",
+                reason="google_connect"
+            )
+
         # 4. Dangerous System / Shell Injection Blocklist
         injection_patterns = [
             r"rm\s+-rf",

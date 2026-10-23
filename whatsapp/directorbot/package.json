@@ -14,6 +14,7 @@
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
     "googleapis": "^182.0.0",
+    "localtunnel": "^2.0.2",
     "mysql2": "^3.24.4",
     "pdfkit": "^0.20.2",
     "pino": "^10.3.1",

@@ -246,9 +246,23 @@ async function handleFastAgentMessage(jid, phone, text) {
     const lower = trimmedText.toLowerCase();
 
     // Re-connect Google
-    if (lower === 'connect google' || lower === 'link google' || lower === 'google connect') {
+    const isGoogleConnect =
+      lower === 'google' ||
+      lower === 'connect google' ||
+      lower === 'connect to google' ||
+      lower === 'link google' ||
+      lower === 'link to google' ||
+      lower === 'link my google' ||
+      lower === 'connect my google' ||
+      lower === 'google connect' ||
+      lower === 'google link' ||
+      lower === 'google login' ||
+      lower === 'login google' ||
+      (lower.includes('google') && (lower.includes('connect') || lower.includes('link') || lower.includes('auth') || lower.includes('login') || lower.includes('account')));
+
+    if (isGoogleConnect) {
       const authLink = generateAuthLink(cleanPhone);
-      await sendMessage(jid, `🔗 Tap below to connect your Google account:\n\n${authLink}`);
+      await sendMessage(jid, `🔗 *Link your Google Account with ZORO:*\n\nTap below to connect your Google Calendar & Gmail:\n\n${authLink}\n\n_Once connected, you can schedule meetings, check calendar, and manage emails live!_`);
       return;
     }
 

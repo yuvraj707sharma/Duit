@@ -41,7 +41,8 @@ def build_confirmation_prompt(intent: str, args: Dict[str, Any]) -> str:
         return (
             f"Send email to *{recipient}*?\n"
             f"• *Subject:* {subject}\n"
-            f"• *Body:*\n{body}"
+            f"• *Body:*\n{body}\n\n"
+            f"_Reply *yes* to send, or *no* to cancel._"
         )
     elif intent == "schedule_meeting":
         title = args.get("title", "Meeting")
@@ -54,7 +55,8 @@ def build_confirmation_prompt(intent: str, args: Dict[str, Any]) -> str:
             f"Schedule meeting *'{title}'*?\n"
             f"• *Time:* {time_str}\n"
             f"• *Attendees:* {attendees}\n"
-            f"• *Description:* {desc}"
+            f"• *Description:* {desc}\n\n"
+            f"_Reply *yes* to confirm & sync to Google Calendar, or *no* to cancel._"
         )
     elif intent == "reschedule_meeting":
         event_id = args.get("event_id", "meeting")

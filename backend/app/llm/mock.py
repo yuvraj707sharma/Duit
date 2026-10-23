@@ -1,7 +1,95 @@
-"""Mock LLM Provider for deterministic argument extraction in tests and offline development."""
 import re
-from typing import Dict, Any, Optional
+from datetime import datetime, timedelta, time
+from typing import Dict, Any, Optional, List
 from backend.app.llm.base import LLMProvider, ExtractionResult
+
+
+def _parse_meeting_details(user_message: str) -> Dict[str, Any]:
+    msg_lower = user_message.lower()
+    now = datetime.now()
+
+    # 1. Attendees & Person extraction
+    emails = re.findall(r"[\w\.-]+@[\w\.-]+", user_message)
+    attendees: List[str] = list(emails)
+
+    person_match = re.search(r"\b(?:with|and|of mine with)\s+([A-Za-z]+)", user_message, re.IGNORECASE)
+    person = person_match.group(1).strip() if person_match else ""
+    stop_words = {"me", "mine", "us", "him", "her", "them", "the", "a", "an", "my", "our", "tomorrow", "today", "yesterday", "team", "google"}
+    if person.lower() in stop_words:
+        person = ""
+
+    if person:
+        person_email = f"{person.lower()}@gmail.com"
+        if person_email not in attendees and not emails:
+            attendees.append(person_email)
+        title = f"Meeting with {person.title()}"
+    elif "sync" in msg_lower:
+        title = "Team Sync"
+    elif "standup" in msg_lower:
+        title = "Daily Standup"
+    elif "catchup" in msg_lower or "catch up" in msg_lower:
+        title = "Catch-up Meeting"
+    else:
+        title = "Discussion Meeting"
+
+    # 2. Date parsing
+    target_date = now.date()
+    if "day after tomorrow" in msg_lower or "parso" in msg_lower:
+        target_date = now.date() + timedelta(days=2)
+    elif "tomorrow" in msg_lower or "kal" in msg_lower:
+        target_date = now.date() + timedelta(days=1)
+    elif "today" in msg_lower or "aaj" in msg_lower:
+        target_date = now.date()
+    else:
+        weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        matched_day = None
+        for i, w in enumerate(weekdays):
+            if w in msg_lower:
+                matched_day = i
+                break
+        if matched_day is not None:
+            days_ahead = (matched_day - now.weekday() + 7) % 7
+            if days_ahead == 0:
+                days_ahead = 7
+            target_date = now.date() + timedelta(days=days_ahead)
+        elif now.hour >= 18:
+            target_date = now.date() + timedelta(days=1)
+
+    # 3. Time parsing
+    hour = 16  # Default 4 PM
+    minute = 0
+    time_match = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", msg_lower)
+    if time_match:
+        hour = int(time_match.group(1))
+        minute = int(time_match.group(2)) if time_match.group(2) else 0
+        meridiem = time_match.group(3).lower()
+        if meridiem == "pm" and hour < 12:
+            hour += 12
+        elif meridiem == "am" and hour == 12:
+            hour = 0
+    else:
+        time_match_2 = re.search(r"\bat\s+(\d{1,2})(?::(\d{2}))?\b", msg_lower)
+        if time_match_2:
+            hour = int(time_match_2.group(1))
+            minute = int(time_match_2.group(2)) if time_match_2.group(2) else 0
+            if hour <= 6:
+                hour += 12
+        else:
+            time_match_3 = re.search(r"\b(\d{1,2})\s*baje\b", msg_lower)
+            if time_match_3:
+                hour = int(time_match_3.group(1))
+                if hour <= 6:
+                    hour += 12
+
+    start_dt = datetime(target_date.year, target_date.month, target_date.day, hour, minute)
+    end_dt = start_dt + timedelta(hours=1)
+
+    return {
+        "title": title,
+        "start_time": start_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "end_time": end_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "attendees": attendees
+    }
 
 
 class MockLLMProvider(LLMProvider):
@@ -16,17 +104,13 @@ class MockLLMProvider(LLMProvider):
         args: Dict[str, Any] = {}
 
         if intent in ("schedule_meeting", "create_calendar_event"):
-            args = {
-                "title": "Discussion Meeting",
-                "start_time": "2026-10-02T10:00:00Z",
-                "end_time": "2026-10-02T11:00:00Z",
-                "attendees": ["rahul@example.com"] if "rahul" in msg_lower else []
-            }
+            args = _parse_meeting_details(user_message)
         elif intent in ("reschedule_meeting", "reschedule_calendar_event"):
+            details = _parse_meeting_details(user_message)
             args = {
                 "event_id": "mock_event_sync_101",
-                "new_start_time": "2026-10-02T16:00:00Z",
-                "new_end_time": "2026-10-02T17:00:00Z"
+                "new_start_time": details["start_time"],
+                "new_end_time": details["end_time"]
             }
         elif intent in ("cancel_meeting", "cancel_calendar_event"):
             args = {

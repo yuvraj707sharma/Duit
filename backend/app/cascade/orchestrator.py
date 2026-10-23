@@ -537,7 +537,23 @@ class CascadeOrchestrator:
 
         if decision == "approve":
             tool_res = await self._execute_tool(user_id, rec["intent"], rec["arguments"])
-            msg = f"Action confirmed and completed."
+            title = rec["arguments"].get("title", "Meeting")
+            start = rec["arguments"].get("start_time", "")
+            end = rec["arguments"].get("end_time", "")
+            time_part = f"{start} to {end}" if end else start
+
+            if rec["intent"] in ("schedule_meeting", "create_calendar_event"):
+                msg = f"✅ *Action confirmed & scheduled!*\n\n📅 *{title}*\n⏰ *Time:* {time_part}"
+                if tool_res.data and tool_res.data.get("html_link"):
+                    msg += f"\n🔗 Calendar Link: {tool_res.data.get('html_link')}"
+                else:
+                    msg += f"\n📍 Added to your Google Calendar."
+            elif rec["intent"] in ("send_email", "reply_email"):
+                recip = rec["arguments"].get("recipient", "")
+                subj = rec["arguments"].get("subject", "")
+                msg = f"✅ *Action confirmed & email sent!*\n\n✉️ *To:* {recip}\n📌 *Subject:* {subj}"
+            else:
+                msg = f"Action confirmed and completed."
             await self.messaging_channel.send_text(user_id, msg)
             return {"status": "approved", "message": msg, "tool_result": tool_res.data}
         else:
