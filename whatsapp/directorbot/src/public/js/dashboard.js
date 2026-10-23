@@ -474,8 +474,8 @@ async function loadActivityLogs() {
       return `
         <div class="activity-item" style="padding: 8px 12px; border-bottom: 1px solid var(--border-color); font-size:12px;">
           <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-            <strong style="color:#1d4ed8;">${escapeHtml(log.category || 'SYSTEM')}</strong>
-            <span style="color:#64748b;">${timeStr}</span>
+            <strong style="color:#facc15;">${escapeHtml(log.category || 'SYSTEM')}</strong>
+            <span style="color:#71717a;">${timeStr}</span>
           </div>
           <div style="color:var(--text-main); word-break:break-word;">${escapeHtml(log.message || '')}</div>
         </div>
@@ -503,7 +503,7 @@ async function loadActivityLogsTable() {
       return `
         <tr>
           <td style="font-size:12px; color:var(--text-sub); white-space:nowrap;">${time}</td>
-          <td><strong style="color:#1d4ed8;">${escapeHtml(l.category)}</strong></td>
+          <td><strong style="color:#facc15;">${escapeHtml(l.category)}</strong></td>
           <td><span style="${levelClass} font-weight:700;">${l.level}</span></td>
           <td style="word-break:break-word;">${escapeHtml(l.message)}</td>
         </tr>
@@ -657,26 +657,26 @@ window.loadSkillsTable = async function() {
     tbody.innerHTML = skills.map(s => {
       const isGlobal = s.user_phone === 'GLOBAL';
       const scopeBadge = isGlobal
-        ? `<span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:600;">Global</span>`
-        : `<span class="badge" style="background:#fef9c3; color:#854d0e; border:1px solid #fef08a; font-weight:600;">User: +${escapeHtml(s.user_phone)}</span>`;
+        ? `<span class="badge" style="background:rgba(250,204,21,0.15); color:#facc15; border:1px solid #facc15; font-weight:700;">Global</span>`
+        : `<span class="badge" style="background:rgba(234,179,8,0.2); color:#fef08a; border:1px solid #ca8a04; font-weight:700;">User: +${escapeHtml(s.user_phone)}</span>`;
       
-      const keywords = s.trigger_keywords ? s.trigger_keywords.split(',').map(k => `<span class="badge" style="background:#f1f5f9; color:#000000; border:1px solid #cbd5e1; margin:2px;">${escapeHtml(k.trim())}</span>`).join(' ') : '<em style="color:#64748b;">Any topic</em>';
+      const keywords = s.trigger_keywords ? s.trigger_keywords.split(',').map(k => `<span class="badge" style="background:#18181b; color:#facc15; border:1px solid #27272a; margin:2px;">${escapeHtml(k.trim())}</span>`).join(' ') : '<em style="color:#71717a;">Any topic</em>';
       
       const promptSnippet = escapeHtml(s.system_prompt || '');
-      const webhook = s.webhook_url ? `<a href="${escapeHtml(s.webhook_url)}" target="_blank" style="color:#1d4ed8; text-decoration:underline; font-size:12px;">Endpoint</a>` : '<span style="color:#94a3b8; font-size:12px;">None (Native LLM)</span>';
+      const webhook = s.webhook_url ? `<a href="${escapeHtml(s.webhook_url)}" target="_blank" style="color:#facc15; text-decoration:underline; font-size:12px;">Endpoint</a>` : '<span style="color:#71717a; font-size:12px;">None (Native LLM)</span>';
 
       return `
         <tr>
           <td>
-            <div style="font-weight:600; font-size:14px; color:#000000; display:flex; align-items:center; gap:8px;">
+            <div style="font-weight:700; font-size:14px; color:#ffffff; display:flex; align-items:center; gap:8px;">
               ${escapeHtml(s.name)}
               ${scopeBadge}
             </div>
-            <div style="font-size:12px; color:#475569; margin-top:3px;">${escapeHtml(s.description || '')}</div>
+            <div style="font-size:12px; color:#a1a1aa; margin-top:3px;">${escapeHtml(s.description || '')}</div>
           </td>
           <td>${keywords}</td>
           <td>
-            <div style="font-size:12px; color:#1e293b; max-height:60px; overflow-y:auto; background:#f8fafc; padding:6px; border:1px solid #e2e8f0; border-radius:4px; font-family:inherit;">
+            <div style="font-size:12px; color:#f4f4f5; max-height:60px; overflow-y:auto; background:#000000; padding:6px; border:1px solid #27272a; border-radius:4px; font-family:inherit;">
               ${promptSnippet}
             </div>
           </td>
