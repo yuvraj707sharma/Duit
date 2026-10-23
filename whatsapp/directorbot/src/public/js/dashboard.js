@@ -741,3 +741,61 @@ window.handleDeleteSkill = async function(skillId) {
     showToast('Network error: ' + err.message, 'error');
   }
 };
+
+const LIBRARY_TEMPLATES = {
+  pdf_generator: {
+    name: 'PDF & Report Generator',
+    trigger_keywords: 'pdf, export pdf, generate report, meeting pdf',
+    description: 'Compiles meeting minutes, schedules, and analytics into downloadable PDF reports.',
+    system_prompt: 'You are an executive document assistant. Summarize requested records into clean, structured Markdown ready for PDF compilation.'
+  },
+  web_researcher: {
+    name: 'Web Research & Intelligence',
+    trigger_keywords: 'research, google search, find info, search web',
+    description: 'Automates live fact-checking, flight lookups, and company background research.',
+    system_prompt: 'You are an executive research analyst. Provide concise, bulleted insights, verified facts, and direct answers without fluff.'
+  },
+  cron_scheduler: {
+    name: 'Recurring Automation & Reminders',
+    trigger_keywords: 'remind me daily, recurring, every day, briefing',
+    description: 'Sets up daily briefings, recurring reminders, and automated health checks.',
+    system_prompt: 'You are an automated scheduling bot. Formulate recurring daily or weekly reminders with exact times and clear summary checkpoints.'
+  },
+  code_auditor: {
+    name: 'Desktop Code Auditor',
+    trigger_keywords: 'review code, audit, inspect git, check diff',
+    description: 'Reviews code snippets, inspects git diffs, and flags security flaws or syntax bugs.',
+    system_prompt: 'You are a Senior Principal Software Engineer. Review the supplied code for bugs, race conditions, security flaws, and performance optimizations.'
+  },
+  sql_analyst: {
+    name: 'Database & SQL Analyst',
+    trigger_keywords: 'sql, query database, database stats, db count',
+    description: 'Runs read-only queries, generates SQL reports, and explains database metrics.',
+    system_prompt: 'You are a database engineer. Generate safe, read-only SELECT queries and format the query results in clean Markdown tables.'
+  }
+};
+
+window.installLibrarySkill = async function(templateKey) {
+  const tpl = LIBRARY_TEMPLATES[templateKey];
+  if (!tpl) return;
+  try {
+    const res = await fetch('/api/skills', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...tpl,
+        user_phone: 'GLOBAL'
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(`Skill "${tpl.name}" installed from library!`);
+      loadSkillsTable();
+    } else {
+      showToast(data.error || 'Failed to install skill', 'error');
+    }
+  } catch (err) {
+    showToast('Network error: ' + err.message, 'error');
+  }
+};
+

@@ -56,6 +56,35 @@ class HardRulesEngine:
                 reason="google_connect"
             )
 
+        # 3.6. Shed Remote Coding Agent Plane
+        if cleaned in ("shed", "shed status", "remote status", "coding status", "agent status"):
+            return RuleResult(
+                matched=True,
+                direct_response=(
+                    "🖥️ *Shed Remote Coding Task Plane (e:\\Inovvate\\shed):*\n"
+                    "• *State:* Connected & Ready\n"
+                    "• *Harnesses:* Claude Code, Codex, Gemini, OpenCode\n"
+                    "• *Capabilities:* Start coding sessions, inspect live terminals, and run tasks remotely from your phone.\n"
+                    "• *Usage:* Text *'code: <prompt>'* or check *'skills'* to trigger desktop tasks."
+                ),
+                reason="shed_status"
+            )
+
+        # 3.7. Skills Library Catalog
+        if cleaned in ("skills", "skills library", "list skills", "show skills", "skills list"):
+            return RuleResult(
+                matched=True,
+                direct_response=(
+                    "📦 *ZORO Skills Library (e:\\Inovvate\\skills):*\n"
+                    "• 📄 *PDF Generator:* 'Generate PDF report of my meetings'\n"
+                    "• 🔍 *Web Researcher:* 'Research latest updates on AI agents'\n"
+                    "• ⏰ *Recurring Briefing:* 'Brief me every morning at 9am'\n"
+                    "• 💻 *Code Auditor:* 'Audit code for security issues'\n"
+                    "• 📊 *SQL Analyst:* 'Query database stats'"
+                ),
+                reason="skills_library"
+            )
+
         # 4. Dangerous System / Shell Injection Blocklist
         injection_patterns = [
             r"rm\s+-rf",

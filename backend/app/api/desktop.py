@@ -129,3 +129,35 @@ async def transcribe_voice_action(
         } if cascade_result else None
     }
 
+
+class ShedTaskRequest(BaseModel):
+    prompt: str
+    harness: Optional[str] = "auto"
+    session_id: Optional[str] = None
+
+
+@router.get("/shed/status")
+async def get_shed_status():
+    """Returns remote access status for Shed coding task plane."""
+    from backend.app.desktop.shed_bridge import shed_bridge
+    return await shed_bridge.get_status()
+
+
+@router.get("/shed/sessions")
+async def get_shed_sessions():
+    """Lists running and recent sessions in Claude, Codex, Gemini, OpenCode via Shed."""
+    from backend.app.desktop.shed_bridge import shed_bridge
+    return await shed_bridge.list_sessions()
+
+
+@router.post("/shed/task")
+async def dispatch_shed_task(payload: ShedTaskRequest):
+    """Dispatches a coding task to Shed."""
+    from backend.app.desktop.shed_bridge import shed_bridge
+    return await shed_bridge.dispatch_task(
+        prompt=payload.prompt,
+        harness=payload.harness or "auto",
+        session_id=payload.session_id
+    )
+
+

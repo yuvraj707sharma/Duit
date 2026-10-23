@@ -50,3 +50,35 @@ async def delete_skill(skill_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Skill not found")
     return {"status": "success", "message": f"Skill {skill_id} deleted"}
+
+
+@router.get("/library", response_model=List[Dict[str, Any]])
+async def get_skills_library():
+    """Returns curated skills from the @hasna/skills library."""
+    from backend.app.desktop.skills_library import skills_library
+    return skills_library.get_catalog()
+
+
+class InstallLibrarySkillRequest(BaseModel):
+    skill_id: str
+    user_id: Optional[str] = "GLOBAL"
+
+
+@router.post("/library/install")
+async def install_library_skill(req: InstallLibrarySkillRequest):
+    """Installs/activates a skill from the library into the active pool."""
+    from backend.app.desktop.skills_library import skills_library
+    template = skills_library.get_skill(req.skill_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Skill not found in library")
+
+    skill = await repository.add_skill(
+        name=template["name"],
+        system_prompt=template["system_prompt"],
+        user_id=req.user_id or "GLOBAL",
+        description=template["description"],
+        trigger_keywords=template["trigger_keywords"],
+        slug=template["slug"]
+    )
+    return {"status": "success", "skill": skill}
+

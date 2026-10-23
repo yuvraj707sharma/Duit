@@ -362,9 +362,118 @@
               </table>
             </div>
           </div>
+        <!-- Pre-built Skills Library Cards (@e:\Inovvate\skills) -->
+        <div class="panel" style="margin-bottom: 24px;">
+          <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="panel-title">📦 Skills Library Catalog (@hasna/skills)</div>
+            <span class="badge" style="background:rgba(250,204,21,0.15); color:#facc15; border:1px solid #facc15;">5 Built-in Packs</span>
+          </div>
+          <div class="panel-body">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+              
+              <!-- Card 1: PDF Generator -->
+              <div style="background:#18181b; border:1px solid #27272a; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span style="font-size:20px;">📄</span>
+                    <strong style="color:#ffffff; font-size:14px;">PDF & Report Generator</strong>
+                  </div>
+                  <p style="font-size:12px; color:#a1a1aa; margin:0 0 12px 0; line-height:1.4;">
+                    Compiles meeting minutes, schedules, and analytics into structured PDF reports.
+                  </p>
+                  <span class="badge" style="background:#09090b; color:#facc15; border:1px solid #27272a; font-size:11px;">Triggers: pdf, report</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="margin-top:12px; width:100%; border-color:#facc15; color:#facc15;" onclick="installLibrarySkill('pdf_generator')">⚡ Quick Deploy</button>
+              </div>
+
+              <!-- Card 2: Web Researcher -->
+              <div style="background:#18181b; border:1px solid #27272a; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span style="font-size:20px;">🔍</span>
+                    <strong style="color:#ffffff; font-size:14px;">Web Research & Intel</strong>
+                  </div>
+                  <p style="font-size:12px; color:#a1a1aa; margin:0 0 12px 0; line-height:1.4;">
+                    Automates live fact-checking, flight lookups, and company intelligence.
+                  </p>
+                  <span class="badge" style="background:#09090b; color:#facc15; border:1px solid #27272a; font-size:11px;">Triggers: research, search</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="margin-top:12px; width:100%; border-color:#facc15; color:#facc15;" onclick="installLibrarySkill('web_researcher')">⚡ Quick Deploy</button>
+              </div>
+
+              <!-- Card 3: Cron Scheduler -->
+              <div style="background:#18181b; border:1px solid #27272a; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span style="font-size:20px;">⏰</span>
+                    <strong style="color:#ffffff; font-size:14px;">Recurring Automation</strong>
+                  </div>
+                  <p style="font-size:12px; color:#a1a1aa; margin:0 0 12px 0; line-height:1.4;">
+                    Sets up daily morning briefings, recurring reminders, and automated health checks.
+                  </p>
+                  <span class="badge" style="background:#09090b; color:#facc15; border:1px solid #27272a; font-size:11px;">Triggers: daily, recurring</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="margin-top:12px; width:100%; border-color:#facc15; color:#facc15;" onclick="installLibrarySkill('cron_scheduler')">⚡ Quick Deploy</button>
+              </div>
+
+              <!-- Card 4: Code Auditor -->
+              <div style="background:#18181b; border:1px solid #27272a; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span style="font-size:20px;">💻</span>
+                    <strong style="color:#ffffff; font-size:14px;">Desktop Code Auditor</strong>
+                  </div>
+                  <p style="font-size:12px; color:#a1a1aa; margin:0 0 12px 0; line-height:1.4;">
+                    Reviews code snippets, inspects git diffs, and flags security flaws or syntax bugs.
+                  </p>
+                  <span class="badge" style="background:#09090b; color:#facc15; border:1px solid #27272a; font-size:11px;">Triggers: audit, git diff</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="margin-top:12px; width:100%; border-color:#facc15; color:#facc15;" onclick="installLibrarySkill('code_auditor')">⚡ Quick Deploy</button>
+              </div>
+
+              <!-- Card 5: SQL Analyst -->
+              <div style="background:#18181b; border:1px solid #27272a; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span style="font-size:20px;">📊</span>
+                    <strong style="color:#ffffff; font-size:14px;">Database & SQL Analyst</strong>
+                  </div>
+                  <p style="font-size:12px; color:#a1a1aa; margin:0 0 12px 0; line-height:1.4;">
+                    Runs read-only queries, generates SQL reports, and explains database metrics.
+                  </p>
+                  <span class="badge" style="background:#09090b; color:#facc15; border:1px solid #27272a; font-size:11px;">Triggers: sql, query db</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="margin-top:12px; width:100%; border-color:#facc15; color:#facc15;" onclick="installLibrarySkill('sql_analyst')">⚡ Quick Deploy</button>
+              </div>
+
+            </div>
+          </div>
         </div>
 
-        <!-- Add Custom Skill Card -->
+        <!-- Shed Remote Access Bridge Status Card -->
+        <div class="panel" style="margin-bottom: 24px; border: 1px solid rgba(250, 204, 21, 0.3);">
+          <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="panel-title">🖥️ Shed Remote Desktop Task Plane (e:\Inovvate\shed)</div>
+            <span class="badge badge-google">Integrated</span>
+          </div>
+          <div class="panel-body">
+            <p style="font-size:13px; color:#d4d4d8; margin:0 0 12px 0;">
+              Shed connects mobile WhatsApp users to local coding harnesses (Claude Code, Codex, Gemini, OpenCode) with Laya routing.
+            </p>
+            <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:12px;">
+              <div style="background:#18181b; padding:8px 14px; border-radius:8px; border:1px solid #27272a;">
+                <span style="color:#a1a1aa;">Shed URL:</span> <strong style="color:#facc15;">http://localhost:4378</strong>
+              </div>
+              <div style="background:#18181b; padding:8px 14px; border-radius:8px; border:1px solid #27272a;">
+                <span style="color:#a1a1aa;">Supported Harnesses:</span> <strong style="color:#ffffff;">Claude Code, Codex, Gemini, OpenCode</strong>
+              </div>
+              <div style="background:#18181b; padding:8px 14px; border-radius:8px; border:1px solid #27272a;">
+                <span style="color:#a1a1aa;">WhatsApp Command:</span> <code style="color:#facc15; background:#000; padding:2px 6px; border-radius:4px;">shed status</code> or <code style="color:#facc15; background:#000; padding:2px 6px; border-radius:4px;">code: &lt;task&gt;</code>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="panel" id="add-skill-card">
           <div class="panel-header">
             <div class="panel-title">Create / Deploy Custom AI Skill</div>

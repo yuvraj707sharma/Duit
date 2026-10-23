@@ -14,6 +14,8 @@ from backend.app.channels.base import MessagingChannel
 from backend.app.channels.mock import MockChannel
 from backend.app.tools.base import BaseTool, ToolResult
 from backend.app.tools.mock import MockCalendarTool, MockGmailTool
+from backend.app.tools.calendar import GoogleCalendarTool
+from backend.app.tools.gmail import GmailTool
 from backend.app.learning.log import learning_logger
 from backend.app.learning.thresholds import threshold_calibrator
 from backend.app.learning.retrieval import correction_retriever
@@ -48,8 +50,8 @@ class CascadeOrchestrator:
         self.decision_model = decision_model or MockDecisionModel()
         self.llm_provider = llm_provider or MockLLMProvider()
         self.messaging_channel = messaging_channel or MockChannel()
-        self.calendar_tool = calendar_tool or MockCalendarTool()
-        self.gmail_tool = gmail_tool or MockGmailTool()
+        self.calendar_tool = calendar_tool or GoogleCalendarTool()
+        self.gmail_tool = gmail_tool or GmailTool()
         self.repo = db_repo or repository
         self.policy_engine = policy_eng or policy_engine
 
@@ -537,6 +539,11 @@ class CascadeOrchestrator:
 
         if decision == "approve":
             tool_res = await self._execute_tool(user_id, rec["intent"], rec["arguments"])
+            if not tool_res.success:
+                msg = f"⚠️ Could not complete action:\n\n{tool_res.error or 'Tool execution failed'}"
+                await self.messaging_channel.send_text(user_id, msg)
+                return {"status": "failed", "message": msg, "error": tool_res.error}
+
             title = rec["arguments"].get("title", "Meeting")
             start = rec["arguments"].get("start_time", "")
             end = rec["arguments"].get("end_time", "")

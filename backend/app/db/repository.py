@@ -359,6 +359,40 @@ class DatabaseRepository:
             except Exception:
                 pass
 
+        # 3. Direct lookup in MySQL gateway database (Duit_wa.google_tokens)
+        if provider == "google":
+            try:
+                import pymysql
+                clean_phone = user_id.replace("+", "").strip()
+                conn = pymysql.connect(
+                    host="localhost",
+                    user="root",
+                    password="Mysqlserver469",
+                    database="Duit_wa",
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT phone, email, access_token, refresh_token, expiry_date FROM google_tokens WHERE phone = %s OR phone = %s LIMIT 1",
+                        (clean_phone, f"+{clean_phone}")
+                    )
+                    row = cur.fetchone()
+                    if row and (row.get("access_token") or row.get("refresh_token")):
+                        rec = {
+                            "user_id": user_id,
+                            "provider": "google",
+                            "access_token": row.get("access_token"),
+                            "refresh_token": row.get("refresh_token"),
+                            "expires_at": row.get("expiry_date"),
+                            "email": row.get("email")
+                        }
+                        self.tokens_store[user_id] = rec
+                        conn.close()
+                        return rec
+                conn.close()
+            except Exception:
+                pass
+
         return None
 
     async def list_skills(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:

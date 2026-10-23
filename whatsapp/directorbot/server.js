@@ -272,9 +272,30 @@ app.get('/auth/google/callback', async (req, res) => {
         'UPDATE fastagent_users SET google_connected = 1, google_email = ?, state = IF(state = \'ONBOARDING_AUTH\', \'ACTIVE\', state) WHERE phone = ?',
         [googleEmail, phone]
       );
+
+      // Sync tokens with FastAgent Python backend for immediate live tool execution
+      try {
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+        await fetch(`${backendUrl}/api/auth/save-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: phone,
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token || null,
+            expiry_date: tokens.expiry_date || null,
+            email: googleEmail,
+            provider: 'google'
+          })
+        });
+        console.log(`[Google OAuth] Synced tokens to FastAgent backend for user ${phone}`);
+      } catch (syncErr) {
+        console.error('[Google OAuth] Failed to sync token to FastAgent backend:', syncErr.message);
+      }
     }
 
     await logActivity('GOOGLE_AUTH', `Google OAuth success for phone=${phone || 'unknown'} email=${googleEmail}`, 'INFO');
+
 
     // Pretty success page
     res.send(`<!DOCTYPE html>

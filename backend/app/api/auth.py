@@ -88,3 +88,39 @@ async def google_oauth_callback(
         "message": "Google Account linked successfully. Tokens encrypted with AES-256-GCM."
     }
 
+
+from pydantic import BaseModel
+
+
+class SaveTokenRequest(BaseModel):
+    user_id: str
+    access_token: str
+    refresh_token: Optional[str] = None
+    expiry_date: Optional[int] = None
+    email: Optional[str] = None
+    provider: Optional[str] = "google"
+
+
+@router.post("/save-token")
+async def save_oauth_token(req: SaveTokenRequest):
+    """Direct ingestion endpoint for OAuth tokens obtained via gateway."""
+    user_id = req.user_id.strip().lstrip("+")
+    encrypted_access = encrypt_token(req.access_token, user_id=user_id)
+    encrypted_refresh = encrypt_token(req.refresh_token or "", user_id=user_id) if req.refresh_token else None
+
+    await repository.save_user_oauth_tokens(
+        user_id=user_id,
+        provider=req.provider or "google",
+        encrypted_access_token=encrypted_access,
+        encrypted_refresh_token=encrypted_refresh
+    )
+
+    # Store raw fallback in memory for fast access by Google Calendar & Gmail tools
+    if user_id in repository.tokens_store:
+        repository.tokens_store[user_id]["access_token"] = req.access_token
+        repository.tokens_store[user_id]["refresh_token"] = req.refresh_token
+        repository.tokens_store[user_id]["email"] = req.email
+
+    return {"status": "success", "user_id": user_id, "email": req.email}
+
+
