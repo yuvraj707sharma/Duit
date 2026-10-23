@@ -168,6 +168,16 @@ async function getDashboardRedirectUrl() {
   return '';
 }
 
+function getGoogleRedirectUri(req) {
+  const host = req.headers['x-forwarded-host'] || req.headers.host || '';
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    return `http://localhost:${process.env.PORT || 5122}/auth/google/callback`;
+  }
+  if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI;
+  const baseUrl = process.env.APP_PUBLIC_URL || `http://localhost:${process.env.PORT || 5122}`;
+  return `${baseUrl}/auth/google/callback`;
+}
+
 // --- Google OAuth2 Routes (Per-User, phone-keyed) ---
 // The /auth/google?user=<base64phone> route initiates OAuth for a specific WhatsApp user.
 app.get('/auth/google', async (req, res) => {
@@ -175,7 +185,7 @@ app.get('/auth/google', async (req, res) => {
     const { google } = await import('googleapis');
     const clientId = (await getSetting('GOOGLE_CLIENT_ID')) || process.env.GOOGLE_CLIENT_ID;
     const clientSecret = (await getSetting('GOOGLE_CLIENT_SECRET')) || process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${process.env.PORT || 5122}/auth/google/callback`;
+    const redirectUri = getGoogleRedirectUri(req);
 
     if (!clientId || !clientSecret) {
       return res.status(500).send('<h3>Google OAuth not configured.</h3><p>Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env</p>');
@@ -206,7 +216,6 @@ app.get('/auth/google', async (req, res) => {
 
 app.get('/auth/google/callback', async (req, res) => {
   const { code, error, state } = req.query;
-  const baseUrl = process.env.APP_PUBLIC_URL || `http://localhost:${process.env.PORT || 5122}`;
 
   if (error) {
     return res.send(`<h3>Auth failed: ${error}</h3><p>You can close this window and try again on WhatsApp.</p>`);
@@ -219,7 +228,7 @@ app.get('/auth/google/callback', async (req, res) => {
     const { google } = await import('googleapis');
     const clientId = (await getSetting('GOOGLE_CLIENT_ID')) || process.env.GOOGLE_CLIENT_ID;
     const clientSecret = (await getSetting('GOOGLE_CLIENT_SECRET')) || process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${baseUrl}/auth/google/callback`;
+    const redirectUri = getGoogleRedirectUri(req);
 
     const oAuth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
     const { tokens } = await oAuth2Client.getToken(code);
