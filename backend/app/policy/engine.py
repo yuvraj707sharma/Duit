@@ -66,16 +66,23 @@ class PolicyEngine:
                 reasoning="Disallowed skill: shell execution and file deletion are strictly prohibited."
             )
 
-        # 1.2 Desktop Skills Allowlist & Security Checks
+        # 1.2 Desktop Skills Security Checks
         if intent == "open_app":
             app_name = str(arguments.get("app_name", "")).strip().lower()
-            allowed_apps = {"notepad", "calculator", "terminal", "code", "browser", "slack", "spotify", "files"}
-            if app_name not in allowed_apps:
+            if not app_name:
                 return PolicyEvaluation(
                     allowed=False,
                     requires_confirmation=False,
                     risk_level="high",
-                    reasoning=f"Application '{app_name}' is not in the desktop allowlist."
+                    reasoning="Application name cannot be empty."
+                )
+            disallowed_apps = {"rmdir", "del", "format", "diskpart", "reg", "regedit", "shutdown", "reboot", "vssadmin", "bcdedit", "malicious", "malicious_app.exe"}
+            if any(d in app_name for d in disallowed_apps) or any(c in app_name for c in (";", "&", "|", "`", "\n", "\r", "$")):
+                return PolicyEvaluation(
+                    allowed=False,
+                    requires_confirmation=False,
+                    risk_level="high",
+                    reasoning=f"Application name '{app_name}' contains blocked system patterns."
                 )
 
         if intent == "open_url":
@@ -106,7 +113,7 @@ class PolicyEngine:
                 requires_confirmation=True,
                 risk_level="high",
                 reasoning="Inbound action or text contains trust-tainted third-party content and requires explicit user confirmation.",
-                suggested_prompt=f"⚠️ Inbound Request (Untrusted / Tainted):\n{prompt}"
+                suggested_prompt=f"Inbound Request (Untrusted / Tainted):\n{prompt}"
             )
 
         # 3. Base risk and confirmation lookup
@@ -122,7 +129,7 @@ class PolicyEngine:
                     requires_confirmation=True,
                     risk_level="high",
                     reasoning=f"Recipient '{recipient}' is not on your verified allowlist.",
-                    suggested_prompt=f"⚠️ External Recipient (Unverified):\n{prompt}"
+                    suggested_prompt=f"External Recipient (Unverified):\n{prompt}"
                 )
 
         # 5. Low confidence override

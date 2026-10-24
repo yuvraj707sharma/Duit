@@ -57,9 +57,9 @@ function emitStatus() {
 // ── User State Machine ───────────────────────────────────────────────────────
 // States: NEW | ONBOARDING_NAME | ONBOARDING_USE_CASE | ONBOARDING_AUTH | ACTIVE | BLOCKED
 const ONBOARDING_QUESTIONS = [
-  { field: 'name',     prompt: '👋 Welcome to *ZORO*! I\'m your personal AI assistant.\n\nTo get started, what\'s your name?' },
-  { field: 'use_case', prompt: '✨ Nice to meet you, {name}!\n\nHow do you plan to use ZORO? Pick a number:\n\n1️⃣  Personal productivity (calendar, emails, reminders)\n2️⃣  Business & work tasks\n3️⃣  Research & learning\n4️⃣  Just exploring\n\nReply with 1, 2, 3, or 4.' },
-  { field: 'google_auth', prompt: '🔗 Almost done! To unlock your Google Calendar & Gmail superpowers, tap the link below and sign in with Google:\n\n{auth_link}\n\n_(You can also skip this and use text-only features for now — reply "skip")_' }
+  { field: 'name',     prompt: 'Welcome to *ZORO*! I am your personal AI assistant.\n\nTo get started, what is your name?' },
+  { field: 'use_case', prompt: 'Nice to meet you, {name}!\n\nHow do you plan to use ZORO? Pick a number:\n\n1. Personal productivity (calendar, emails, reminders)\n2. Business & work tasks\n3. Research & learning\n4. Just exploring\n\nReply with 1, 2, 3, or 4.' },
+  { field: 'google_auth', prompt: 'Almost done! To unlock your Google Calendar & Gmail superpowers, tap the link below and sign in with Google:\n\n{auth_link}\n\n_(You can also skip this and use text-only features for now — reply "skip")_' }
 ];
 
 const USE_CASE_MAP = { '1': 'Personal productivity', '2': 'Business & work', '3': 'Research & learning', '4': 'Exploring' };
@@ -133,11 +133,21 @@ function generateAuthLink(phone) {
   return `${baseUrl}/auth/google?user=${encoded}`;
 }
 
+function stripEmojis(str) {
+  if (!str || typeof str !== 'string') return str;
+  return str
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2300}-\u{23FF}\u{2B50}\u{FE0F}\u{200D}]/gu, '')
+    .replace(/[⏳✅❌🤖📅✉️🤔💡🎉⚠️🗑️📊✨⚔️📍⏰📌🔗🙂👋👆🧩⚡]/g, '')
+    .replace(/  +/g, ' ')
+    .trim();
+}
+
 // ── Send WhatsApp Message ────────────────────────────────────────────────────
 async function sendMessage(jid, text) {
   try {
     if (!botSock) throw new Error('Bot socket not connected');
-    const sent = await botSock.sendMessage(jid, { text });
+    const cleanedText = stripEmojis(text);
+    const sent = await botSock.sendMessage(jid, { text: cleanedText });
     if (sent?.key && sent.message) {
       saveMessageToStore(sent.key, sent.message);
     }
@@ -220,7 +230,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     if (lower === 'skip' || lower === 'later' || lower === 'no') {
       await updateUser(cleanPhone, { state: 'ACTIVE' });
       await sendMessage(jid,
-        `✅ *You're all set, ${user.name || 'there'}!*\n\nYou can connect Google later by typing *"connect google"*.\n\n🤖 ZORO is ready. Just text me anything — I can help with tasks, questions, scheduling, and more!\n\nType *"help"* anytime to see what I can do.`
+        `*You are all set, ${user.name || 'there'}!*\n\nYou can connect Google later by typing *"connect google"*.\n\nZORO is ready. Just text me anything — I can help with tasks, questions, scheduling, and more!\n\nType *"help"* anytime to see what I can do.`
       );
     } else {
       // User might have already authenticated via the link and come back
@@ -229,12 +239,12 @@ async function handleFastAgentMessage(jid, phone, text) {
       if (tokenRow.length > 0) {
         await updateUser(cleanPhone, { state: 'ACTIVE', google_connected: 1 });
         await sendMessage(jid,
-          `🎉 *Google connected successfully, ${user.name || 'there'}!*\n\n✅ Calendar & Gmail are now live.\n🤖 ZORO is ready — text me anything!\n\nType *"help"* to see what I can do.`
+          `*Google connected successfully, ${user.name || 'there'}!*\n\nCalendar & Gmail are now live.\nZORO is ready — text me anything!\n\nType *"help"* to see what I can do.`
         );
       } else {
         const authLink = generateAuthLink(cleanPhone);
         await sendMessage(jid,
-          `🔗 It looks like the Google connection isn't done yet. Please tap this link to connect:\n\n${authLink}\n\n_Or reply "skip" to continue without Google._`
+          `It looks like the Google connection is not done yet. Please tap this link to connect:\n\n${authLink}\n\n_Or reply "skip" to continue without Google._`
         );
       }
     }
@@ -262,14 +272,14 @@ async function handleFastAgentMessage(jid, phone, text) {
 
     if (isGoogleConnect) {
       const authLink = generateAuthLink(cleanPhone);
-      await sendMessage(jid, `🔗 *Link your Google Account with ZORO:*\n\nTap below to connect your Google Calendar & Gmail:\n\n${authLink}\n\n_Once connected, you can schedule meetings, check calendar, and manage emails live!_`);
+      await sendMessage(jid, `*Link your Google Account with ZORO:*\n\nTap below to connect your Google Calendar & Gmail:\n\n${authLink}\n\n_Once connected, you can schedule meetings, check calendar, and manage emails live!_`);
       return;
     }
 
     // Help command
     if (lower === 'help' || lower === '/help') {
       await sendMessage(jid,
-        `🤖 *ZORO — What I can do:*\n\n📅 *Calendar* — "Schedule a meeting tomorrow at 3pm"\n📧 *Email* — "Draft an email to John about the project"\n⚡ *Skills* — Type *"skills"* to view and add modular agent skills\n✅ *Tasks* — "Remind me to call Dr. Sharma at 6pm"\n🔍 *Research* — Ask me anything\n📊 *Summarise* — "Summarise my emails from today"\n\n⚙️ Commands:\n• *skills* — View active skills & templates\n• *add skill: <Name> — <Prompt>* — Create custom skill\n• *connect google* — Link your Google account\n• *status* — Check your account status\n• *help* — Show this menu\n\n_Powered by ZORO AI_ ⚔️`
+        `*ZORO — What I can do:*\n\n• *Calendar* — "Schedule a meeting tomorrow at 3pm"\n• *Email* — "Draft an email to John about the project"\n• *Skills* — Type *"skills"* to view and add modular agent skills\n• *Tasks* — "Remind me to call Dr. Sharma at 6pm"\n• *Research* — Ask me anything\n• *Summarise* — "Summarise my emails from today"\n\nCommands:\n• *skills* — View active skills & templates\n• *add skill: <Name> — <Prompt>* — Create custom skill\n• *connect google* — Link your Google account\n• *status* — Check your account status\n• *help* — Show this menu\n\n_Powered by ZORO AI_`
       );
       return;
     }
@@ -277,11 +287,11 @@ async function handleFastAgentMessage(jid, phone, text) {
     // Skills hub command
     if (lower === 'skills' || lower === '/skills' || lower === 'my skills') {
       const skills = await listSkills(cleanPhone);
-      let msg = `⚡ *ZORO Skills Hub*\n\nHere are your active agent skills:\n`;
+      let msg = `*ZORO Skills Hub*\n\nHere are your active agent skills:\n`;
       skills.forEach((s, i) => {
         msg += `\n${i + 1}. *${s.name}*\n   • Trigger: _${s.trigger_keywords || s.slug}_\n   • ${s.description || 'Specialized agent prompt'}\n`;
       });
-      msg += `\n💡 *Add Your Own Skill:*\nReply with:\n*add skill: <Name> — <Instructions>*\n\n_Example:_\nadd skill: Diet Coach — You are a nutritionist. Analyze meal descriptions, estimate calories, and suggest healthier alternatives.`;
+      msg += `\n*Add Your Own Skill:*\nReply with:\n*add skill: <Name> — <Instructions>*\n\n_Example:_\nadd skill: Diet Coach — You are a nutritionist. Analyze meal descriptions, estimate calories, and suggest healthier alternatives.`;
       await sendMessage(jid, msg);
       return;
     }
@@ -292,7 +302,7 @@ async function handleFastAgentMessage(jid, phone, text) {
       const delimiter = payload.includes('—') ? '—' : (payload.includes('-') ? '-' : ':');
       const parts = payload.split(delimiter);
       if (parts.length < 2) {
-        await sendMessage(jid, `⚠️ *Format:* \`add skill: <Skill Name> — <AI Instructions>\`\n\n_Example:_\nadd skill: Diet Coach — You are a nutritionist. Analyze meal descriptions and calculate macros.`);
+        await sendMessage(jid, `*Format:* \`add skill: <Skill Name> — <AI Instructions>\`\n\n_Example:_\nadd skill: Diet Coach — You are a nutritionist. Analyze meal descriptions and calculate macros.`);
         return;
       }
       const skillName = parts[0].trim();
@@ -326,7 +336,7 @@ async function handleFastAgentMessage(jid, phone, text) {
         // Backend offline or in-memory, MySQL still holds it
       }
 
-      await sendMessage(jid, `🎉 *Skill Added Successfully!*\n\n🧩 *${skillName}* is now active.\nJust message me with your request or mention *${skillName}* to trigger it!`);
+      await sendMessage(jid, `*Skill Added Successfully!*\n\n*${skillName}* is now active.\nJust message me with your request or mention *${skillName}* to trigger it!`);
       return;
     }
 
@@ -337,34 +347,80 @@ async function handleFastAgentMessage(jid, phone, text) {
       const target = skills.find(s => s.name.toLowerCase() === skillName || s.slug.toLowerCase() === skillName);
       if (target) {
         await deleteSkill(target.skill_id);
-        await sendMessage(jid, `🗑️ Skill *${target.name}* has been removed.`);
+        await sendMessage(jid, `Skill *${target.name}* has been removed.`);
       } else {
-        await sendMessage(jid, `⚠️ Skill not found. Type *"skills"* to list your active skills.`);
+        await sendMessage(jid, `Skill not found. Type *"skills"* to list your active skills.`);
       }
       return;
     }
 
     // Status command
     if (lower === 'status' || lower === '/status') {
-      const googleStatus = user.google_connected ? '✅ Connected' : '❌ Not connected';
+      const googleStatus = user.google_connected ? 'Connected' : 'Not connected';
       const skills = await listSkills(cleanPhone);
       await sendMessage(jid,
-        `📊 *Your ZORO Status:*\n\n👤 Name: ${user.name || 'Not set'}\n📱 Phone: +${cleanPhone}\n🎯 Use case: ${user.use_case || 'Not set'}\n🧩 Active Skills: ${skills.length}\n🔗 Google: ${googleStatus}\n✨ Account: Active\n\n_Type "skills" to manage skills or "help" for options._`
+        `*Your ZORO Status:*\n\nName: ${user.name || 'Not set'}\nPhone: +${cleanPhone}\nUse case: ${user.use_case || 'Not set'}\nActive Skills: ${skills.length}\nGoogle: ${googleStatus}\nAccount: Active\n\n_Type "skills" to manage skills or "help" for options._`
       );
       return;
     }
 
-    // Route to FastAgent backend
-    await sendMessage(jid, '⏳ _Thinking..._');
+    // WhatsApp Chats Reader & Search Handler
+    const isChatQuery = /whatsapp (chats?|messages?)|text(ed)? me|recent (whatsapp )?chats?|read (my )?(whatsapp )?chats?|summarize (my )?(whatsapp )?chats?|check (my )?(whatsapp )?messages?/i.test(trimmedText);
+    if (isChatQuery) {
+      let contactMatch = trimmedText.match(/(?:from|by|of)\s+([a-zA-Z0-9_\-\.]+)/i);
+      let contactFilter = contactMatch ? contactMatch[1].trim() : '';
 
+      let chatRows = [];
+      try {
+        if (contactFilter) {
+          chatRows = await query(
+            `SELECT sender_name, sender_phone, message_text, timestamp 
+             FROM whatsapp_chats 
+             WHERE (sender_name LIKE ? OR sender_phone LIKE ?) AND is_from_me = 0
+             ORDER BY timestamp DESC LIMIT 15`,
+            [`%${contactFilter}%`, `%${contactFilter}%`]
+          );
+        } else {
+          chatRows = await query(
+            `SELECT sender_name, sender_phone, message_text, timestamp 
+             FROM whatsapp_chats 
+             WHERE is_from_me = 0
+             ORDER BY timestamp DESC LIMIT 15`
+          );
+        }
+      } catch (dbErr) {
+        console.error('[DB] Chat query error:', dbErr.message);
+      }
+
+      if (!chatRows || chatRows.length === 0) {
+        await sendMessage(jid,
+          contactFilter
+            ? `No archived WhatsApp messages found from *${contactFilter}* yet. As messages arrive from contacts, they are archived automatically for instant lookup.`
+            : `No archived WhatsApp chats from other contacts recorded yet. All incoming messages from your contacts to this WhatsApp number are archived automatically for instant lookup.`
+        );
+        return;
+      }
+
+      let replyMsg = `*Recent WhatsApp Communications (${chatRows.length} message(s)):*\n\n`;
+      chatRows.forEach((row, idx) => {
+        const timeStr = new Date(Number(row.timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateStr = new Date(Number(row.timestamp)).toLocaleDateString();
+        replyMsg += `${idx + 1}. *${row.sender_name || row.sender_phone}* (${dateStr} ${timeStr}):\n   "${row.message_text}"\n\n`;
+      });
+
+      await sendMessage(jid, replyMsg.trim());
+      return;
+    }
+
+    // Route directly to FastAgent backend without intermediate thinking message
     const reply = await callFastAgentBackend(cleanPhone, trimmedText);
 
     if (reply) {
       await sendMessage(jid, reply);
     } else {
-      // Fallback — basic Gemini-less reply
+      // Fallback
       await sendMessage(jid,
-        `🤔 I'm having trouble reaching the ZORO brain right now. Please try again in a moment.\n\n_If this persists, type "status" to check your connection._`
+        `I am having trouble reaching the ZORO brain right now. Please try again in a moment.\n\n_If this persists, type "status" to check your connection._`
       );
     }
 
@@ -539,6 +595,26 @@ export async function startBotSession() {
         '';
 
       if (!text.trim()) continue;
+
+      // Automatically archive every incoming message from all contacts into MySQL
+      const senderName = msg.pushName || (msg.key.fromMe ? 'Me' : phone);
+      const isFromMe = msg.key.fromMe ? 1 : 0;
+      const ts = msg.messageTimestamp ? Number(msg.messageTimestamp) * 1000 : Date.now();
+      const uniqueMsgId = msgId || `msg_${Date.now()}_${Math.random()}`;
+
+      query(
+        `INSERT INTO whatsapp_chats (msg_id, chat_jid, sender_name, sender_phone, message_text, timestamp, is_from_me)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE message_text = VALUES(message_text), timestamp = VALUES(timestamp)`,
+        [uniqueMsgId, rawJid, senderName, phone, text.trim(), ts, isFromMe]
+      ).catch(err => console.error('[DB] Archive chat error:', err.message));
+
+      query(
+        `INSERT INTO whatsapp_contacts (jid, phone, name, notify)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE name = COALESCE(VALUES(name), name), notify = COALESCE(VALUES(notify), notify), updated_at = CURRENT_TIMESTAMP`,
+        [rawJid, phone, senderName, senderName]
+      ).catch(err => console.error('[DB] Archive contact error:', err.message));
 
       // Handle message asynchronously so we don't block the event loop
       handleFastAgentMessage(replyJid, phone, text).catch(err => {

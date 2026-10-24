@@ -6,7 +6,7 @@ let killSwitchTriggered = false;
 
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
+  const { width } = primaryDisplay.workAreaSize;
 
   // Create frameless, transparent sidebar toggle widget window
   mainWindow = new BrowserWindow({
@@ -63,6 +63,10 @@ ipcMain.handle('trigger-kill-switch', () => {
 ipcMain.handle('reset-kill-switch', () => {
   killSwitchTriggered = false;
   return { success: true, killSwitchActive: false };
+});
+
+ipcMain.handle('get-kill-switch-state', () => {
+  return { killSwitchActive: killSwitchTriggered };
 });
 
 ipcMain.handle('toggle-sidebar', (_event, isExpanded: boolean) => {

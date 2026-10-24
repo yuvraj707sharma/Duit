@@ -187,9 +187,11 @@ class DesktopSidecarAgent:
                                 if msg_type == "execute_action":
                                     payload = data.get("payload", {})
                                     action_id = payload.get("action_id")
+                                    logger.info("Sidecar executing action %s: intent=%s", action_id, payload.get("intent"))
                                     # Execute task
                                     self._current_task = asyncio.create_task(self.execute_action_safely(payload))
                                     res = await self._current_task
+                                    logger.info("Action %s execution completed with status=%s", action_id, res.get("status"))
                                     # Send back result
                                     await ws.send_json({
                                         "type": "action_result",
@@ -228,5 +230,15 @@ class DesktopSidecarAgent:
                 logger.debug("Heartbeat error: %s", e)
                 break
 
+    async def stop(self) -> None:
+        """Stops the sidecar loop and closes open websocket."""
+        self.is_running = False
+        if self._ws and not self._ws.closed:
+            try:
+                await self._ws.close()
+            except Exception:
+                pass
+
 
 sidecar_agent = DesktopSidecarAgent()
+

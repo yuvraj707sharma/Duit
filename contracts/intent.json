@@ -20,6 +20,9 @@
     "set_volume",
     "search_files",
     "clear_history",
+    "shed_status",
+    "dispatch_coding_task",
+    "automate_cart",
     "other"
   ]
 }

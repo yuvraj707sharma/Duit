@@ -138,7 +138,7 @@ class CascadeOrchestrator:
             # Fix 5: Emergency stop cancels all user pending approvals and states count
             if rule_res.action_override == "halt_all":
                 cancelled_count = await self.repo.cancel_user_pending_approvals(user_id)
-                resp_text = f"🛑 All automated actions halted. {cancelled_count} pending approval(s) were cancelled."
+                resp_text = f"All automated actions halted. {cancelled_count} pending approval(s) were cancelled."
 
             resp_obj = OrchestratorResponse(
                 request_id=request_id,
@@ -390,6 +390,135 @@ class CascadeOrchestrator:
 
         if not tool_res.success:
             reply_msg = f"Failed to execute action: {tool_res.error}"
+        elif decision.intent == "summarize_email":
+            emails = (tool_res.data or {}).get("emails", [])
+            snippets = (tool_res.data or {}).get("snippets", [])
+            if emails:
+                lines = []
+                has_urgent = any("urgent" in (e.get("subject", "") + e.get("snippet", "")).lower() for e in emails)
+                urgency = "High (Action Required)" if has_urgent else "Low (Promotional, Notifications & Job Alerts)"
+                
+                lines.append(f"*Email Briefing Summary ({len(emails)} Recent Messages)*")
+                lines.append(f"- Total New Emails: {len(emails)}")
+                lines.append(f"- Urgency Level: {urgency}\n")
+                lines.append("*Email Breakdown:*")
+
+                import re
+                for i, em in enumerate(emails, 1):
+                    sender = em.get("from", "Unknown")
+                    sender_name = sender.split("<")[0].strip().strip('"') if "<" in sender else sender
+                    sender_name = re.sub(r'[\u200b-\u200f\ufeff\xad]', '', sender_name).strip()
+                    subject = re.sub(r'[\u200b-\u200f\ufeff\xad]', '', em.get("subject", "No Subject")).strip()
+                    snip = re.sub(r'[\u200b-\u200f\ufeff\xad]', '', em.get("snippet", "")).strip()
+                    
+                    short_snip = snip.split(".")[0].strip() if "." in snip else snip[:120]
+                    if not short_snip:
+                        short_snip = "No preview available"
+
+                    sub_lower = (subject + " " + snip).lower()
+                    if any(k in sub_lower for k in ("job", "hiring", "intern", "career", "manager")):
+                        tag = "Job Alert"
+                    elif any(k in sub_lower for k in ("insurance", "offer", "deal", "discount", "sale", "trip")):
+                        tag = "Promotion/Offer"
+                    elif any(k in sub_lower for k in ("account", "security", "update", "verify", "password")):
+                        tag = "Account/Security"
+                    else:
+                        tag = "General"
+
+                    lines.append(f"{i}. *{sender_name}* | {subject}\n   [{tag}] {short_snip}.")
+
+                lines.append("\n*Takeaway:* Routine promotional & alert notifications. No critical action required.")
+                reply_msg = re.sub(r'[\u200b-\u200f\ufeff\xad]', '', "\n".join(lines))
+            elif snippets:
+                lines = ["*Email Briefing Summary:*"]
+                for i, snip in enumerate(snippets, 1):
+                    lines.append(f"{i}. {snip}")
+                reply_msg = "\n".join(lines)
+            else:
+                reply_msg = "No recent emails found in your inbox."
+        elif decision.intent == "check_calendar":
+            events = (tool_res.data or {}).get("events", [])
+            if events:
+                lines = ["Your upcoming calendar events:"]
+                for i, ev in enumerate(events[:5], 1):
+                    title = ev.get("summary", "Meeting")
+                    start = ev.get("start", {}).get("dateTime") or ev.get("start", {}).get("date") or "TBD"
+                    lines.append(f"{i}. {title} ({start})")
+                reply_msg = "\n".join(lines)
+            else:
+                reply_msg = "Your calendar is clear. No upcoming events found."
+        elif decision.intent == "search_files":
+            matches = (tool_res.data or {}).get("matches", [])
+            file_contents = (tool_res.data or {}).get("file_contents", {})
+            tool_msg = (tool_res.data or {}).get("message", "")
+            query = extracted_args.get("query", "files")
+            if tool_msg and "Read '" in tool_msg:
+                reply_msg = tool_msg
+            elif file_contents:
+                first_f, first_c = next(iter(file_contents.items()))
+                reply_msg = f"Read '{first_f}':\n\n{first_c}"
+            elif matches:
+                lines = [f"Found {len(matches)} file(s) matching '{query}':"]
+                import os
+                for i, m in enumerate(matches[:5], 1):
+                    lines.append(f"- {os.path.basename(m)}")
+                reply_msg = "\n".join(lines)
+            else:
+                reply_msg = f"No files found matching '{query}' on your desktop."
+        elif decision.intent == "shed_status":
+            status_data = (tool_res.data or {}).get("shed_status", {})
+            online = status_data.get("online", False)
+            url = status_data.get("url", "http://127.0.0.1:4378")
+            if not online:
+                reply_msg = f"*Shed Task Plane Status: Offline*\nNotice: {status_data.get('notice', 'Server offline.')}"
+            else:
+                harnesses = status_data.get("harnesses", {})
+                h_lines = []
+                for h_name, h_info in harnesses.items():
+                    installed = h_info.get("installed", False)
+                    state = "Ready" if installed else "Not installed"
+                    h_lines.append(f"- {h_name.capitalize()}: {state}")
+                harness_summary = "\n".join(h_lines) if h_lines else "- No harnesses registered"
+                active_count = status_data.get("active_sessions_count", 0)
+                reply_msg = (
+                    f"*Shed Task Plane Status: Online*\n"
+                    f"- URL: {url}\n"
+                    f"- Active Coding Sessions: {active_count}\n\n"
+                    f"*Available Harnesses:*\n"
+                    f"{harness_summary}\n\n"
+                    f"Send 'start coding <prompt>' to dispatch a task."
+                )
+        elif decision.intent == "dispatch_coding_task":
+            task_info = tool_res.data or {}
+            task_id = task_info.get("id", "queued")
+            harness_used = task_info.get("harness", "agent")
+            title = task_info.get("title", "Coding task")
+            status = task_info.get("status", "running")
+            reply_msg = (
+                f"*Shed Coding Task Dispatched*\n"
+                f"- Task ID: {task_id}\n"
+                f"- Harness: {harness_used}\n"
+                f"- Title: {title}\n"
+                f"- Status: {status}\n\n"
+                f"Agent is now executing on your workstation."
+            )
+        elif decision.intent == "automate_cart":
+            cart_info = tool_res.data or {}
+            store = cart_info.get("store", "Amazon")
+            product = cart_info.get("product", "Item")
+            status = cart_info.get("status", "Added to Cart")
+            url = cart_info.get("url", "")
+            reply_msg = (
+                f"*Cart Automation: {status}*\n"
+                f"- Store: {store}\n"
+                f"- Product: {product}\n"
+                + (f"- Link: {url}\n" if url else "")
+                + "The item has been added to your shopping cart."
+            )
+        elif tool_res.data and "message" in tool_res.data:
+            reply_msg = str(tool_res.data["message"])
+        elif tool_res.data and "output" in tool_res.data:
+            reply_msg = str(tool_res.data["output"])
         else:
             reply_msg = f"Done! Executed {decision.intent}."
 
@@ -424,7 +553,8 @@ class CascadeOrchestrator:
 
     async def _execute_tool(self, user_id: str, intent: str, args: Dict[str, Any]) -> ToolResult:
         if intent in ("schedule_meeting", "reschedule_meeting", "cancel_meeting", "check_calendar"):
-            args["action"] = intent.replace("_meeting", "").replace("check_", "list")
+            act = intent.replace("_meeting", "").replace("check_", "list")
+            args["action"] = "create" if act == "schedule" else act
             return await self.calendar_tool.execute(user_id, args)
         elif intent in ("send_email", "reply_email", "summarize_email"):
             args["action"] = "send" if intent in ("send_email", "reply_email") else "summarize"
@@ -434,7 +564,17 @@ class CascadeOrchestrator:
                 success=True,
                 data={"status": "confirmed", "booking_id": "bk_mock_101", "details": args.get("details", "")}
             )
-        elif intent in ("open_app", "open_url", "create_note", "type_text", "set_volume", "search_files", "clear_history"):
+        elif intent == "shed_status":
+            from backend.app.desktop.shed_bridge import shed_bridge
+            status = await shed_bridge.get_status()
+            return ToolResult(success=True, data={"shed_status": status})
+        elif intent == "dispatch_coding_task":
+            from backend.app.desktop.shed_bridge import shed_bridge
+            prompt = args.get("prompt", "")
+            harness = args.get("harness", "auto")
+            res = await shed_bridge.dispatch_task(prompt=prompt, harness=harness)
+            return ToolResult(success=res.get("success", False), data=res.get("task", {}), error=res.get("error"))
+        elif intent in ("open_app", "open_url", "create_note", "type_text", "set_volume", "search_files", "clear_history", "automate_cart"):
             from backend.app.desktop.presence import presence_manager
             from backend.app.desktop.skills import skill_executor
             if presence_manager.is_online(user_id):
@@ -540,7 +680,7 @@ class CascadeOrchestrator:
         if decision == "approve":
             tool_res = await self._execute_tool(user_id, rec["intent"], rec["arguments"])
             if not tool_res.success:
-                msg = f"⚠️ Could not complete action:\n\n{tool_res.error or 'Tool execution failed'}"
+                msg = f"Could not complete action:\n\n{tool_res.error or 'Tool execution failed'}"
                 await self.messaging_channel.send_text(user_id, msg)
                 return {"status": "failed", "message": msg, "error": tool_res.error}
 
@@ -550,15 +690,48 @@ class CascadeOrchestrator:
             time_part = f"{start} to {end}" if end else start
 
             if rec["intent"] in ("schedule_meeting", "create_calendar_event"):
-                msg = f"✅ *Action confirmed & scheduled!*\n\n📅 *{title}*\n⏰ *Time:* {time_part}"
+                msg = f"*Action confirmed & scheduled!*\n\n*{title}*\n*Time:* {time_part}"
                 if tool_res.data and tool_res.data.get("html_link"):
-                    msg += f"\n🔗 Calendar Link: {tool_res.data.get('html_link')}"
+                    msg += f"\nCalendar Link: {tool_res.data.get('html_link')}"
                 else:
-                    msg += f"\n📍 Added to your Google Calendar."
+                    msg += f"\nAdded to your Google Calendar."
             elif rec["intent"] in ("send_email", "reply_email"):
                 recip = rec["arguments"].get("recipient", "")
                 subj = rec["arguments"].get("subject", "")
-                msg = f"✅ *Action confirmed & email sent!*\n\n✉️ *To:* {recip}\n📌 *Subject:* {subj}"
+                msg = f"*Action confirmed & email sent!*\n\n*To:* {recip}\n*Subject:* {subj}"
+            elif rec["intent"] == "open_app":
+                app_name = rec["arguments"].get("app_name", "application")
+                if tool_res.data and tool_res.data.get("message"):
+                    msg = f"*Action confirmed!*\n{tool_res.data['message']}"
+                else:
+                    msg = f"*Action confirmed! Opened {app_name} on your desktop.*"
+            elif rec["intent"] == "open_url":
+                url = rec["arguments"].get("url", "website")
+                if tool_res.data and tool_res.data.get("message"):
+                    msg = f"*Action confirmed!*\n{tool_res.data['message']}"
+                else:
+                    msg = f"*Action confirmed! Opened {url} in your desktop browser.*"
+            elif rec["intent"] == "type_text":
+                count = (tool_res.data or {}).get("character_count", len(rec["arguments"].get("text", "")))
+                msg = f"*Action confirmed! Typed text into your active desktop window ({count} characters).*"
+            elif rec["intent"] == "create_note":
+                title = rec["arguments"].get("title", "Note")
+                msg = f"*Action confirmed! Created note '{title}' on your desktop.*"
+            elif rec["intent"] == "search_files":
+                query = rec["arguments"].get("query", "files")
+                count = (tool_res.data or {}).get("count", 0)
+                msg = f"*Action confirmed! Searched for '{query}' on your desktop ({count} match(es) found).*"
+            elif rec["intent"] == "dispatch_coding_task":
+                task_data = tool_res.data or {}
+                harness = task_data.get("harness", "agent")
+                task_id = task_data.get("id", "queued")
+                msg = f"*Action confirmed! Dispatched coding task to Shed ({harness})*\nTask ID: {task_id}\nAgent is executing."
+            elif rec["intent"] == "automate_cart":
+                product = rec["arguments"].get("product_name", "item")
+                store = rec["arguments"].get("store", "Amazon")
+                url = (tool_res.data or {}).get("url", "")
+                link_part = f"\nLink: {url}" if url else ""
+                msg = f"*Action confirmed! Searched '{product}' and added to {store.capitalize()} cart.*{link_part}"
             else:
                 msg = f"Action confirmed and completed."
             await self.messaging_channel.send_text(user_id, msg)

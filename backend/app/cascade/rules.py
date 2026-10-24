@@ -21,7 +21,7 @@ class HardRulesEngine:
         if cleaned in ("stop", "pause", "cancel all", "emergency stop", "halt"):
             return RuleResult(
                 matched=True,
-                direct_response="🛑 All automated pending actions have been halted. Type 'resume' or send a new request.",
+                direct_response="All automated pending actions have been halted. Type 'resume' or send a new request.",
                 action_override="halt_all",
                 reason="emergency_halt"
             )
@@ -31,43 +31,15 @@ class HardRulesEngine:
             return RuleResult(
                 matched=True,
                 direct_response=(
-                    "🤖 *FastAgent Capabilities:*\n"
-                    "• *Calendar:* 'Schedule sync with Rahul tomorrow 4pm', 'Check my calendar'\n"
-                    "• *Email:* 'Reply yes to Amit's email', 'Summarize unread emails'\n"
-                    "• *Hindi/Hinglish:* 'Kal subah 10 baje meeting rakh do'\n"
-                    "• *Safety:* Side effects require your confirmation."
+                    "*FastAgent Capabilities:*\n"
+                    "- Calendar: 'Schedule sync with Rahul tomorrow 4pm', 'Check my calendar'\n"
+                    "- Email: 'Reply yes to Amit's email', 'Summarize unread emails'\n"
+                    "- Coding: 'Shed status', 'Start coding <task>'\n"
+                    "- Shopping: 'Add boat headphones to cart'\n"
+                    "- Hindi/Hinglish: 'Kal subah 10 baje meeting rakh do'\n"
+                    "- Safety: Side effects require your confirmation."
                 ),
                 reason="help_menu"
-            )
-
-        # 3. Simple Greetings (avoid LLM/Laya invocation)
-        if cleaned in ("hi", "hello", "hey", "namaste", "hola"):
-            return RuleResult(
-                matched=True,
-                direct_response="Hello! How can I assist with your scheduling or emails today?",
-                reason="greeting"
-            )
-
-        # 3.5. Google Connect Command
-        if cleaned in ("connect google", "connect to google", "link google", "link to google", "google connect", "link my google", "connect my google"):
-            return RuleResult(
-                matched=True,
-                direct_response="🔗 *Link your Google Account:*\nPlease tap the authentication link sent to you on WhatsApp or type *'connect google'* to authorize your Google Calendar and Gmail.",
-                reason="google_connect"
-            )
-
-        # 3.6. Shed Remote Coding Agent Plane
-        if cleaned in ("shed", "shed status", "remote status", "coding status", "agent status"):
-            return RuleResult(
-                matched=True,
-                direct_response=(
-                    "🖥️ *Shed Remote Coding Task Plane (e:\\Inovvate\\shed):*\n"
-                    "• *State:* Connected & Ready\n"
-                    "• *Harnesses:* Claude Code, Codex, Gemini, OpenCode\n"
-                    "• *Capabilities:* Start coding sessions, inspect live terminals, and run tasks remotely from your phone.\n"
-                    "• *Usage:* Text *'code: <prompt>'* or check *'skills'* to trigger desktop tasks."
-                ),
-                reason="shed_status"
             )
 
         # 3.7. Skills Library Catalog
@@ -75,12 +47,12 @@ class HardRulesEngine:
             return RuleResult(
                 matched=True,
                 direct_response=(
-                    "📦 *ZORO Skills Library (e:\\Inovvate\\skills):*\n"
-                    "• 📄 *PDF Generator:* 'Generate PDF report of my meetings'\n"
-                    "• 🔍 *Web Researcher:* 'Research latest updates on AI agents'\n"
-                    "• ⏰ *Recurring Briefing:* 'Brief me every morning at 9am'\n"
-                    "• 💻 *Code Auditor:* 'Audit code for security issues'\n"
-                    "• 📊 *SQL Analyst:* 'Query database stats'"
+                    "*ZORO Skills Library (e:\\Inovvate\\skills):*\n"
+                    "• *PDF Generator:* 'Generate PDF report of my meetings'\n"
+                    "• *Web Researcher:* 'Research latest updates on AI agents'\n"
+                    "• *Recurring Briefing:* 'Brief me every morning at 9am'\n"
+                    "• *Code Auditor:* 'Audit code for security issues'\n"
+                    "• *SQL Analyst:* 'Query database stats'"
                 ),
                 reason="skills_library"
             )
@@ -98,7 +70,7 @@ class HardRulesEngine:
             if re.search(pattern, cleaned):
                 return RuleResult(
                     matched=True,
-                    direct_response="⚠️ Invalid request: command contains blocked system patterns.",
+                    direct_response="Invalid request: command contains blocked system patterns.",
                     reason="security_blocklist"
                 )
 

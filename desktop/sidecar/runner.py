@@ -24,12 +24,12 @@ logger = logging.getLogger("FastAgentDesktopSidecar")
 async def main():
     user_id = os.getenv("FASTAGENT_USER_ID", "default_user")
     ws_url = os.getenv("FASTAGENT_WS_URL", "ws://127.0.0.1:8000/api/desktop/ws")
-    secret = os.getenv("FASTAGENT_SECRET", "desktop_shared_secret_fastagent_2026")
+    secret = os.getenv("FASTAGENT_SECRET", "fastagent_desktop_secret_2026_dev")
 
     print("=" * 60)
-    print("⚡ FastAgent Local Desktop Sidecar (Windows OS Executor)")
-    print(f"👤 User ID:     {user_id}")
-    print(f"🔗 Gateway WS:  {ws_url}")
+    print("FastAgent Local Desktop Sidecar (Windows OS Executor)")
+    print(f"User ID:     {user_id}")
+    print(f"Gateway WS:  {ws_url}")
     print("=" * 60)
 
     # 1. Startup WAL crash reconciliation
@@ -47,7 +47,7 @@ async def main():
     )
 
     try:
-        await agent.run_connection_loop()
+        await agent.run()
     except (KeyboardInterrupt, asyncio.CancelledError):
         logger.info("Shutting down Desktop Sidecar Agent gracefully.")
         await agent.stop()

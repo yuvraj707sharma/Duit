@@ -65,12 +65,12 @@ async def google_oauth_callback(
     user_phone = user.get("phone_number") if user else (state if state.replace("+", "").isdigit() else None)
     if user_phone:
         welcome_msg = (
-            "🎉 *Google Account Successfully Linked!*\n\n"
+            "*Google Account Successfully Linked!*\n\n"
             "FastAgent is now active for your calendar and email.\n\n"
             "Try asking me:\n"
-            "• 📅 *\"What meetings do I have tomorrow?\"*\n"
-            "• ✉️ *\"Check unread emails from Priya\"*\n"
-            "• ⚡ *\"Schedule sync with Team on Friday at 4pm\"*"
+            "• *\"What meetings do I have tomorrow?\"*\n"
+            "• *\"Check unread emails from Priya\"*\n"
+            "• *\"Schedule sync with Team on Friday at 4pm\"*"
         )
         try:
             await outbound_channel.send_text(user_phone, welcome_msg)

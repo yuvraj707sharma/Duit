@@ -52,6 +52,13 @@ class LayaDecisionModel(DecisionModel):
                     "summarize_email": "Summarize unread emails or inbox",
                     "send_email": "Draft or send a new email",
                     "book_something": "Book a ticket, restaurant, or ride",
+                    "open_app": "Open or launch desktop application on PC",
+                    "open_url": "Open webpage or URL on desktop browser",
+                    "create_note": "Create, take or save a desktop note",
+                    "search_files": "Search or find files on desktop computer",
+                    "shed_status": "Check Shed remote coding agent status and harnesses",
+                    "dispatch_coding_task": "Dispatch or start a coding task on Claude, Codex, or Gemini via Shed",
+                    "automate_cart": "Search e-commerce site and add product to shopping cart",
                     "other": "General conversation or other requests"
                 }
             }
@@ -170,19 +177,27 @@ class MockDecisionModel(DecisionModel):
             )
 
         # 5. Schedule meeting (English / Hindi / Hinglish)
-        if any(w in msg for w in ("schedule", "set up meeting", "book a slot", "meeting fix kar do", "rakh do", "meet with")):
+        meeting_terms = (
+            "schedule", "set the meeting", "set meeting", "set up meeting", "book a slot", "book slot",
+            "meeting fix kar do", "meeting rakh do", "rakh do", "meet with", "meeting", "appointment",
+            "arrange a meeting", "catchup", "sync with", "call with"
+        )
+        if any(w in msg for w in meeting_terms):
             return DecisionOutput(
                 intent="schedule_meeting",
                 risk="medium",
                 needs_confirmation=True,
-                confidence=0.93,
-                detected_language="hi-Latn" if any(w in msg for w in ("kar do", "rakh", "baje")) else "en",
+                confidence=0.94,
+                detected_language="hi-Latn" if any(w in msg for w in ("kar do", "rakh", "baje", "ke saath")) else "en",
                 model_used="mock-laya-router",
                 reasoning_tag="schedule_keyword"
             )
 
         # 6. Email replies / sends / summaries
-        if any(w in msg for w in ("reply yes", "reply to", "email back", "mail ka jawab")):
+        email_terms = ("email", "emails", "mail", "mails", "inbox", "gmail")
+        has_email = any(term in msg for term in email_terms)
+
+        if any(w in msg for w in ("reply yes", "reply to", "email back", "mail ka jawab", "reply to email", "reply to mail")):
             return DecisionOutput(
                 intent="reply_email",
                 risk="medium",
@@ -193,24 +208,33 @@ class MockDecisionModel(DecisionModel):
                 reasoning_tag="email_reply_keyword"
             )
 
-        if any(w in msg for w in ("send email", "send an email", "send this to", "send to", "forward to", "forward all", "mail bhej do", "email likh do")):
+        has_email_addr = bool(re.search(r"[\w\.-]+@[\w\.-]+", msg))
+        if (has_email_addr and any(w in msg for w in ("write", "send", "mail", "email", "draft", "compose", "to"))) or \
+           any(w in msg for w in (
+               "send email", "send an email", "send this to", "send to", "forward to", "forward all",
+               "mail bhej do", "email likh do", "draft email", "compose email", "write mail", "write email",
+               "write a mail", "write an email", "mail to", "email to", "send mail"
+           )):
             return DecisionOutput(
                 intent="send_email",
                 risk="high",
                 needs_confirmation=True,
                 confidence=0.95,
-                detected_language="hi-Latn" if "bhej do" in msg else "en",
+                detected_language="hi-Latn" if any(w in msg for w in ("bhej do", "likh do")) else "en",
                 model_used="mock-laya-router",
                 reasoning_tag="email_send_keyword"
             )
 
-        if any(w in msg for w in ("summarize email", "unread emails", "inbox summary", "emails batao", "summarize my")):
+        if (has_email and any(w in msg for w in (
+            "summarize", "summary", "summarise", "unread", "recent", "latest",
+            "check", "read", "fetch", "get", "give me", "show", "batao", "kya aaya", "kya aya", "list"
+        ))) or any(w in msg for w in ("summarize email", "unread emails", "inbox summary", "emails batao", "summarize my", "recent mails", "recent emails")):
             return DecisionOutput(
                 intent="summarize_email",
                 risk="low",
                 needs_confirmation=False,
-                confidence=0.94,
-                detected_language="en",
+                confidence=0.95,
+                detected_language="hi-Latn" if any(w in msg for w in ("batao", "kya aaya", "kya aya")) else "en",
                 model_used="mock-laya-router",
                 reasoning_tag="email_summary_keyword"
             )
@@ -224,6 +248,127 @@ class MockDecisionModel(DecisionModel):
                 detected_language="en",
                 model_used="mock-laya-router",
                 reasoning_tag="booking_keyword"
+            )
+
+        # 7. Desktop Intents (App execution, browser URLs, files, notes, typing, volume)
+        app_match = re.search(r"\b(?:open|launch|start)\s+(?:the\s+)?([a-zA-Z0-9_\-\.]+?)(?:\s+on\s+desktop|\s+app|\s+application|$)", msg)
+        if app_match and not any(w in msg for w in ("url", "site", "website", "link", "http", "cart", "email", "mail", "meeting", "slot", "calendar", "files", "note", ".com", ".org", ".io", ".dev", ".in", ".net", "browse", "explore")):
+            return DecisionOutput(
+                intent="open_app",
+                risk="medium",
+                needs_confirmation=True,
+                confidence=0.95,
+                detected_language="en",
+                model_used="mock-laya-router",
+                reasoning_tag="dynamic_desktop_open_app"
+            )
+
+        if msg.startswith("type ") or any(w in msg for w in (
+            "now write", "type text", "type this", "type on it", "write a message", "write on it",
+            "write message", "type on screen", "type into", "type it", "write it", "type something",
+            "write something", "type here", "write here"
+        )):
+            return DecisionOutput(
+                intent="type_text",
+                risk="medium",
+                needs_confirmation=True,
+                confidence=0.95,
+                detected_language="en",
+                model_used="mock-laya-router",
+                reasoning_tag="desktop_type_text"
+            )
+
+        has_url_pattern = bool(re.search(r"https?://|\b[a-zA-Z0-9-]+\.(?:com|org|io|dev|in|net|co|app)\b", msg))
+        if any(w in msg for w in (
+            "open url", "open link", "open site", "open website", "explore site", "explore website",
+            "explore on browser", "explore in browser", "explore edge", "in edge", "on edge",
+            "browse to", "navigate to", "take me to", "visit site", "visit link", "khol do browser",
+            "khol do edge", "open in edge", "open in browser", "open on edge", "open on browser",
+            "browse edge", "explore on edge"
+        )) or (has_url_pattern and any(w in msg for w in ("open", "explore", "browse", "visit", "navigate", "go to", "load", "khol", "show", "take me"))):
+            return DecisionOutput(
+                intent="open_url",
+                risk="low",
+                needs_confirmation=False,
+                confidence=0.95,
+                detected_language="hi-Latn" if any(w in msg for w in ("khol", "karo", "pe")) else "en",
+                model_used="mock-laya-router",
+                reasoning_tag="desktop_open_url"
+            )
+
+        if any(w in msg for w in (
+            "search files", "search file", "find files", "find file", "file search",
+            "read file", "read note", "read the file", "open file", "what is in file", "show file",
+            "read my notes", "read my note", "read notes"
+        )):
+            return DecisionOutput(
+                intent="search_files",
+                risk="low",
+                needs_confirmation=False,
+                confidence=0.94,
+                detected_language="en",
+                model_used="mock-laya-router",
+                reasoning_tag="desktop_search_and_read_files"
+            )
+
+        if any(w in msg for w in (
+            "create note", "take note", "note down", "write note", "make a note", "save note",
+            "write to file", "save file", "create file", "write file"
+        )):
+            return DecisionOutput(
+                intent="create_note",
+                risk="low",
+                needs_confirmation=False,
+                confidence=0.94,
+                detected_language="en",
+                model_used="mock-laya-router",
+                reasoning_tag="desktop_create_note"
+            )
+
+        if any(w in msg for w in ("set volume", "change volume", "volume to", "adjust volume", "mute volume")):
+            return DecisionOutput(
+                intent="set_volume",
+                risk="low",
+                needs_confirmation=False,
+                confidence=0.95,
+                detected_language="en",
+                model_used="mock-laya-router",
+                reasoning_tag="desktop_set_volume"
+            )
+
+        # 8. Shed Remote Coding Agent Intents
+        if any(w in msg for w in ("shed status", "shed info", "coding agents", "active harnesses", "agent status", "harness health", "list coding", "coding sessions", "shed check")) or msg == "shed":
+            return DecisionOutput(
+                intent="shed_status",
+                risk="low",
+                needs_confirmation=False,
+                confidence=0.98,
+                detected_language="en",
+                model_used="mock-laya-router",
+                reasoning_tag="shed_status_query"
+            )
+
+        if any(w in msg for w in ("start coding", "dispatch coding", "code with", "shed code", "run coding agent", "dispatch to shed", "ask claude to code", "ask codex to code")):
+            return DecisionOutput(
+                intent="dispatch_coding_task",
+                risk="medium",
+                needs_confirmation=True,
+                confidence=0.95,
+                detected_language="en",
+                model_used="mock-laya-router",
+                reasoning_tag="shed_dispatch_coding"
+            )
+
+        # 9. Autonomous Browser & Shopping Cart
+        if any(w in msg for w in ("to cart", "in cart", "cart me", "cart mein", "buy on", "order on", "add to basket")) or (("add" in msg or "daal" in msg or "put" in msg) and "cart" in msg):
+            return DecisionOutput(
+                intent="automate_cart",
+                risk="medium",
+                needs_confirmation=True,
+                confidence=0.95,
+                detected_language="hi-Latn" if any(w in msg for w in ("daal", "mein")) else "en",
+                model_used="mock-laya-router",
+                reasoning_tag="browser_automate_cart"
             )
 
         # Default / low confidence fallback

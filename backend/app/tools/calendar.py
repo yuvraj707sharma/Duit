@@ -17,8 +17,11 @@ class GoogleCalendarTool(BaseTool):
             return self.service_factory(user_id)
 
         token_record = await repository.get_user_oauth_tokens(user_id, "google")
-        if not token_record or not settings.GOOGLE_CLIENT_ID or settings.USE_MOCK_TOOLS:
+        if not token_record or settings.USE_MOCK_TOOLS:
             return None
+
+        client_id = settings.GOOGLE_CLIENT_ID
+        client_secret = settings.GOOGLE_CLIENT_SECRET
 
         try:
             from google.oauth2.credentials import Credentials
@@ -33,8 +36,8 @@ class GoogleCalendarTool(BaseTool):
                 token=access_token,
                 refresh_token=refresh_token,
                 token_uri="https://oauth2.googleapis.com/token",
-                client_id=settings.GOOGLE_CLIENT_ID,
-                client_secret=settings.GOOGLE_CLIENT_SECRET
+                client_id=client_id,
+                client_secret=client_secret
             )
             return build("calendar", "v3", credentials=creds)
         except Exception as e:
@@ -44,7 +47,7 @@ class GoogleCalendarTool(BaseTool):
         idempotency_key = payload.get("idempotency_key")
         action = payload.get("action", "create")  # create, reschedule, cancel, list
 
-        if idempotency_key and action in ("create", "reschedule", "cancel"):
+        if idempotency_key and action in ("create", "schedule", "reschedule", "cancel"):
             cached = self.get_cached_result(user_id, idempotency_key)
             if cached:
                 return cached
@@ -101,7 +104,7 @@ class GoogleCalendarTool(BaseTool):
                 ).execute()
                 events = events_result.get("items", [])
                 return ToolResult(success=True, data={"action": "list", "events": events})
-            elif action == "create":
+            elif action in ("create", "schedule"):
                 start_time = payload.get("start_time")
                 end_time = payload.get("end_time")
                 event_body = {

@@ -1,5 +1,6 @@
 """Gmail Tool Adapter with Multi-Tenant OAuth Isolation."""
 import base64
+import html
 from email.mime.text import MIMEText
 from typing import Dict, Any, Optional
 from backend.app.tools.base import BaseTool, ToolResult
@@ -19,8 +20,11 @@ class GmailTool(BaseTool):
             return self.service_factory(user_id)
 
         token_record = await repository.get_user_oauth_tokens(user_id, "google")
-        if not token_record or not settings.GOOGLE_CLIENT_ID or settings.USE_MOCK_TOOLS:
+        if not token_record or settings.USE_MOCK_TOOLS:
             return None
+
+        client_id = settings.GOOGLE_CLIENT_ID
+        client_secret = settings.GOOGLE_CLIENT_SECRET
 
         try:
             from google.oauth2.credentials import Credentials
@@ -35,8 +39,8 @@ class GmailTool(BaseTool):
                 token=access_token,
                 refresh_token=refresh_token,
                 token_uri="https://oauth2.googleapis.com/token",
-                client_id=settings.GOOGLE_CLIENT_ID,
-                client_secret=settings.GOOGLE_CLIENT_SECRET
+                client_id=client_id,
+                client_secret=client_secret
             )
             return build("gmail", "v1", credentials=creds)
         except Exception:
@@ -77,7 +81,18 @@ class GmailTool(BaseTool):
                 "recipient": payload.get("recipient"),
                 "subject": payload.get("subject"),
                 "body_snippet": payload.get("body", "")[:100],
-                "user_id": user_id
+                "user_id": user_id,
+                "snippets": [
+                    "Meeting agenda for sprint planning next week.",
+                    "Weekly digest and status report."
+                ],
+                "emails": [
+                    {
+                        "subject": "Sprint Planning",
+                        "from": "colleague@example.com",
+                        "snippet": "Meeting agenda for sprint planning next week."
+                    }
+                ]
             }
             res = ToolResult(success=True, data=result_data)
             if idempotency_key:
@@ -113,17 +128,59 @@ class GmailTool(BaseTool):
                 if idempotency_key:
                     self.store_cached_result(user_id, idempotency_key, res)
                 return res
-            elif action == "summarize" or action == "fetch":
-                # Fetch recent unread messages
-                results = service.users().messages().list(userId="me", q="is:unread", maxResults=5).execute()
+            elif action in ("summarize", "fetch"):
+                max_results = payload.get("max_results", 5)
+                query_str = payload.get("query")
+                q_text = payload.get("query_text", "").lower()
+                if not query_str:
+                    if "unread" in q_text:
+                        query_str = "is:unread"
+                    else:
+                        query_str = None
+
+                results = service.users().messages().list(
+                    userId="me",
+                    q=query_str,
+                    maxResults=max_results
+                ).execute()
                 messages = results.get("messages", [])
+
+                # Fallback to recent messages if unread query returned empty
+                if not messages and query_str:
+                    results = service.users().messages().list(
+                        userId="me",
+                        maxResults=max_results
+                    ).execute()
+                    messages = results.get("messages", [])
+
+                emails = []
                 snippets = []
                 for msg in messages:
-                    msg_data = service.users().messages().get(userId="me", id=msg["id"], format="snippet").execute()
-                    snippets.append(msg_data.get("snippet", ""))
+                    msg_data = service.users().messages().get(
+                        userId="me",
+                        id=msg["id"],
+                        format="metadata",
+                        metadataHeaders=["Subject", "From", "Date"]
+                    ).execute()
+                    snippet = html.unescape(msg_data.get("snippet", ""))
+                    headers = msg_data.get("payload", {}).get("headers", [])
+                    subject = next((h["value"] for h in headers if h["name"].lower() == "subject"), "(No Subject)")
+                    sender = next((h["value"] for h in headers if h["name"].lower() == "from"), "Unknown Sender")
+                    date = next((h["value"] for h in headers if h["name"].lower() == "date"), "")
+
+                    emails.append({
+                        "id": msg["id"],
+                        "subject": subject,
+                        "from": sender,
+                        "date": date,
+                        "snippet": snippet
+                    })
+                    snippets.append(f"From: {sender} | Subject: {subject} | {snippet}")
+
                 return ToolResult(success=True, data={
                     "action": action,
-                    "count": len(snippets),
+                    "count": len(emails),
+                    "emails": emails,
                     "snippets": snippets
                 })
             else:

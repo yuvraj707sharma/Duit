@@ -38,6 +38,8 @@ class DesktopPresenceManager:
 
     def is_online(self, user_id: str) -> bool:
         rec = self._connections.get(user_id)
+        if not rec and ("default_user" in self._connections or len(self._connections) == 1):
+            rec = self._connections.get("default_user") or next(iter(self._connections.values()), None)
         if not rec:
             return False
         elapsed = time.time() - rec.get("last_heartbeat", 0.0)
@@ -45,6 +47,8 @@ class DesktopPresenceManager:
 
     def get_presence(self, user_id: str) -> Dict[str, Any]:
         rec = self._connections.get(user_id)
+        if not rec and ("default_user" in self._connections or len(self._connections) == 1):
+            rec = self._connections.get("default_user") or next(iter(self._connections.values()), None)
         if not rec:
             return {
                 "user_id": user_id,
@@ -74,7 +78,10 @@ class DesktopPresenceManager:
                 "error": "laptop offline"
             }
 
-        rec = self._connections[user_id]
+        rec = self._connections.get(user_id)
+        if not rec and ("default_user" in self._connections or len(self._connections) == 1):
+            rec = self._connections.get("default_user") or next(iter(self._connections.values()), None)
+
         ws: WebSocket = rec["socket"]
         action_id = command_payload.get("action_id") or f"act_{int(time.time()*1000)}"
         command_payload["action_id"] = action_id

@@ -106,7 +106,11 @@
         "idempotency_key": { "type": "string" },
         "app_name": {
           "type": "string",
-          "enum": ["notepad", "calculator", "terminal", "code", "browser", "slack", "spotify", "files"]
+          "description": "Target desktop application name or executable to dynamically discover and launch."
+        },
+        "draft_text": {
+          "type": "string",
+          "description": "Optional draft content to initialize application with."
         }
       }
     },
@@ -118,6 +122,10 @@
         "url": {
           "type": "string",
           "pattern": "^https?://"
+        },
+        "browser": {
+          "type": "string",
+          "description": "Optional target browser (e.g. edge, chrome, default)."
         }
       }
     },
@@ -150,8 +158,9 @@
       "type": "object",
       "required": ["query"],
       "properties": {
-        "query": { "type": "string" },
-        "directory": { "type": "string" }
+        "query": { "type": "string", "description": "Search substring or file name to locate and read." },
+        "directory": { "type": "string" },
+        "read_content": { "type": "boolean", "default": true, "description": "Whether to read and return text content from matched file." }
       }
     },
     "ClearHistory": {
@@ -159,6 +168,30 @@
       "required": ["idempotency_key"],
       "properties": {
         "idempotency_key": { "type": "string" }
+      }
+    },
+    "ShedStatus": {
+      "type": "object",
+      "properties": {
+        "include_sessions": { "type": "boolean", "default": true }
+      }
+    },
+    "DispatchCodingTask": {
+      "type": "object",
+      "required": ["idempotency_key", "prompt"],
+      "properties": {
+        "idempotency_key": { "type": "string" },
+        "prompt": { "type": "string" },
+        "harness": { "type": "string", "default": "auto" }
+      }
+    },
+    "AutomateCart": {
+      "type": "object",
+      "required": ["idempotency_key", "product_name"],
+      "properties": {
+        "idempotency_key": { "type": "string" },
+        "product_name": { "type": "string" },
+        "store": { "type": "string", "default": "amazon" }
       }
     }
   }

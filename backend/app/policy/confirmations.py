@@ -28,6 +28,9 @@ INTENT_RISK_MAP = {
     "set_volume": ("low", False),
     "search_files": ("low", False),
     "clear_history": ("low", True),
+    "shed_status": ("low", False),
+    "dispatch_coding_task": ("medium", True),
+    "automate_cart": ("medium", True),
     "other": ("low", False)
 }
 
@@ -40,8 +43,8 @@ def build_confirmation_prompt(intent: str, args: Dict[str, Any]) -> str:
         body = args.get("body", "(Empty body)")
         return (
             f"Send email to *{recipient}*?\n"
-            f"• *Subject:* {subject}\n"
-            f"• *Body:*\n{body}\n\n"
+            f"- *Subject:* {subject}\n"
+            f"- *Body:*\n{body}\n\n"
             f"_Reply *yes* to send, or *no* to cancel._"
         )
     elif intent == "schedule_meeting":
@@ -53,9 +56,9 @@ def build_confirmation_prompt(intent: str, args: Dict[str, Any]) -> str:
         time_str = f"{start} to {end}" if end else start
         return (
             f"Schedule meeting *'{title}'*?\n"
-            f"• *Time:* {time_str}\n"
-            f"• *Attendees:* {attendees}\n"
-            f"• *Description:* {desc}\n\n"
+            f"- *Time:* {time_str}\n"
+            f"- *Attendees:* {attendees}\n"
+            f"- *Description:* {desc}\n\n"
             f"_Reply *yes* to confirm & sync to Google Calendar, or *no* to cancel._"
         )
     elif intent == "reschedule_meeting":
@@ -63,22 +66,60 @@ def build_confirmation_prompt(intent: str, args: Dict[str, Any]) -> str:
         new_start = args.get("new_start_time", "new time")
         new_end = args.get("new_end_time", "")
         time_str = f"{new_start} to {new_end}" if new_end else new_start
-        return f"Reschedule meeting *'{event_id}'* to *{time_str}*?"
+        return f"Reschedule meeting *'{event_id}'* to *{time_str}*?\n\n_Reply *yes* to confirm, or *no* to cancel._"
     elif intent == "cancel_meeting":
         event_id = args.get("event_id", "meeting")
         reason = args.get("reason", "None provided")
         query_text = args.get("query_text", "")
-        query_line = f"\n• *Original Request:* \"{query_text}\"" if query_text else ""
-        return f"Are you sure you want to CANCEL meeting *'{event_id}'*?{query_line}\n(Reason: {reason})\nReply 'yes' to confirm or 'no' to reject."
+        query_line = f"\n- *Original Request:* \"{query_text}\"" if query_text else ""
+        return f"Are you sure you want to CANCEL meeting *'{event_id}'*?{query_line}\n(Reason: {reason})\n\n_Reply *yes* to confirm, or *no* to cancel._"
     elif intent == "book_something":
         details = args.get("details", args.get("raw_text", "booking request"))
-        return f"Confirm booking for: *{details}*?"
+        return f"Confirm booking for: *{details}*?\n\n_Reply *yes* to proceed, or *no* to cancel._"
     elif intent == "open_app":
         app_name = args.get("app_name", "app")
-        return f"Open application *'{app_name}'* on your laptop?"
+        draft = args.get("draft_text", "")
+        if draft:
+            preview = draft[:100] + ("..." if len(draft) > 100 else "")
+            return (
+                f"Open application *'{app_name}'* on your desktop and initialize draft?\n"
+                f"- *Draft:*\n{preview}\n\n"
+                f"_Reply *yes* to launch, or *no* to cancel._"
+            )
+        return (
+            f"Open application *'{app_name}'* on your desktop?\n\n"
+            f"_Reply *yes* to launch, or *no* to cancel._"
+        )
+    elif intent == "open_url":
+        url = args.get("url", "website")
+        return (
+            f"Open link *'{url}'* in your desktop browser?\n\n"
+            f"_Reply *yes* to open, or *no* to cancel._"
+        )
     elif intent == "type_text":
-        char_count = len(args.get("text", ""))
-        return f"Type {char_count} characters into the currently focused window?"
+        text = args.get("text", "")
+        preview = text[:80] + ("..." if len(text) > 80 else "")
+        return (
+            f"Type text into the active window on your desktop?\n"
+            f"- *Text:* \"{preview}\"\n\n"
+            f"_Reply *yes* to proceed, or *no* to cancel._"
+        )
     elif intent == "clear_history":
-        return "Clear all stored desktop operation history and reset encrypted context?"
-    return "Confirm execution of this action?"
+        return "Clear all stored desktop operation history and reset encrypted context?\n\n_Reply *yes* to confirm, or *no* to cancel._"
+    elif intent == "dispatch_coding_task":
+        prompt = args.get("prompt", "task")
+        harness = args.get("harness", "auto")
+        return (
+            f"Dispatch coding task to Shed agent ({harness})?\n"
+            f"- *Prompt:* {prompt}\n\n"
+            f"_Reply *yes* to start agent, or *no* to cancel._"
+        )
+    elif intent == "automate_cart":
+        product = args.get("product_name", "item")
+        store = args.get("store", "Amazon")
+        return (
+            f"Search and add to cart on {store.capitalize()}?\n"
+            f"- *Item:* {product}\n\n"
+            f"_Reply *yes* to add to cart, or *no* to cancel._"
+        )
+    return "Confirm execution of this action?\n\n_Reply *yes* to proceed, or *no* to cancel._"

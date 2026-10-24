@@ -47,6 +47,19 @@ export const App: React.FC = () => {
         handleCancelAction();
       });
     }
+
+    // Ping backend health to update connection status
+    const checkBackend = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:8000/health');
+        setIsBackendOnline(res.ok);
+      } catch {
+        setIsBackendOnline(false);
+      }
+    };
+    checkBackend();
+    const timer = setInterval(checkBackend, 10000);
+    return () => clearInterval(timer);
   }, []);
 
   const handleToggleSidebar = () => {
