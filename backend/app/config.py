@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",
         extra="ignore"
     )
@@ -35,11 +35,26 @@ class Settings(BaseSettings):
     USE_MOCK_DECISION: bool = False
 
     # LLM Providers
-    DEFAULT_LLM_PROVIDER: str = "mock"  # gemini, ollama, mock
+    DEFAULT_LLM_PROVIDER: str = "meta"  # meta, gemini, ollama, mock
     GEMINI_API_KEY: str = ""
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "qwen2.5:7b-instruct"
     USE_MOCK_LLM: bool = False
+
+    # Meta Model API (Muse family: Wonder, Spark, Image, Voice Transcribe, SAM 3.1)
+    MODEL_API_KEY: str = ""
+    META_MODEL_API_KEY: str = ""
+    META_MODEL_BASE_URL: str = "https://api.meta.ai/v1"
+    META_DEFAULT_MODEL: str = "muse-spark-1.3"
+    META_WONDER_MODEL: str = "muse-wonder-1.0"
+    META_VOICE_MODEL: str = "muse-voice-transcribe-1.0"
+    META_VISION_MODEL: str = "sam-3.1"
+    META_MAX_TOKENS_PER_CALL: int = 400  # Cost-protection: strict limit to prevent credit drain
+    META_ENABLE_CACHE: bool = True  # In-memory prompt caching to preserve credit pool
+
+    @property
+    def meta_api_key(self) -> str:
+        return self.META_MODEL_API_KEY or self.MODEL_API_KEY
 
     # Messaging Channels
     MESSAGING_CHANNEL: str = "mock"  # evolution, mock

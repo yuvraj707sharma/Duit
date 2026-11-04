@@ -1,5 +1,6 @@
 """Code-level Policy Engine enforcing allowlists, third-party trigger gates, and rate limits."""
 import time
+import re
 from typing import Dict, Any, List, Optional
 from backend.app.policy.confirmations import PolicyEvaluation, INTENT_RISK_MAP, build_confirmation_prompt
 
@@ -68,7 +69,12 @@ class PolicyEngine:
 
         # 1.2 Desktop Skills Security Checks
         if intent == "open_app":
-            app_name = str(arguments.get("app_name", "")).strip().lower()
+            app_name = str(arguments.get("app_name") or arguments.get("app") or arguments.get("application") or arguments.get("name") or arguments.get("target_app") or "").strip().lower()
+            if not app_name and "query_text" in arguments:
+                q = str(arguments["query_text"])
+                m_app = re.search(r"\b(?:open|launch|start|run)\s+(?:the\s+)?([a-zA-Z0-9_\-\. ]+?)(?:\s+on\s+(?:my\s+)?(?:desktop|laptop|pc|computer)|\s+app|\s+application|$)", q, re.IGNORECASE)
+                if m_app:
+                    app_name = m_app.group(1).strip().lower().rstrip(".!?,")
             if not app_name:
                 return PolicyEvaluation(
                     allowed=False,
@@ -76,6 +82,7 @@ class PolicyEngine:
                     risk_level="high",
                     reasoning="Application name cannot be empty."
                 )
+            arguments["app_name"] = app_name
             disallowed_apps = {"rmdir", "del", "format", "diskpart", "reg", "regedit", "shutdown", "reboot", "vssadmin", "bcdedit", "malicious", "malicious_app.exe"}
             if any(d in app_name for d in disallowed_apps) or any(c in app_name for c in (";", "&", "|", "`", "\n", "\r", "$")):
                 return PolicyEvaluation(
@@ -86,7 +93,19 @@ class PolicyEngine:
                 )
 
         if intent == "open_url":
-            url = str(arguments.get("url", "")).strip().lower()
+            url = str(arguments.get("url") or arguments.get("link") or arguments.get("website") or arguments.get("target_url") or "").strip()
+            if not url and "query_text" in arguments:
+                q = str(arguments["query_text"])
+                m_url = re.search(r"https?://[^\s]+", q)
+                if m_url:
+                    url = m_url.group(0)
+                else:
+                    m_dom = re.search(r"\b([a-zA-Z0-9-]+\.(?:com|org|io|dev|in|net|co|app))\b", q, re.IGNORECASE)
+                    if m_dom:
+                        url = f"https://{m_dom.group(1)}"
+            if url and not url.startswith("http://") and not url.startswith("https://"):
+                if "://" not in url:
+                    url = f"https://{url}"
             if not (url.startswith("http://") or url.startswith("https://")):
                 return PolicyEvaluation(
                     allowed=False,
@@ -94,6 +113,7 @@ class PolicyEngine:
                     risk_level="high",
                     reasoning="Only HTTP and HTTPS URLs are permitted."
                 )
+            arguments["url"] = url
 
         if intent == "type_text":
             target = str(arguments.get("target_control_type", "")).strip().lower()

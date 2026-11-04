@@ -111,6 +111,10 @@
         "draft_text": {
           "type": "string",
           "description": "Optional draft content to initialize application with."
+        },
+        "profile": {
+          "type": "string",
+          "description": "Optional browser user profile directory or display name (e.g. 'Person 1', 'Yuvraj', 'jecrcu.edu.in', 'Profile 2', 'Default')."
         }
       }
     },
@@ -126,6 +130,10 @@
         "browser": {
           "type": "string",
           "description": "Optional target browser (e.g. edge, chrome, default)."
+        },
+        "profile": {
+          "type": "string",
+          "description": "Optional browser user profile directory or display name (e.g. 'Person 1', 'Yuvraj', 'jecrcu.edu.in', 'Profile 2', 'Default')."
         }
       }
     },
@@ -192,6 +200,16 @@
         "idempotency_key": { "type": "string" },
         "product_name": { "type": "string" },
         "store": { "type": "string", "default": "amazon" }
+      }
+    },
+    "ListBrowserProfiles": {
+      "type": "object",
+      "properties": {
+        "browser": {
+          "type": "string",
+          "description": "Target browser: 'chrome' or 'edge'. Defaults to 'chrome'.",
+          "default": "chrome"
+        }
       }
     }
   }

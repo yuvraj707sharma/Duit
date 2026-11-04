@@ -12,7 +12,7 @@ from backend.app.api.whatsapp import router as whatsapp_router
 from backend.app.api.skills import router as skills_router
 
 app = FastAPI(
-    title="FastAgent API",
+    title="DUIT API",
     description="Deterministic 4-stage cascade for fast, cheap, safe AI scheduling & email assistance.",
     version="1.0.0"
 )
@@ -41,7 +41,7 @@ app.include_router(skills_router)
 @app.get("/")
 async def root():
     return {
-        "app": "FastAgent",
+        "app": "DUIT",
         "status": "online",
         "version": "1.0.0",
         "docs_url": "/docs"

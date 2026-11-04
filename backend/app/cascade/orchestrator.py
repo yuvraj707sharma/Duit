@@ -21,6 +21,7 @@ from backend.app.learning.thresholds import threshold_calibrator
 from backend.app.learning.retrieval import correction_retriever
 from backend.app.metrics import StageTimer, metrics_collector
 from backend.app.db.repository import repository, DatabaseRepository
+from backend.app.config import settings
 
 
 class OrchestratorResponse(BaseModel):
@@ -48,7 +49,18 @@ class CascadeOrchestrator:
         policy_eng: Optional[PolicyEngine] = None
     ):
         self.decision_model = decision_model or MockDecisionModel()
-        self.llm_provider = llm_provider or MockLLMProvider()
+        if llm_provider:
+            self.llm_provider = llm_provider
+        elif settings.USE_MOCK_LLM or settings.APP_ENV == "test":
+            self.llm_provider = MockLLMProvider()
+        elif settings.DEFAULT_LLM_PROVIDER == "meta" and settings.meta_api_key:
+            from backend.app.llm.meta import MetaModelProvider
+            self.llm_provider = MetaModelProvider()
+        elif settings.DEFAULT_LLM_PROVIDER == "gemini" and settings.GEMINI_API_KEY:
+            from backend.app.llm.gemini import GeminiProvider
+            self.llm_provider = GeminiProvider()
+        else:
+            self.llm_provider = MockLLMProvider()
         self.messaging_channel = messaging_channel or MockChannel()
         self.calendar_tool = calendar_tool or GoogleCalendarTool()
         self.gmail_tool = gmail_tool or GmailTool()
@@ -243,8 +255,19 @@ class CascadeOrchestrator:
                     intent="other",
                     schema={}
                 )
+                system_prompt = (
+                    "You are FastAgent, an intuitive, warm, and highly capable personal AI Chief of Staff. "
+                    "The user interacts with you through WhatsApp text or voice messages. "
+                    "Speak naturally, helpfully, and conversationally like a trusted human executive assistant. "
+                    "Keep responses concise and direct. Do not use emojis. "
+                    "You can manage calendars, draft and summarize emails, control desktop applications, "
+                    "browse and explore websites, take notes, and dispatch coding tasks."
+                )
+                conversational_reply = await self.llm_provider.generate_response(
+                    system_prompt=system_prompt,
+                    user_message=message_text
+                )
             stage_latencies["stage_3_llm_extraction"] = (time.perf_counter() - t0) * 1000
-            conversational_reply = f"I understand you said: '{message_text}'. How can I assist with your scheduling or emails?"
             await self.messaging_channel.send_text(user_id, conversational_reply)
 
             resp_obj = OrchestratorResponse(
@@ -263,14 +286,39 @@ class CascadeOrchestrator:
 
         # Extract arguments for both write AND read intents (Fix 9: read intents run argument extraction)
         with StageTimer("stage_3_llm_extraction"):
+            from backend.app.cascade.schemas import get_schema_for_intent
+            intent_schema = get_schema_for_intent(decision.intent)
             llm_res = await self.llm_provider.extract_arguments(
                 user_message=message_text,
                 intent=decision.intent,
-                schema={}
+                schema=intent_schema
             )
             extracted_args = llm_res.arguments or {}
             extracted_args.setdefault("query_text", message_text)
         stage_latencies["stage_3_llm_extraction"] = (time.perf_counter() - t0) * 1000
+
+        # -------------------------------------------------------------
+        # Cross-Channel Desktop Target Presence Check (<1ms)
+        # -------------------------------------------------------------
+        desktop_intents = {"open_app", "open_url", "create_note", "type_text", "set_volume", "search_files", "clear_history"}
+        if decision.intent in desktop_intents:
+            from backend.app.desktop.presence import presence_manager
+            if not presence_manager.is_online(user_id):
+                offline_reply = "laptop offline"
+                await self.messaging_channel.send_text(user_id, offline_reply)
+                resp_obj = OrchestratorResponse(
+                    request_id=request_id,
+                    user_id=user_id,
+                    intent=decision.intent,
+                    risk="low",
+                    confidence=decision.confidence,
+                    status="offline",
+                    response_text=offline_reply,
+                    stage_latencies_ms=stage_latencies
+                )
+                if inbound_message_id:
+                    await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())
+                return resp_obj
 
         # -------------------------------------------------------------
         # STAGE 4: Policy Engine & Approvals Validation (<2ms)
@@ -303,27 +351,6 @@ class CascadeOrchestrator:
             if inbound_message_id:
                 await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())
             return resp_obj
-
-        # Requirement 6: Cross-channel desktop target check (if laptop offline -> reply 'laptop offline')
-        desktop_intents = {"open_app", "open_url", "create_note", "type_text", "set_volume", "search_files", "clear_history"}
-        if decision.intent in desktop_intents:
-            from backend.app.desktop.presence import presence_manager
-            if not presence_manager.is_online(user_id):
-                offline_reply = "laptop offline"
-                await self.messaging_channel.send_text(user_id, offline_reply)
-                resp_obj = OrchestratorResponse(
-                    request_id=request_id,
-                    user_id=user_id,
-                    intent=decision.intent,
-                    risk=policy_eval.risk_level,
-                    confidence=decision.confidence,
-                    status="offline",
-                    response_text=offline_reply,
-                    stage_latencies_ms=stage_latencies
-                )
-                if inbound_message_id:
-                    await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())
-                return resp_obj
 
         # Fix 8: Idempotency key derived from message_id + action
         idempotency_key = self.derive_idempotency_key(msg_id, decision.intent)
@@ -574,7 +601,7 @@ class CascadeOrchestrator:
             harness = args.get("harness", "auto")
             res = await shed_bridge.dispatch_task(prompt=prompt, harness=harness)
             return ToolResult(success=res.get("success", False), data=res.get("task", {}), error=res.get("error"))
-        elif intent in ("open_app", "open_url", "create_note", "type_text", "set_volume", "search_files", "clear_history", "automate_cart"):
+        elif intent in ("open_app", "open_url", "create_note", "type_text", "set_volume", "search_files", "clear_history", "automate_cart", "generate_briefing_pdf", "briefing_pdf", "generate_pdf"):
             from backend.app.desktop.presence import presence_manager
             from backend.app.desktop.skills import skill_executor
             if presence_manager.is_online(user_id):

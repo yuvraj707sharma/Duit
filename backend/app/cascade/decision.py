@@ -164,8 +164,29 @@ class MockDecisionModel(DecisionModel):
                 reasoning_tag="cancel_keyword"
             )
 
-        # 4. Check calendar / availability (evaluate before schedule creation)
-        if any(w in msg for w in ("calendar", "what is on my", "what's on my", "schedule kya hai", "aaj ka schedule", "check calendar", "my schedule", "free today", "free tomorrow", "availability", "meetings today", "am i free")):
+        # Explicit file search / read keywords (checked before calendar/schedule keywords)
+        if any(w in msg for w in (
+            "search files", "search file", "find files", "find file", "file search",
+            "read file", "read the file", "open file", "what is in file", "show file",
+            "udhaar sheet", "laptop se bhejo", "laptop se send"
+        )):
+            return DecisionOutput(
+                intent="search_files",
+                risk="low",
+                needs_confirmation=False,
+                confidence=0.94,
+                detected_language="hi-Latn" if any(w in msg for w in ("sheet", "bhejo", "laptop se")) else "en",
+                model_used="mock-laya-router",
+                reasoning_tag="desktop_search_and_read_files"
+            )
+
+        # Check calendar read queries if explicit read words present
+        if any(w in msg for w in (
+            "check calendar", "view calendar", "show calendar", "is my calendar",
+            "what is on my", "what's on my", "am i free", "free today", "free tomorrow",
+            "schedule kya hai", "aaj ka schedule", "meetings today", "any meetings",
+            "check meetings", "meetings scheduled", "have we got any meetings", "what meetings"
+        )):
             return DecisionOutput(
                 intent="check_calendar",
                 risk="low",
@@ -176,11 +197,14 @@ class MockDecisionModel(DecisionModel):
                 reasoning_tag="calendar_read_query"
             )
 
-        # 5. Schedule meeting (English / Hindi / Hinglish)
+        # 4. Schedule meeting (English / Hindi / Hinglish)
         meeting_terms = (
             "schedule", "set the meeting", "set meeting", "set up meeting", "book a slot", "book slot",
-            "meeting fix kar do", "meeting rakh do", "rakh do", "meet with", "meeting", "appointment",
-            "arrange a meeting", "catchup", "sync with", "call with"
+            "meeting fix kar do", "meeting rakh do", "rakh do", "meet with", "appointment",
+            "arrange a meeting", "catchup", "sync with", "call with", "put it on the calendar",
+            "put on the calendar", "add to the calendar", "add to calendar", "block my calendar",
+            "block calendar", "calendar me daal", "calendar pe daal", "on the calendar",
+            "book on the calendar", "book site visit", "book visit", "book a visit"
         )
         if any(w in msg for w in meeting_terms):
             return DecisionOutput(
@@ -188,7 +212,7 @@ class MockDecisionModel(DecisionModel):
                 risk="medium",
                 needs_confirmation=True,
                 confidence=0.94,
-                detected_language="hi-Latn" if any(w in msg for w in ("kar do", "rakh", "baje", "ke saath")) else "en",
+                detected_language="hi-Latn" if any(w in msg for w in ("kar do", "rakh", "baje", "ke saath", "daal")) else "en",
                 model_used="mock-laya-router",
                 reasoning_tag="schedule_keyword"
             )
@@ -251,8 +275,12 @@ class MockDecisionModel(DecisionModel):
             )
 
         # 7. Desktop Intents (App execution, browser URLs, files, notes, typing, volume)
-        app_match = re.search(r"\b(?:open|launch|start)\s+(?:the\s+)?([a-zA-Z0-9_\-\.]+?)(?:\s+on\s+desktop|\s+app|\s+application|$)", msg)
-        if app_match and not any(w in msg for w in ("url", "site", "website", "link", "http", "cart", "email", "mail", "meeting", "slot", "calendar", "files", "note", ".com", ".org", ".io", ".dev", ".in", ".net", "browse", "explore")):
+        clean_desktop_msg = re.sub(r"[.!?,]+$", "", msg.strip())
+        app_match = re.search(r"\b(?:open|launch|start|run)\s+(?:the\s+)?([a-zA-Z0-9_\-\. ]+?)(?:\s+on\s+(?:my\s+)?(?:desktop|laptop|pc|computer)|\s+app|\s+application|$)", clean_desktop_msg, re.IGNORECASE)
+        has_app_excluded = any(w in msg for w in ("url", "site", "website", "link", "http", "cart", "email", "mail", "meeting", "slot", "calendar", "files", ".com", ".org", ".io", ".dev", ".in", ".net", "browse", "explore"))
+        if not has_app_excluded and re.search(r"\bnotes?\b", msg) and not re.search(r"\bnotepads?\b", msg):
+            has_app_excluded = True
+        if app_match and not has_app_excluded:
             return DecisionOutput(
                 intent="open_app",
                 risk="medium",
