@@ -118,19 +118,23 @@ class MockLLMProvider(LLMProvider):
         elif intent in ("send_email", "reply_email"):
             email_match = re.search(r"[\w\.-]+@[\w\.-]+", user_message)
             recipient = email_match.group(0) if email_match else ("rahul@example.com" if "rahul" in msg_lower else "colleague@example.com")
-            subject = "Quick Update"
-            body = "Hi, replying to confirm as requested."
+            subject = "Update regarding your request"
+            body = "Hi,\n\nI am reaching out regarding your request.\n\nBest regards,"
 
-            about_match = re.search(r"(?:about|saying that|saying|regarding)\s+(.*)", user_message, re.IGNORECASE)
+            about_match = re.search(r"(?:about|saying that|saying|regarding|informing him that|informing her that|informing them that|that)\s+(.*)", user_message, re.IGNORECASE)
             if about_match:
                 about_text = about_match.group(1).strip().rstrip(".! ")
-                if any(w in about_text.lower() for w in ("meet", "meeting")):
+                if any(w in about_text.lower() for w in ("5 pm", "5pm", "place", "reach")):
+                    subject = "Reaching today at 5 PM"
+                elif any(w in about_text.lower() for w in ("meet", "meeting")):
                     subject = "Meeting Today"
                 else:
                     subject = about_text[:40].capitalize()
                 recipient_name = recipient.split("@")[0].split(".")[0].capitalize() if recipient else "there"
                 clean_about = re.sub(r"\bmeet (?:him|her|them)\b", "meet you", about_text, flags=re.IGNORECASE)
-                body = f"Hi {recipient_name},\n\nI wanted to reach out and let you know that {clean_about}.\n\nBest regards,"
+                clean_about = re.sub(r"\bhis place\b", "your place", clean_about, flags=re.IGNORECASE)
+                clean_about = re.sub(r"\bher place\b", "your place", clean_about, flags=re.IGNORECASE)
+                body = f"Hi {recipient_name},\n\nConfirming that {clean_about}.\n\nBest regards,\nYuvraj"
 
             args = {
                 "recipient": recipient,
@@ -149,7 +153,8 @@ class MockLLMProvider(LLMProvider):
                 "max_results": 5
             }
         elif intent == "open_app":
-            app_match = re.search(r"\b(?:open|launch|start)\s+(?:the\s+)?([a-zA-Z0-9_\-\.]+?)(?:\s+on\s+desktop|\s+app|\s+application|$)", user_message, re.IGNORECASE)
+            clean_app_msg = re.sub(r"[.!?,]+$", "", user_message.strip())
+            app_match = re.search(r"\b(?:open|launch|start|run)\s+(?:the\s+)?([a-zA-Z0-9_\-\. ]+?)(?:\s+on\s+(?:my\s+)?(?:desktop|laptop|pc|computer)|\s+app|\s+application|$)", clean_app_msg, re.IGNORECASE)
             app = app_match.group(1).strip() if app_match else "notepad"
             if app in ("calc", "calculator"):
                 app = "calculator"
@@ -159,6 +164,10 @@ class MockLLMProvider(LLMProvider):
                 app = "terminal"
             elif app in ("explorer", "folder"):
                 app = "files"
+            elif app.lower() in ("microsoft edge", "ms edge", "edge browser", "edge"):
+                app = "msedge"
+            elif app.lower() in ("google chrome", "chrome browser", "chrome"):
+                app = "chrome"
 
             draft_text = None
             if "notepad" in app.lower() and any(w in msg_lower for w in ("draft", "write", "message", "note")):
@@ -173,6 +182,9 @@ class MockLLMProvider(LLMProvider):
                     draft_text = "Quick draft notes:\n- Review project goals\n- Check system status\n- Next followups"
 
             args = {"app_name": app, "idempotency_key": f"app_{int(time_mod.time()*1000)}"}
+            prof_m = re.search(r"(?:in|with|using)\s+(?:my\s+)?([a-zA-Z0-9_\-\. ]+?)\s+profile", user_message, re.IGNORECASE) or re.search(r"\bprofile\s+([a-zA-Z0-9_\-\.]+)", user_message, re.IGNORECASE)
+            if prof_m:
+                args["profile"] = prof_m.group(1).strip()
             if draft_text:
                 args["draft_text"] = draft_text
         elif intent == "open_url":
@@ -181,7 +193,23 @@ class MockLLMProvider(LLMProvider):
                 url = url_match.group(0)
             else:
                 domain_match = re.search(r"\b([a-zA-Z0-9-]+\.(?:com|org|io|dev|in|net|co|app))\b", user_message, re.IGNORECASE)
-                url = f"https://{domain_match.group(1)}" if domain_match else "https://fastagent.dev"
+                if domain_match:
+                    url = f"https://{domain_match.group(1)}"
+                elif "youtube" in msg_lower or "yt" in msg_lower:
+                    url = "https://youtube.com"
+                elif "reddit" in msg_lower:
+                    url = "https://reddit.com"
+                elif "github" in msg_lower:
+                    url = "https://github.com"
+                elif "twitter" in msg_lower or "x.com" in msg_lower:
+                    url = "https://x.com"
+                elif "google" in msg_lower:
+                    url = "https://google.com"
+                else:
+                    search_term = re.sub(r"^(?:open|explore|browse|search for|search|visit|navigate to|go to)\s+", "", user_message, flags=re.IGNORECASE)
+                    search_term = re.sub(r"\s+(?:in|on)\s+(?:edge|chrome|firefox|brave|browser).*$", "", search_term, flags=re.IGNORECASE).strip()
+                    import urllib.parse
+                    url = f"https://www.bing.com/search?q={urllib.parse.quote_plus(search_term or 'fastagent')}" if "edge" in msg_lower else f"https://www.google.com/search?q={urllib.parse.quote_plus(search_term or 'fastagent')}"
 
             browser = "default"
             if "edge" in msg_lower or "msedge" in msg_lower:
@@ -190,8 +218,13 @@ class MockLLMProvider(LLMProvider):
                 browser = "chrome"
             elif "firefox" in msg_lower:
                 browser = "firefox"
+            elif "brave" in msg_lower:
+                browser = "brave"
 
             args = {"url": url, "browser": browser, "idempotency_key": f"url_{int(time_mod.time()*1000)}"}
+            prof_m = re.search(r"(?:in|with|using)\s+(?:my\s+)?([a-zA-Z0-9_\-\. ]+?)\s+profile", user_message, re.IGNORECASE) or re.search(r"\bprofile\s+([a-zA-Z0-9_\-\.]+)", user_message, re.IGNORECASE)
+            if prof_m:
+                args["profile"] = prof_m.group(1).strip()
         elif intent == "create_note":
             title = "Quick Note"
             content = ""
@@ -249,6 +282,9 @@ class MockLLMProvider(LLMProvider):
                 "store": store,
                 "idempotency_key": f"cart_{int(time_mod.time()*1000)}"
             }
+        elif intent == "list_browser_profiles":
+            b_target = "edge" if "edge" in msg_lower else "chrome"
+            args = {"browser": b_target}
         else:
             args = {"raw_text": user_message}
 
@@ -268,7 +304,11 @@ class MockLLMProvider(LLMProvider):
         prompt_lower = (system_prompt or "").lower()
         msg_lower = (user_message or "").lower()
 
-        if "expense" in prompt_lower or "receipt" in prompt_lower:
+        if "capital of france" in msg_lower:
+            return "The capital of France is Paris. How else can I assist you today?"
+        elif any(g in msg_lower for g in ("hello", "hey", "hi", "good morning", "good evening", "how are you", "who are you")):
+            return "Hello! I am your FastAgent Chief of Staff. I can manage your calendar, summarize your emails, open applications on your workstation, explore websites, or run coding tasks. What would you like to do?"
+        elif "expense" in prompt_lower or "receipt" in prompt_lower:
             return (
                 "*Expense Analysis*\n"
                 "• *Category*: Business / Office\n"
@@ -276,7 +316,9 @@ class MockLLMProvider(LLMProvider):
                 "• *Raw Note*: " + user_message[:60] + "\n"
                 "• *Status*: Logged & Categorized"
             )
-        elif "action" in prompt_lower or "meeting" in prompt_lower or "staff" in prompt_lower:
+        elif "chief of staff" in prompt_lower or "assistant" in prompt_lower:
+            return f"I hear you. Regarding '{user_message}': I am ready to handle your tasks or look up anything you need. What should we tackle next?"
+        elif "action" in prompt_lower or "meeting" in prompt_lower:
             return (
                 "*Action Items Extracted*\n"
                 "1. [Urgent] " + user_message[:50] + "\n"
