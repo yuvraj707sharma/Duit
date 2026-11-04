@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, History, Trash2, Laptop, Wifi, WifiOff } from 'lucide-react';
+import { Mic, MicOff, History, Trash2, Wifi, WifiOff } from 'lucide-react';
 import { StatusOverlay, OverlayState } from './components/StatusOverlay';
 import { KillSwitchIndicator } from './components/KillSwitchIndicator';
+import duitLogo from './assets/duit-logo.jpg';
+import duitMascot from './assets/duit-mascot.jpg';
 
 declare global {
   interface Window {
@@ -131,15 +133,27 @@ export const App: React.FC = () => {
         flexDirection: 'column',
         maxHeight: '580px'
       }}>
-        {/* Header */}
+        {/* Header with Mascot & Logo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }} className="drag-handle">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '28px', height: '28px', background: '#ef4444', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Laptop size={16} color="white" />
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <img
+              src={duitMascot}
+              alt="DUIT Mascot"
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '2px solid #10b981',
+                boxShadow: '0 0 14px rgba(16, 185, 129, 0.4)'
+              }}
+            />
             <div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 800 }}>DUIT Desktop</div>
-              <div style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <img src={duitLogo} alt="DUIT" style={{ height: '22px', objectFit: 'contain' }} />
+                <span style={{ fontSize: '0.68rem', background: '#10b981', color: '#000', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>DESKTOP</span>
+              </div>
+              <div style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                 {isBackendOnline ? <Wifi size={10} color="#10b981" /> : <WifiOff size={10} color="#ef4444" />}
                 <span>{isBackendOnline ? 'Presence Online' : 'Presence Offline'}</span>
               </div>
