@@ -1,0 +1,193 @@
+<USER_REQUEST>
+Here are 12 personas, each tied to skills your system can do (calendar, Gmail, voice, laptop sidecar, screenshot proof, scheduled briefings). For each I give the typical message, what happens, and the proof that comes back.
+
+## Personas
+
+**1. Restaurant or hotel owner (Meera, runs a 20-table restaurant)**
+- *Voice note (Hinglish):* "Kal ke liye supplier ko email bhejo ki 20kg paneer chahiye, aur Friday 3 baje chef ke saath meeting rakh do."
+- *Cloud:* drafts the supplier email and checks the calendar, then asks "yes" before sending.
+- *Laptop:* "Open the billing software and send me a screenshot of today's sales screen."
+- *Proof:* approval card, then a screenshot of the billing window.
+
+**2. School teacher (Mr. Verma)**
+- *Message:* "Open the Class 8 marks spreadsheet on my laptop and send me the file," or "Remind me to email parents about Friday's PTM and put it on the calendar."
+- *Why it fits:* it's task execution, not an education chatbot, which your hackathon guide lists as a generic anti-project.
+- *Proof:* file or screenshot on WhatsApp, calendar confirmation.
+
+**3. College student (Aarav)**
+- *Message:* "Open my assignment folder, create a note called OS_Lab_Notes, and remind me to submit it by 9 PM."
+- *Laptop:* creates the file and opens it. *Cloud:* sets the reminder.
+- *Proof:* screenshot of the open file.
+
+**4. Senior citizen (Dadaji, voice-first)**
+- *Voice note in Hindi:* "Beta ke saath kal shaam 5 baje call rakho," or "Mere bijli bill ka email dhundo."
+- *Design needs:* voice only, large and simple replies, and a trusted family member as the approver for anything risky.
+- *Avoid:* medical advice, which the hackathon bans.
+- *Proof:* a short voice or text confirmation.
+
+**5. Startup CEO (Persona 1 in your doc)**
+- *Flow:* 7 AM PDF briefing, then a voice note to schedule and draft an email, then one-tap approval.
+- *Proof:* briefing PDF, draft card, calendar confirmation.
+
+**6. Software developer (Persona 3)**
+- *Message:* "Check Shed status on my workstation," then "Run the tests on the backend repo."
+- *Laptop:* sidecar runs allowlisted commands or dispatches to a coding harness.
+- *Proof:* pass/fail summary and a terminal screenshot.
+
+**7. Sales director (Persona 2)**
+- *Message:* "Open Edge, go to the client's YouTube channel, and put bullet points about their latest launch in Client_Prep on my desktop."
+- *Proof:* screenshot of the browser and the open file.
+
+**8. Freelancer or agency owner (Persona 4)**
+- *Message:* "Which clients asked for a quote today?"
+- *Caveat:* scanning chats means reading other people's messages. Do it only on the owner's own account, locally and with minimal storage, and say so plainly in the README.
+
+**9. Doctor or clinic receptionist**
+- *Message:* "Reschedule tomorrow's 11 AM slot to 2 PM and email the patient the new time."
+- *Why it fits:* pure scheduling and email admin.
+- *Avoid:* diagnosis or patient-data analysis, which is risky and falls under banned medical advice.
+- *Proof:* approval card, then confirmation.
+
+**10. Shopkeeper or small trader**
+- *Voice note:* "Kal ke liye 5 customers ko 'Diwali sale shuru' message ka draft banao" and "Laptop pe invoice template kholo."
+- *Proof:* draft shown for approval and a screenshot of the template.
+
+**11. Field worker or traveling consultant**
+- *Message:* "Is my laptop online?" then "Send me the proposal PDF from my Documents folder."
+- *Edge case:* if the laptop is asleep, FastAgent says "laptop offline" instead of failing silently.
+- *Proof:* the file arrives on WhatsApp.
+
+**12. Content creator or designer**
+- *Message:* "Open Canva in Chrome and screenshot my last project," or "Open OBS and tell me whether it is running."
+- *Why it fits:* shows app launching with process and window verification.
+- *Proof:* screenshot.
+
+## How to use these
+
+- **Pitch and demo:** pick one primary user and one secondary. I'd demo the **restaurant owner** (Hinglish voice plus email approval plus a laptop screenshot) or the **CEO**. Twelve personas in a 3-minute video is noise.
+- **README and market slide:** show the full set as a "who this serves" grid to prove breadth, but label them as use cases, not tested users.
+- **Only claim what works:** for each persona, mark which skills are working today and which are planned. Judges check this against the demo.
+
+## Edge cases to handle in the demo
+
+- Laptop asleep or offline
+- Voice note in Hinglish that the transcriber mishears (show a "did you mean?" confirmation)
+- A risky action (sending email, deleting a file) that requires approval
+- An email containing a malicious instruction, which gets blocked or flagged
+- A non-allowlisted app request that gets refused
+
+Two things in your overview need checking before they go in a pitch: the exact model versions (the guide lists Muse Spark, Wonder, Voice Transcribe, and SAM 3.1, not "Spark 1.3" or "Wonder 1.0"), and security claims like AES-256-GCM encryption and "sub-2ms routing", which you should include only if your code really does it and you measured it.
+
+Which two personas do you want the demo built around? Once you choose, I can write the exact message scripts and the step-by-step flow for each.
+-----------------------------------
+These 70 scenarios all run on the same small skill set, which is the point. Tags show which skill each one uses:
+
+**[CAL]** calendar · **[MAIL]** Gmail draft/send · **[VOICE]** voice note · **[APP]** open/verify app · **[FILE]** find/send/create file · **[SHOT]** screenshot proof · **[BRIEF]** scheduled briefing · **[RUN]** run an allowlisted command
+
+Anything that sends or deletes needs approval.
+
+## Channel reality check
+The hackathon is built around WhatsApp, but WhatsApp is blocked in mainland China (WeChat dominates) and Japan mostly uses LINE. The US uses iMessage/SMS more than WhatsApp. So demo on WhatsApp, and present China, Japan and the US as "same engine, different channel adapter." Don't claim those adapters exist.
+
+## India (1-18)
+1. **Kirana shop owner** (Hindi voice): "Aaj ka udhaar sheet laptop se bhejo." [VOICE][FILE]
+2. **Chartered accountant**: put GST deadlines on the calendar and draft a document checklist to clients. [CAL][MAIL]
+3. **Wedding planner**: schedule caterer and decorator meetings and email each a brief. [CAL][MAIL]
+4. **Cloud kitchen owner**: open the order dashboard and screenshot today's orders. [APP][SHOT]
+5. **Coaching class owner**: draft fee-reminder emails to parents for approval. [MAIL]
+6. **Real estate agent**: book site visits and send the brochure PDF from the laptop. [CAL][FILE]
+7. **Freelance video editor**: "Is my render finished?" with a screenshot of the editor. [APP][SHOT]
+8. **IT employee working from home**: start the VPN and open Jira on the office laptop. [APP][SHOT]
+9. **Farmer cooperative secretary** (Marathi/Telugu voice): draft an email to a mandi buyer. [VOICE][MAIL]
+10. **District court lawyer**: log hearing dates and email the cause list to a junior. No legal advice. [CAL][MAIL]
+11. **Boutique owner**: send the catalog PDF to a customer after approval. [FILE][MAIL]
+12. **Travel agent**: draft itinerary emails and block calendar dates. [MAIL][CAL]
+13. **Auto garage owner**: send an invoice PDF to a customer and book the next service slot. [FILE][CAL]
+14. **NGO coordinator**: set up volunteer meetings and a weekly summary PDF. [CAL][BRIEF]
+15. **Bengaluru startup founder**: 7 AM briefing and a voice-note scheduling flow. [BRIEF][VOICE][CAL]
+16. **Retired bank officer** (Hindi voice): find the electricity bill email and set a pay-by reminder. [VOICE][MAIL][CAL]
+17. **Hinglish content creator**: check whether OBS is running. [APP][SHOT]
+18. **Hotel front desk manager**: email a vendor and open the booking sheet. [MAIL][APP][SHOT]
+
+## United States (19-36)
+19. **Real estate agent**: schedule an open house and email the listing sheet. [CAL][MAIL][FILE]
+20. **Plumber/contractor**: reschedule today's jobs and send an estimate PDF. [CAL][FILE]
+21. **Solo lawyer**: conflict-check a requested meeting and draft the client reply. [CAL][MAIL]
+22. **Gig driver**: open the mileage spreadsheet and send it for tax time. [FILE]
+23. **Nurse**: shift-swap emails and calendar changes only, nothing clinical. [MAIL][CAL]
+24. **Remote software engineer**: run tests, check CI status. [RUN][SHOT]
+25. **Product manager**: meeting-prep briefing every morning. [BRIEF]
+26. **Etsy seller**: open the shipping label tool and screenshot the order queue. [APP][SHOT]
+27. **College student**: create a notes file and set a deadline reminder. [FILE][CAL]
+28. **Parent of three**: sync school events and draft a note to the teacher. [CAL][MAIL]
+29. **Retiree**: find the property tax email and set a payment reminder. [MAIL][CAL]
+30. **Podcast producer**: confirm the audio export finished. [APP][SHOT]
+31. **Freelance designer**: send an invoice from a template after approval. [FILE][MAIL]
+32. **Restaurant GM**: send the staff schedule and email the supplier. [FILE][MAIL]
+33. **Financial advisor's assistant**: schedule client reviews. No investment advice. [CAL][MAIL]
+34. **Teacher**: send the grade spreadsheet and draft a parent email. [FILE][MAIL]
+35. **Journalist**: set up interviews and open the transcript file. [CAL][APP]
+36. **User with limited mobility**: voice-only laptop control. [VOICE][APP][SHOT]
+
+## China (37-53)
+37. **Shenzhen cross-border seller**: draft English buyer emails and screenshot the seller dashboard. [MAIL][APP][SHOT]
+38. **Export factory manager**: schedule calls across time zones and email overseas buyers. [CAL][MAIL]
+39. **Live-stream seller**: check the streaming software is running before going live. [APP][SHOT]
+40. **Mini-program developer**: kick off a build and report the result. [RUN]
+41. **Hangzhou founder**: morning briefing with email highlights. [BRIEF]
+42. **Taobao shop owner**: export the order file and send it. [FILE]
+43. **Chinese student abroad**: Mandarin voice note to English email, with a confirm step. [VOICE][MAIL]
+44. **Inbound tourism agent**: itinerary emails and booking calendar. [MAIL][CAL]
+45. **Accountant**: find the invoice (fapiao) PDF and send it to a client. [FILE][MAIL]
+46. **School administrator**: schedule parent-teacher meetings and send a notice draft. [CAL][MAIL]
+47. **Elderly user** (Mandarin voice): set a family call reminder. [VOICE][CAL]
+48. **Chengdu restaurant owner**: email the supplier and screenshot the POS. [MAIL][APP][SHOT]
+49. **Logistics coordinator**: open the tracking dashboard and screenshot delays. [APP][SHOT]
+50. **Designer**: "Did my render finish?" [APP][SHOT]
+51. **Foreign business traveler in Shanghai**: itinerary and meeting invites. [CAL][MAIL]
+52. **Hardware engineer**: open the CAD project and export the file. [APP][FILE]
+53. **Freelance translator**: set a deadline reminder and send the translated file. [CAL][FILE]
+
+## Japan (54-70)
+54. **Office worker**: draft a polite business-Japanese (keigo) email reply for approval. [MAIL]
+55. **Izakaya owner**: supplier orders and reservation calendar. [MAIL][CAL]
+56. **Elderly user** (Japanese voice): appointment and family reminders. No medical advice. [VOICE][CAL]
+57. **Convenience store owner**: send the shift schedule. [FILE]
+58. **Game developer**: check the build status. [RUN][SHOT]
+59. **Illustrator**: confirm the export finished in the art app. [APP][SHOT]
+60. **Ryokan manager**: guest booking emails with English drafts. [MAIL]
+61. **University researcher**: lab meeting schedule and open the dataset file. [CAL][APP]
+62. **Tax accountant**: filing-deadline reminders. [CAL][BRIEF]
+63. **Tour guide**: itinerary emails to inbound tourists. [MAIL][CAL]
+64. **Telework employee**: open the company VPN and a work app. [APP][SHOT]
+65. **Real estate agent**: viewing schedule and listing PDF. [CAL][FILE]
+66. **Small manufacturer**: send a quote PDF to a client. [FILE][MAIL]
+67. **Care office coordinator**: staff schedule changes and emails. Admin only. [CAL][MAIL]
+68. **Kyoto cafe owner**: supplier email and a daily sales screenshot. [MAIL][APP][SHOT]
+69. **Commuter on a train**: text-only quiet mode to move a meeting. [CAL][MAIL]
+70. **Freelance writer**: open the manuscript file and set a delivery reminder. [APP][CAL]
+
+## What to do with this list
+- **Don't build 70 things.** These are about 8 skills in different clothes. Build the skills, then show the list as a "who this serves" grid.
+- **Mark what works.** In the README, label each skill as working, partial, or planned. Judges compare that against your demo.
+- **Cover every market with one demo.** The voice-first Hinglish flow in #1, #15 or #16 is your strongest, because it shows Muse Voice Transcribe plus approval plus laptop proof. Mention Japanese keigo drafting (#54) and Mandarin voice (#43) as test cases only if you actually test them.
+- **Avoid the banned areas.** I kept medical, legal-advice, financial-advice and education-chatbot scenarios to admin tasks, since the guide lists medical advice and simple education chatbots as anti-projects.
+
+Want me to turn the three strongest ones into word-for-word demo scripts for your 3-minute video?
+
+
+try this project on these all personas and scenarios
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-11-01T13:42:29+05:30.
+
+The user's current state is as follows:
+Active Document: e:\Inovvate\backend\.env (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 4
+Other open documents:
+- e:\Inovvate\backend\app\desktop\voice_stt.py (LANGUAGE_UNSPECIFIED)
+- e:\Inovvate\run_all.ps1 (LANGUAGE_UNSPECIFIED)
+- e:\Inovvate\run_all.bat (LANGUAGE_UNSPECIFIED)
+- e:\Inovvate\shed\server\tunnel.js (LANGUAGE_UNSPECIFIED)
+- e:\Inovvate\shed\server\health.js (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>

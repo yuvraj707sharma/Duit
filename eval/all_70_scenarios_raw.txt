@@ -1,0 +1,66 @@
+<USER_REQUEST>
+Here are 12 personas, each tied to skills your system can do (calendar, Gmail, voice, laptop sidecar, screenshot proof, scheduled briefings). For each I give the typical message, what happens, and the proof that comes back.
+
+## Personas
+
+**1. Restaurant or hotel owner (Meera, runs a 20-table restaurant)**
+- *Voice note (Hinglish):* "Kal ke liye supplier ko email bhejo ki 20kg paneer chahiye, aur Friday 3 baje chef ke saath meeting rakh do."
+- *Cloud:* drafts the supplier email and checks the calendar, then asks "yes" before sending.
+- *Laptop:* "Open the billing software and send me a screenshot of today's sales screen."
+- *Proof:* approval card, then a screenshot of the billing window.
+
+**2. School teacher (Mr. Verma)**
+- *Message:* "Open the Class 8 marks spreadsheet on my laptop and send me the file," or "Remind me to email parents about Friday's PTM and put it on the calendar."
+- *Why it fits:* it's task execution, not an education chatbot, which your hackathon guide lists as a generic anti-project.
+- *Proof:* file or screenshot on WhatsApp, calendar confirmation.
+
+**3. College student (Aarav)**
+- *Message:* "Open my assignment folder, create a note called OS_Lab_Notes, and remind me to submit it by 9 PM."
+- *Laptop:* creates the file and opens it. *Cloud:* sets the reminder.
+- *Proof:* screenshot of the open file.
+
+**4. Senior citizen (Dadaji, voice-first)**
+- *Voice note in Hindi:* "Beta ke saath kal shaam 5 baje call rakho," or "Mere bijli bill ka email dhundo."
+- *Design needs:* voice only, large and simple replies, and a trusted family member as the approver for anything risky.
+- *Avoid:* medical advice, which the hackathon bans.
+- *Proof:* a short voice or text confirmation.
+
+**5. Startup CEO (Persona 1 in your doc)**
+- *Flow:* 7 AM PDF briefing, then a voice note to schedule and draft an email, then one-tap approval.
+- *Proof:* briefing PDF, draft card, calendar confirmation.
+
+**6. Software developer (Persona 3)**
+- *Message:* "Check Shed status on my works
+<truncated 9796 bytes>
+pany VPN and a work app. [APP][SHOT]
+65. **Real estate agent**: viewing schedule and listing PDF. [CAL][FILE]
+66. **Small manufacturer**: send a quote PDF to a client. [FILE][MAIL]
+67. **Care office coordinator**: staff schedule changes and emails. Admin only. [CAL][MAIL]
+68. **Kyoto cafe owner**: supplier email and a daily sales screenshot. [MAIL][APP][SHOT]
+69. **Commuter on a train**: text-only quiet mode to move a meeting. [CAL][MAIL]
+70. **Freelance writer**: open the manuscript file and set a delivery reminder. [APP][CAL]
+
+## What to do with this list
+- **Don't build 70 things.** These are about 8 skills in different clothes. Build the skills, then show the list as a "who this serves" grid.
+- **Mark what works.** In the README, label each skill as working, partial, or planned. Judges compare that against your demo.
+- **Cover every market with one demo.** The voice-first Hinglish flow in #1, #15 or #16 is your strongest, because it shows Muse Voice Transcribe plus approval plus laptop proof. Mention Japanese keigo drafting (#54) and Mandarin voice (#43) as test cases only if you actually test them.
+- **Avoid the banned areas.** I kept medical, legal-advice, financial-advice and education-chatbot scenarios to admin tasks, since the guide lists medical advice and simple education chatbots as anti-projects.
+
+Want me to turn the three strongest ones into word-for-word demo scripts for your 3-minute video?
+
+
+try this project on these all personas and scenarios
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-11-01T13:42:29+05:30.
+
+The user's current state is as follows:
+Active Document: e:\Inovvate\backend\.env (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 4
+Other open documents:
+- e:\Inovvate\backend\app\desktop\voice_stt.py (LANGUAGE_UNSPECIFIED)
+- e:\Inovvate\run_all.ps1 (LANGUAGE_UNSPECIFIED)
+- e:\Inovvate\run_all.bat (LANGUAGE_UNSPECIFIED)
+- e:\Inovvate\shed\server\tunnel.js (LANGUAGE_UNSPECIFIED)
+- e:\Inovvate\shed\server\health.js (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
