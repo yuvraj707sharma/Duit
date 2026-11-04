@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, ChevronLeft, ChevronRight, History, Trash2, Laptop, Wifi, WifiOff } from 'lucide-react';
+import { Mic, MicOff, History, Trash2, Laptop, Wifi, WifiOff } from 'lucide-react';
 import { StatusOverlay, OverlayState } from './components/StatusOverlay';
 import { KillSwitchIndicator } from './components/KillSwitchIndicator';
 
@@ -8,14 +8,12 @@ declare global {
     electronAPI?: {
       triggerKillSwitch: () => Promise<{ success: boolean; killSwitchActive: boolean }>;
       resetKillSwitch: () => Promise<{ success: boolean; killSwitchActive: boolean }>;
-      toggleSidebar: (isExpanded: boolean) => Promise<boolean>;
       onKillSwitchActivated: (callback: () => void) => void;
     };
   }
 }
 
 export const App: React.FC = () => {
-  const [isExpanded, setIsExpanded] = useState(true);
   const [isMicToggledOn, setIsMicToggledOn] = useState(true);
   const [isPushToTalkHeld, setIsPushToTalkHeld] = useState(false);
   const [isKillSwitchActive, setIsKillSwitchActive] = useState(false);
@@ -61,12 +59,6 @@ export const App: React.FC = () => {
     const timer = setInterval(checkBackend, 10000);
     return () => clearInterval(timer);
   }, []);
-
-  const handleToggleSidebar = () => {
-    const next = !isExpanded;
-    setIsExpanded(next);
-    window.electronAPI?.toggleSidebar(next);
-  };
 
   // Push-To-Talk Handlers (Mic open ONLY when toggled ON AND key/button held down)
   const handlePushToTalkStart = () => {
@@ -127,63 +119,33 @@ export const App: React.FC = () => {
 
   return (
     <div style={{ padding: '8px', width: '100%', height: '100%' }}>
-      {/* Collapsed Mini Float Button */}
-      {!isExpanded ? (
-        <button
-          onClick={handleToggleSidebar}
-          style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '28px',
-            background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-            border: '2px solid #ef4444',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 8px 24px rgba(239, 68, 68, 0.4)'
-          }}
-          title="Expand FastAgent Sidebar"
-        >
-          <ChevronLeft size={24} color="#ef4444" />
-        </button>
-      ) : (
-        /* Expanded Sidebar Widget */
-        <div style={{
-          background: 'var(--bg-widget)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '16px',
-          padding: '18px',
-          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(16px)',
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: '580px'
-        }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }} className="drag-handle">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '28px', height: '28px', background: '#ef4444', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Laptop size={16} color="white" />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800 }}>FastAgent Desktop</div>
-                <div style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {isBackendOnline ? <Wifi size={10} color="#10b981" /> : <WifiOff size={10} color="#ef4444" />}
-                  <span>{isBackendOnline ? 'Presence Online' : 'Presence Offline'}</span>
-                </div>
+      {/* Desktop App Widget */}
+      <div style={{
+        background: 'var(--bg-widget)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '16px',
+        padding: '18px',
+        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(16px)',
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: '580px'
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }} className="drag-handle">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '28px', height: '28px', background: '#ef4444', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Laptop size={16} color="white" />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 800 }}>DUIT Desktop</div>
+              <div style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {isBackendOnline ? <Wifi size={10} color="#10b981" /> : <WifiOff size={10} color="#ef4444" />}
+                <span>{isBackendOnline ? 'Presence Online' : 'Presence Offline'}</span>
               </div>
             </div>
-
-            <button
-              onClick={handleToggleSidebar}
-              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
-              title="Collapse Sidebar"
-            >
-              <ChevronRight size={20} />
-            </button>
           </div>
+        </div>
 
           {/* Kill Switch Indicator */}
           <KillSwitchIndicator
@@ -317,7 +279,6 @@ export const App: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 };

@@ -68,6 +68,9 @@ auth_bot/
 auth_director/
 whatsapp/evolution-go/
 *.exe
+*.spec
+artifacts/
+WhatsApp Image*.jpg
 
 # External sub-repositories, kits & archives
 Hackathon innov8/
