@@ -5,6 +5,8 @@ import sys
 
 # Ensure root workspace is on python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+os.environ["APP_ENV"] = "test"
+os.environ["USE_MOCK_LLM"] = "True"
 
 from backend.app.cascade.orchestrator import CascadeOrchestrator
 from backend.app.channels.mock import MockChannel

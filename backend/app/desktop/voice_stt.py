@@ -50,6 +50,45 @@ class VoiceSTTEngine:
         # Calculate simple RMS amplitude over raw samples if PCM
         return True
 
+    def transcribe_with_meta_voice(
+        self,
+        audio_bytes: bytes,
+        language: str = "en"
+    ) -> Optional[Dict[str, Any]]:
+        """Transcribes audio using Meta Model API's Muse Voice Transcribe model."""
+        from backend.app.config import settings
+        if not settings.meta_api_key or settings.USE_MOCK_LLM or settings.APP_ENV == "test":
+            return None
+
+        import httpx
+        start_time = time.perf_counter()
+        try:
+            files = {"file": ("audio.wav", audio_bytes, "audio/wav")}
+            data = {"model": getattr(settings, "META_VOICE_MODEL", "muse-voice-transcribe-1.0")}
+            headers = {"Authorization": f"Bearer {settings.meta_api_key}"}
+
+            with httpx.Client(timeout=10.0) as client:
+                res = client.post(
+                    f"{settings.META_MODEL_BASE_URL.rstrip('/')}/asr/transcribe",
+                    headers=headers,
+                    files=files,
+                    data=data
+                )
+                if res.status_code == 200:
+                    resp_data = res.json()
+                    text = resp_data.get("text", "")
+                    latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+                    return {
+                        "text": text,
+                        "language": resp_data.get("language", language),
+                        "latency_ms": latency_ms,
+                        "confidence": 0.98,
+                        "engine": "meta-muse-voice-transcribe"
+                    }
+        except Exception as e:
+            logger.warning("Meta Muse Voice Transcribe call failed (%s). Falling back.", e)
+        return None
+
     def transcribe_audio(
         self,
         audio_bytes: bytes,
@@ -70,6 +109,12 @@ class VoiceSTTEngine:
                 "engine": "faster-whisper"
             }
 
+        # 1. Attempt Meta Muse Voice Transcribe if configured
+        meta_res = self.transcribe_with_meta_voice(audio_bytes, language=language)
+        if meta_res:
+            return meta_res
+
+        # 2. Local faster-whisper fallback
         model = self._load_model()
         if model:
             try:

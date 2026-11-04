@@ -347,3 +347,51 @@ def test_voice_stt_engine_and_api():
     assert data["transcription"]["text"] == "open notepad on my laptop"
     assert "cascade" in data
 
+
+# ---------------------------------------------------------------------------
+# Test 8: Browser Profile Discovery & Resolution (Chrome & Edge)
+# ---------------------------------------------------------------------------
+def test_browser_profile_discovery_and_resolution():
+    from backend.app.desktop.skills import (
+        DesktopSkillExecutor,
+        get_browser_profiles,
+        resolve_browser_profile,
+    )
+
+    executor = DesktopSkillExecutor()
+
+    # 1. Execute list_browser_profiles skill
+    res = executor.execute_skill("list_browser_profiles", {"browser": "chrome"})
+    assert res["success"] is True
+    assert res["action"] == "list_browser_profiles"
+    assert "profiles" in res
+    assert isinstance(res["profiles"], list)
+
+    # 2. Test profile resolution logic with mock profiles
+    with patch("backend.app.desktop.skills.get_browser_profiles") as mock_get_profs:
+        mock_get_profs.return_value = {
+            "Default": {"id": "Default", "name": "Personal", "email": "personal@example.com"},
+            "Profile 2": {"id": "Profile 2", "name": "Work", "email": "work@company.com"},
+            "Profile 4": {"id": "Profile 4", "name": "College", "email": "student@university.edu"},
+            "Profile 6": {"id": "Profile 6", "name": "Yuvraj", "email": "nanuuv0007@gmail.com"},
+        }
+
+        # Exact ID
+        assert resolve_browser_profile("chrome", "Default") == "Default"
+        assert resolve_browser_profile("chrome", "Profile 2") == "Profile 2"
+
+        # Number alias
+        assert resolve_browser_profile("chrome", "2") == "Profile 2"
+        assert resolve_browser_profile("chrome", "6") == "Profile 6"
+
+        # Name match
+        assert resolve_browser_profile("chrome", "Work") == "Profile 2"
+        assert resolve_browser_profile("chrome", "Yuvraj") == "Profile 6"
+        assert resolve_browser_profile("chrome", "college") == "Profile 4"
+
+        # Email match
+        assert resolve_browser_profile("chrome", "nanuuv0007@gmail.com") == "Profile 6"
+        assert resolve_browser_profile("chrome", "nanuuv") == "Profile 6"
+        assert resolve_browser_profile("chrome", "university") == "Profile 4"
+
+
