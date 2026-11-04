@@ -14,7 +14,8 @@ import {
   getWhatsAppStatus,
   setSocketIO,
   sendTestPing,
-  disconnectBotSession
+  disconnectBotSession,
+  requestBotPairingCode
 } from './src/whatsapp/baileysManager.js';
 
 dotenv.config();

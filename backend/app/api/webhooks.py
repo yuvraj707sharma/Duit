@@ -56,9 +56,9 @@ async def receive_evolution_webhook(
         if not is_registered:
             onboarding_url = f"{settings.APP_WEB_URL}/connect?phone={clean_phone}"
             onboarding_msg = (
-                f"👋 Welcome to *FastAgent*!\n\n"
+                f"Welcome to *FastAgent*.\n\n"
                 f"Your phone number (+{clean_phone}) is not yet connected.\n\n"
-                f"🔗 Click here to link your Google Calendar, Email, and Desktop apps:\n"
+                f"Link here to connect your Google Calendar, Email, and Desktop apps:\n"
                 f"{onboarding_url}\n\n"
                 f"Once connected, you can manage your daily schedule, emails, and workstation instantly from here."
             )

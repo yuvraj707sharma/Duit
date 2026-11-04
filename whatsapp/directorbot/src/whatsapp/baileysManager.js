@@ -57,9 +57,9 @@ function emitStatus() {
 // ── User State Machine ───────────────────────────────────────────────────────
 // States: NEW | ONBOARDING_NAME | ONBOARDING_USE_CASE | ONBOARDING_AUTH | ACTIVE | BLOCKED
 const ONBOARDING_QUESTIONS = [
-  { field: 'name',     prompt: 'Welcome to *ZORO*! I am your personal AI assistant.\n\nTo get started, what is your name?' },
-  { field: 'use_case', prompt: 'Nice to meet you, {name}!\n\nHow do you plan to use ZORO? Pick a number:\n\n1. Personal productivity (calendar, emails, reminders)\n2. Business & work tasks\n3. Research & learning\n4. Just exploring\n\nReply with 1, 2, 3, or 4.' },
-  { field: 'google_auth', prompt: 'Almost done! To unlock your Google Calendar & Gmail superpowers, tap the link below and sign in with Google:\n\n{auth_link}\n\n_(You can also skip this and use text-only features for now — reply "skip")_' }
+  { field: 'name',     prompt: 'Welcome to *DUIT*! I am your personal AI assistant.\n\nTo get started, what is your name?' },
+  { field: 'use_case', prompt: 'Nice to meet you, {name}!\n\nHow do you plan to use DUIT? Pick a number:\n\n1. Personal productivity (calendar, emails, reminders)\n2. Business & work tasks\n3. Research & learning\n4. Just exploring\n\nReply with 1, 2, 3, or 4.' },
+  { field: 'google_auth', prompt: 'Almost done! To unlock your Google Calendar & Gmail superpowers, tap the link below and sign in with Google:\n\n{auth_link}\n\n_(You can also skip this and use text-only features for now - reply "skip")_' }
 ];
 
 const USE_CASE_MAP = { '1': 'Personal productivity', '2': 'Business & work', '3': 'Research & learning', '4': 'Exploring' };
@@ -137,7 +137,7 @@ function stripEmojis(str) {
   if (!str || typeof str !== 'string') return str;
   return str
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2300}-\u{23FF}\u{2B50}\u{FE0F}\u{200D}]/gu, '')
-    .replace(/[⏳✅❌🤖📅✉️🤔💡🎉⚠️🗑️📊✨⚔️📍⏰📌🔗🙂👋👆🧩⚡]/g, '')
+    .replace(/[✅❌📅✉️🤔💡🎉⚠️🗑️📊✨⚔️📍⏰📌🔗🧩⚡]/g, '')
     .replace(/  +/g, ' ')
     .trim();
 }
@@ -180,7 +180,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     return;
   }
 
-  // ── NEW user — start onboarding ──────────────────────────────────────────
+  // ── NEW user - start onboarding ──────────────────────────────────────────
   if (user.state === 'NEW') {
     await updateUser(cleanPhone, { state: 'ONBOARDING_NAME' });
     await sendMessage(jid, ONBOARDING_QUESTIONS[0].prompt);
@@ -199,7 +199,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     const commonGreetings = ['hi', 'hy', 'hello', 'hey', 'hii', 'hiii', 'hola', 'namaste', 'start', 'help', 'yo', 'suno'];
 
     if (!cleanName || cleanName.length < 2 || commonGreetings.includes(lower)) {
-      await sendMessage(jid, '🙂 Please tell me your name so I can personalize your assistant (e.g. "Yuvraj" or "Amit").');
+      await sendMessage(jid, ' Please tell me your name so I can personalize your assistant (e.g. "Yuvraj" or "Amit").');
       return;
     }
     await updateUser(cleanPhone, { name: cleanName, state: 'ONBOARDING_USE_CASE' });
@@ -213,7 +213,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     const choice = trimmedText.slice(0, 1);
     const useCase = USE_CASE_MAP[choice];
     if (!useCase) {
-      await sendMessage(jid, '👆 Please reply with 1, 2, 3, or 4 to pick your use case.');
+      await sendMessage(jid, ' Please reply with 1, 2, 3, or 4 to pick your use case.');
       return;
     }
     await updateUser(cleanPhone, { use_case: useCase, state: 'ONBOARDING_AUTH' });
@@ -230,7 +230,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     if (lower === 'skip' || lower === 'later' || lower === 'no') {
       await updateUser(cleanPhone, { state: 'ACTIVE' });
       await sendMessage(jid,
-        `*You are all set, ${user.name || 'there'}!*\n\nYou can connect Google later by typing *"connect google"*.\n\nZORO is ready. Just text me anything — I can help with tasks, questions, scheduling, and more!\n\nType *"help"* anytime to see what I can do.`
+        `*You are all set, ${user.name || 'there'}!*\n\nYou can connect Google later by typing *"connect google"*.\n\nDUIT is ready. Just text me anything - I can help with tasks, questions, scheduling, and more!\n\nType *"help"* anytime to see what I can do.`
       );
     } else {
       // User might have already authenticated via the link and come back
@@ -239,7 +239,7 @@ async function handleFastAgentMessage(jid, phone, text) {
       if (tokenRow.length > 0) {
         await updateUser(cleanPhone, { state: 'ACTIVE', google_connected: 1 });
         await sendMessage(jid,
-          `*Google connected successfully, ${user.name || 'there'}!*\n\nCalendar & Gmail are now live.\nZORO is ready — text me anything!\n\nType *"help"* to see what I can do.`
+          `*Google connected successfully, ${user.name || 'there'}!*\n\nCalendar & Gmail are now live.\nDUIT is ready - text me anything!\n\nType *"help"* to see what I can do.`
         );
       } else {
         const authLink = generateAuthLink(cleanPhone);
@@ -251,7 +251,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     return;
   }
 
-  // ── ACTIVE user — handle special commands then route to FastAgent ────────
+  // ── ACTIVE user - handle special commands then route to FastAgent ────────
   if (user.state === 'ACTIVE') {
     const lower = trimmedText.toLowerCase();
 
@@ -272,14 +272,14 @@ async function handleFastAgentMessage(jid, phone, text) {
 
     if (isGoogleConnect) {
       const authLink = generateAuthLink(cleanPhone);
-      await sendMessage(jid, `*Link your Google Account with ZORO:*\n\nTap below to connect your Google Calendar & Gmail:\n\n${authLink}\n\n_Once connected, you can schedule meetings, check calendar, and manage emails live!_`);
+      await sendMessage(jid, `*Link your Google Account with DUIT:*\n\nTap below to connect your Google Calendar & Gmail:\n\n${authLink}\n\n_Once connected, you can schedule meetings, check calendar, and manage emails live!_`);
       return;
     }
 
     // Help command
     if (lower === 'help' || lower === '/help') {
       await sendMessage(jid,
-        `*ZORO — What I can do:*\n\n• *Calendar* — "Schedule a meeting tomorrow at 3pm"\n• *Email* — "Draft an email to John about the project"\n• *Skills* — Type *"skills"* to view and add modular agent skills\n• *Tasks* — "Remind me to call Dr. Sharma at 6pm"\n• *Research* — Ask me anything\n• *Summarise* — "Summarise my emails from today"\n\nCommands:\n• *skills* — View active skills & templates\n• *add skill: <Name> — <Prompt>* — Create custom skill\n• *connect google* — Link your Google account\n• *status* — Check your account status\n• *help* — Show this menu\n\n_Powered by ZORO AI_`
+        `*DUIT - What I can do:*\n\n- *Calendar* - "Schedule a meeting tomorrow at 3pm"\n- *Email* - "Draft an email to John about the project"\n- *Skills* - Type *"skills"* to view and add modular agent skills\n- *Tasks* - "Remind me to call Dr. Sharma at 6pm"\n- *Research* - Ask me anything\n- *Summarise* - "Summarise my emails from today"\n\nCommands:\n- *skills* - View active skills & templates\n- *add skill: <Name> - <Prompt>* - Create custom skill\n- *connect google* - Link your Google account\n- *status* - Check your account status\n- *help* - Show this menu\n\n_Powered by DUIT AI_`
       );
       return;
     }
@@ -287,11 +287,11 @@ async function handleFastAgentMessage(jid, phone, text) {
     // Skills hub command
     if (lower === 'skills' || lower === '/skills' || lower === 'my skills') {
       const skills = await listSkills(cleanPhone);
-      let msg = `*ZORO Skills Hub*\n\nHere are your active agent skills:\n`;
+      let msg = `*DUIT Skills Hub*\n\nHere are your active agent skills:\n`;
       skills.forEach((s, i) => {
-        msg += `\n${i + 1}. *${s.name}*\n   • Trigger: _${s.trigger_keywords || s.slug}_\n   • ${s.description || 'Specialized agent prompt'}\n`;
+        msg += `\n${i + 1}. *${s.name}*\n   - Trigger: _${s.trigger_keywords || s.slug}_\n   - ${s.description || 'Specialized agent prompt'}\n`;
       });
-      msg += `\n*Add Your Own Skill:*\nReply with:\n*add skill: <Name> — <Instructions>*\n\n_Example:_\nadd skill: Diet Coach — You are a nutritionist. Analyze meal descriptions, estimate calories, and suggest healthier alternatives.`;
+      msg += `\n*Add Your Own Skill:*\nReply with:\n*add skill: <Name> - <Instructions>*\n\n_Example:_\nadd skill: Diet Coach - You are a nutritionist. Analyze meal descriptions, estimate calories, and suggest healthier alternatives.`;
       await sendMessage(jid, msg);
       return;
     }
@@ -299,10 +299,10 @@ async function handleFastAgentMessage(jid, phone, text) {
     // Add Skill command
     if (lower.startsWith('add skill:') || lower.startsWith('add skill :')) {
       const payload = trimmedText.replace(/^add skill\s*:\s*/i, '').trim();
-      const delimiter = payload.includes('—') ? '—' : (payload.includes('-') ? '-' : ':');
+      const delimiter = payload.includes('-') ? '-' : (payload.includes('-') ? '-' : ':');
       const parts = payload.split(delimiter);
       if (parts.length < 2) {
-        await sendMessage(jid, `*Format:* \`add skill: <Skill Name> — <AI Instructions>\`\n\n_Example:_\nadd skill: Diet Coach — You are a nutritionist. Analyze meal descriptions and calculate macros.`);
+        await sendMessage(jid, `*Format:* \`add skill: <Skill Name> - <AI Instructions>\`\n\n_Example:_\nadd skill: Diet Coach - You are a nutritionist. Analyze meal descriptions and calculate macros.`);
         return;
       }
       const skillName = parts[0].trim();
@@ -359,13 +359,32 @@ async function handleFastAgentMessage(jid, phone, text) {
       const googleStatus = user.google_connected ? 'Connected' : 'Not connected';
       const skills = await listSkills(cleanPhone);
       await sendMessage(jid,
-        `*Your ZORO Status:*\n\nName: ${user.name || 'Not set'}\nPhone: +${cleanPhone}\nUse case: ${user.use_case || 'Not set'}\nActive Skills: ${skills.length}\nGoogle: ${googleStatus}\nAccount: Active\n\n_Type "skills" to manage skills or "help" for options._`
+        `*Your DUIT Status:*\n\nName: ${user.name || 'Not set'}\nPhone: +${cleanPhone}\nUse case: ${user.use_case || 'Not set'}\nActive Skills: ${skills.length}\nGoogle: ${googleStatus}\nAccount: Active\n\n_Type "skills" to manage skills or "help" for options._`
       );
       return;
     }
 
+    // WhatsApp Phone Pairing Code command
+    if (lower.startsWith('pair ') || lower.startsWith('pair phone ') || lower.startsWith('link phone ') || lower === 'pair' || lower === 'link') {
+      const matchPhone = trimmedText.match(/\+?[0-9]{10,15}/);
+      const targetPhone = matchPhone ? matchPhone[0].replace(/[^0-9]/g, '') : cleanPhone;
+      try {
+        const pCode = await requestBotPairingCode(targetPhone);
+        await sendMessage(jid, `*WhatsApp Pairing Code:*\n${pCode}\n\nTo link this phone:
+1. Open WhatsApp on your phone
+2. Tap *Settings* (or three dots) > *Linked Devices*
+3. Tap *Link a Device*
+4. Tap *Link with phone number instead* at the bottom
+5. Enter this 8-character code: *${pCode}*
+`);
+      } catch (pErr) {
+        await sendMessage(jid, `Could not generate pairing code: ${pErr.message}`);
+      }
+      return;
+    }
+
     // WhatsApp Chats Reader & Search Handler
-    const isChatQuery = /whatsapp (chats?|messages?)|text(ed)? me|recent (whatsapp )?chats?|read (my )?(whatsapp )?chats?|summarize (my )?(whatsapp )?chats?|check (my )?(whatsapp )?messages?/i.test(trimmedText);
+    const isChatQuery = /whatsapp (chats?|messages?)|text(ed)? me|recent (whatsapp )?chats?|read (my )?(whatsapp )?chats?|summarize (my )?(whatsapp )?chats?|check (my )?(whatsapp )?messages?|last \d+ (chats?|messages?)|summary of my (last )?\d* ?(chats?|messages?)|(chats?|messages?) summary/i.test(trimmedText);
     if (isChatQuery) {
       let contactMatch = trimmedText.match(/(?:from|by|of)\s+([a-zA-Z0-9_\-\.]+)/i);
       let contactFilter = contactMatch ? contactMatch[1].trim() : '';
@@ -401,15 +420,36 @@ async function handleFastAgentMessage(jid, phone, text) {
         return;
       }
 
-      let replyMsg = `*Recent WhatsApp Communications (${chatRows.length} message(s)):*\n\n`;
+      // Prepare formatted transcript for Meta AI summarization
+      let transcriptText = '';
       chatRows.forEach((row, idx) => {
         const timeStr = new Date(Number(row.timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const dateStr = new Date(Number(row.timestamp)).toLocaleDateString();
-        replyMsg += `${idx + 1}. *${row.sender_name || row.sender_phone}* (${dateStr} ${timeStr}):\n   "${row.message_text}"\n\n`;
+        transcriptText += `${idx + 1}. [${dateStr} ${timeStr}] From ${row.sender_name || row.sender_phone}: "${row.message_text}"\n`;
       });
 
-      await sendMessage(jid, replyMsg.trim());
+      // Query FastAgent backend to summarize the chat transcript via Meta AI
+      let summaryReply = '';
+      try {
+        const sumPrompt = `Please summarize these recent WhatsApp messages concisely for an executive:\n\n${transcriptText}\n\nHighlight key action items, urgent inquiries, and quotes requested. Strictly zero emojis.`;
+        summaryReply = await callFastAgentBackend(cleanPhone, sumPrompt);
+      } catch (sumErr) {
+        console.error('[Summary AI Error]:', sumErr.message);
+      }
+
+      if (summaryReply) {
+        await sendMessage(jid, `*WhatsApp Summary (${chatRows.length} recent messages):*\n\n${summaryReply}`);
+      } else {
+        let replyMsg = `*Recent WhatsApp Communications (${chatRows.length} message(s)):*\n\n`;
+        chatRows.forEach((row, idx) => {
+          const timeStr = new Date(Number(row.timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const dateStr = new Date(Number(row.timestamp)).toLocaleDateString();
+          replyMsg += `${idx + 1}. *${row.sender_name || row.sender_phone}* (${dateStr} ${timeStr}):\n   "${row.message_text}"\n\n`;
+        });
+        await sendMessage(jid, replyMsg.trim());
+      }
       return;
+
     }
 
     // Route directly to FastAgent backend without intermediate thinking message
@@ -420,7 +460,7 @@ async function handleFastAgentMessage(jid, phone, text) {
     } else {
       // Fallback
       await sendMessage(jid,
-        `I am having trouble reaching the ZORO brain right now. Please try again in a moment.\n\n_If this persists, type "status" to check your connection._`
+        `I am having trouble reaching the DUIT brain right now. Please try again in a moment.\n\n_If this persists, type "status" to check your connection._`
       );
     }
 
@@ -430,7 +470,7 @@ async function handleFastAgentMessage(jid, phone, text) {
 
   // Fallback for unknown state
   await updateUser(cleanPhone, { state: 'NEW' });
-  await sendMessage(jid, '👋 Let\'s start fresh! ' + ONBOARDING_QUESTIONS[0].prompt);
+  await sendMessage(jid, ' Let\'s start fresh! ' + ONBOARDING_QUESTIONS[0].prompt);
 }
 
 function clearAuthDir() {
@@ -474,7 +514,7 @@ export async function startBotSession() {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, authLogger)
     },
-    browser: ['ZORO', 'Chrome', '120.0.0'],
+    browser: ['DUIT', 'Chrome', '120.0.0'],
     syncFullHistory: false,
     markOnlineOnConnect: true,
     getMessage: async (key) => {
@@ -631,6 +671,18 @@ export function getWhatsAppStatus() {
   };
 }
 
+export async function requestBotPairingCode(phoneNumber) {
+  if (!botSock) {
+    throw new Error('WhatsApp gateway is not running. Start the session first.');
+  }
+  const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
+  if (!cleanPhone || cleanPhone.length < 10) {
+    throw new Error('Please provide a valid phone number with country code (e.g. 919876543210).');
+  }
+  const code = await botSock.requestPairingCode(cleanPhone);
+  return code;
+}
+
 export async function disconnectBotSession() {
   isManualDisconnect = true;
   try {
@@ -666,7 +718,7 @@ export async function sendTestPing(targetJid) {
     return { success: false, error: 'Bot not connected' };
   }
   try {
-    await botSock.sendMessage(targetJid, { text: '🏓 *ZORO ping!* Bot is alive and connected.' });
+    await botSock.sendMessage(targetJid, { text: '🏓 *DUIT ping!* Bot is alive and connected.' });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };

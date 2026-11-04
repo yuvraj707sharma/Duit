@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZORO | WhatsApp Agent Command Center</title>
+  <title>DUIT | WhatsApp Agent Command Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -27,7 +27,7 @@
         </svg>
       </div>
       <div class="brand-text">
-        <h1 id="nav-org-title">ZORO</h1>
+        <h1 id="nav-org-title">DUIT</h1>
         <span class="brand-subtitle">WhatsApp AI Agent Hub • Multi-User Command Center</span>
       </div>
     </div>
@@ -98,7 +98,7 @@
             <span>MySQL Database</span>
             <span class="dot-online" id="dot-db"></span>
           </div>
-          <div class="connector-desc" id="db-desc">fastagent_wa (Ready)</div>
+          <div class="connector-desc" id="db-desc">duit_wa (Ready)</div>
         </div>
       </div>
     </aside>
@@ -110,7 +110,7 @@
       <section class="tab-content active" id="tab-overview">
         <div class="page-header">
           <div>
-            <h2>FastAgent WhatsApp Overview</h2>
+            <h2>DUIT WhatsApp Overview</h2>
             <p class="subtitle">Multi-user autonomous AI assistant running on a single dedicated WhatsApp number</p>
           </div>
           <div class="date-display" id="current-date-display">Today: ...</div>
@@ -166,7 +166,7 @@
         <!-- Connectors Status Row -->
         <div class="section-title">
           <h3>Bot & Pipeline Status</h3>
-          <span class="section-sub">Live health of FastAgent components</span>
+          <span class="section-sub">Live health of DUIT components</span>
         </div>
 
         <div class="connectors-grid">
@@ -175,7 +175,7 @@
             <div class="connector-top">
               <div class="connector-info">
                 <span class="connector-tag">SINGLE BOT SESSION</span>
-                <h4>FastAgent WhatsApp Number</h4>
+                <h4>DUIT WhatsApp Number</h4>
                 <p>One active number serving all users concurrently via Baileys WebSocket.</p>
               </div>
               <span class="status-indicator-pill" id="bot-status-pill">Checking...</span>
@@ -185,12 +185,12 @@
             </div>
           </div>
 
-          <!-- FastAgent Python Backend -->
+          <!-- DUIT Python Backend -->
           <div class="connector-card">
             <div class="connector-top">
               <div class="connector-info">
                 <span class="connector-tag">CASCADE BRAIN</span>
-                <h4>FastAgent AI Backend</h4>
+                <h4>DUIT AI Backend</h4>
                 <p id="backend-status-text">4-Stage Cascade (Hard Rules, Laya Classifier, LLM, Policy Engine).</p>
               </div>
               <span class="status-indicator-pill" id="backend-status-pill">Checking...</span>
@@ -213,7 +213,7 @@
             </div>
             <div class="panel-body">
               <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">
-                Send a direct ping message from the FastAgent bot number to verify outbound delivery.
+                Send a direct ping message from the DUIT bot number to verify outbound delivery.
               </p>
               <div style="display:flex; gap:10px;">
                 <input type="text" id="ping-phone-input" class="form-input" placeholder="e.g. 919876543210 (with country code)" style="flex:1;">
@@ -245,14 +245,14 @@
       <section class="tab-content" id="tab-connectors">
         <div class="page-header">
           <div>
-            <h2>ZORO WhatsApp Bot Pairing</h2>
+            <h2>DUIT WhatsApp Bot Pairing</h2>
             <p class="subtitle">Single dedicated WhatsApp session powering the 24/7 autonomous multi-user assistant</p>
           </div>
         </div>
 
         <div class="qr-single-container">
           <div class="qr-badge badge-accent">PRIMARY BOT NUMBER • 24/7 DEDICATED</div>
-          <h3 style="margin-top:10px; font-size:1.25rem;">Scan with ZORO Bot Number</h3>
+          <h3 style="margin-top:10px; font-size:1.25rem;">Scan with DUIT Bot Number</h3>
           <p style="color:var(--text-muted); font-size:0.85rem; margin-top:6px;">
             Open WhatsApp on the phone number you want users to text → <b>Linked Devices</b> → <b>Link a Device</b> → Scan the QR below:
           </p>
@@ -275,7 +275,7 @@
           </div>
 
           <p style="font-size:0.75rem; color:var(--text-sub); margin-top:16px;">
-            🔒 All inbound messages from any user are safely processed through ZORO's deterministic policy & security gates.
+            🔒 All inbound messages from any user are safely processed through DUIT's deterministic policy & security gates.
           </p>
         </div>
       </section>
@@ -549,7 +549,7 @@
         <div class="page-header">
           <div>
             <h2>System Configuration</h2>
-            <p class="subtitle">Configure Google OAuth keys, FastAgent backend URL, and administrative credentials</p>
+            <p class="subtitle">Configure Google OAuth keys, DUIT backend URL, and administrative credentials</p>
           </div>
         </div>
 
@@ -562,7 +562,7 @@
                 Admin Security Passcode
               </h4>
               <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.76rem; padding: 4px 10px;">
-                Logged in as: <strong id="settings-current-email">admin@fastagent.ai</strong>
+                Logged in as: <strong id="settings-current-email">admin@duit.ai</strong>
               </span>
             </div>
 
@@ -596,11 +596,11 @@
           <!-- Configuration Form -->
           <form id="settings-form">
             <div class="form-section">
-              <h4>1. FastAgent Python Backend Connection</h4>
+              <h4>1. DUIT Python Backend Connection</h4>
               <div class="form-group">
                 <label for="setting-backend-url">Backend URL</label>
                 <input type="text" id="setting-backend-url" class="form-input" placeholder="http://localhost:8000">
-                <span class="form-hint">FastAgent FastAPI backend URL that processes active messages through the cascade.</span>
+                <span class="form-hint">DUIT FastAPI backend URL that processes active messages through the cascade.</span>
               </div>
             </div>
 
