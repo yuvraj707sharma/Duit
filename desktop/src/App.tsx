@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, History, Trash2, Wifi, WifiOff } from 'lucide-react';
 import { StatusOverlay, OverlayState } from './components/StatusOverlay';
 import { KillSwitchIndicator } from './components/KillSwitchIndicator';
-import duitLogo from './assets/duit-logo.jpg';
-import duitMascot from './assets/duit-mascot.jpg';
+import duitLogo from './assets/duit-logo-white.png';
+import duitMascot from './assets/duit-mascot.png';
 
 declare global {
   interface Window {
