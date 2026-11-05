@@ -1,6 +1,6 @@
 """FastAgent Backend Configuration using Pydantic Settings."""
-from typing import List
-from pydantic import Field
+import sys
+from typing import List, Set
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -49,8 +49,8 @@ class Settings(BaseSettings):
     META_WONDER_MODEL: str = "muse-wonder-1.0"
     META_VOICE_MODEL: str = "muse-voice-transcribe-1.0"
     META_VISION_MODEL: str = "sam-3.1"
-    META_MAX_TOKENS_PER_CALL: int = 400  # Cost-protection: strict limit to prevent credit drain
-    META_ENABLE_CACHE: bool = True  # In-memory prompt caching to preserve credit pool
+    META_MAX_TOKENS_PER_CALL: int = 400
+    META_ENABLE_CACHE: bool = True
 
     @property
     def meta_api_key(self) -> str:
@@ -62,10 +62,9 @@ class Settings(BaseSettings):
     EVOLUTION_GLOBAL_API_KEY: str = "evolution_dev_api_key_12345"
     EVOLUTION_INSTANCE_NAME: str = "fastagent-primary"
     EVOLUTION_WEBHOOK_SECRET: str = "webhook_secret_key_fastagent_2026"
-    WHATSAPP_REQUIRE_REGISTRATION: bool = False  # Set True for strict pilot/production registration gate
-    WHATSAPP_AUTHORIZED_NUMBERS: List[str] = ["*"]  # List of allowed phone numbers or ["*"] for public self-registration
+    WHATSAPP_REQUIRE_REGISTRATION: bool = False
+    WHATSAPP_AUTHORIZED_NUMBERS: List[str] = ["*"]  # In dev allows all, blocked in production
     APP_WEB_URL: str = "http://localhost:5173"
-
 
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
@@ -77,5 +76,43 @@ class Settings(BaseSettings):
     DESKTOP_SHARED_SECRET: str = "fastagent_desktop_secret_2026_dev"
     DESKTOP_HEARTBEAT_TIMEOUT_SECONDS: float = 30.0
 
+    # Internal gateway shared secret (server-to-server auth for /save-token, /whatsapp webhook, etc.)
+    GATEWAY_SHARED_SECRET: str = "duit_gateway_secret_2026_dev"
+
+    @property
+    def is_production(self) -> bool:
+        return self.APP_ENV.lower() in ("production", "prod", "staging")
+
+    def validate_production_secrets(self) -> None:
+        """Fail application startup immediately if insecure defaults or missing secrets are detected in production."""
+        if not self.is_production:
+            return
+
+        insecure_defaults = {
+            "SECRET_KEY": "fastagent_super_secret_development_key_32bytes_len!!",
+            "TOKEN_ENCRYPTION_KEY": "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
+            "EVOLUTION_GLOBAL_API_KEY": "evolution_dev_api_key_12345",
+            "EVOLUTION_WEBHOOK_SECRET": "webhook_secret_key_fastagent_2026",
+            "DESKTOP_SHARED_SECRET": "fastagent_desktop_secret_2026_dev",
+            "GATEWAY_SHARED_SECRET": "duit_gateway_secret_2026_dev",
+        }
+
+        errors = []
+        for name, bad_val in insecure_defaults.items():
+            current_val = getattr(self, name, "")
+            if not current_val:
+                errors.append(f"{name} is missing")
+            elif current_val == bad_val:
+                errors.append(f"{name} is using insecure development default")
+
+        if "*" in self.WHATSAPP_AUTHORIZED_NUMBERS:
+            errors.append("WHATSAPP_AUTHORIZED_NUMBERS cannot contain wildcard '*' in production")
+
+        if errors:
+            msg = "\n".join(f" - {err}" for err in errors)
+            print(f"FATAL PRODUCTION SECURITY VIOLATION:\n{msg}", file=sys.stderr)
+            sys.exit(1)
+
 
 settings = Settings()
+settings.validate_production_secrets()

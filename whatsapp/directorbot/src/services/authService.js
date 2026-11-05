@@ -2,8 +2,8 @@ import crypto from 'crypto';
 import { query, logActivity } from '../database/db.js';
 
 const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@fastagent.ai';
-const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-const DEFAULT_ADMIN_NAME = 'ZORO Admin';
+const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const DEFAULT_ADMIN_NAME = 'DUIT Admin';
 
 /**
  * Hash a password using scrypt with a unique salt
@@ -48,8 +48,11 @@ export async function seedDefaultAdmin() {
       }
     }
 
+    // If no ADMIN_PASSWORD is provided in environment, generate a cryptographically strong bootstrap password
+    const adminPassword = DEFAULT_ADMIN_PASSWORD || crypto.randomBytes(16).toString('base64url');
+
     // Seed default admin
-    const { hash, salt } = hashPassword(DEFAULT_ADMIN_PASSWORD);
+    const { hash, salt } = hashPassword(adminPassword);
     await query(
       `INSERT INTO admin_users (email, name, password_hash, salt, role) 
        VALUES (?, ?, ?, ?, 'director')
@@ -57,7 +60,13 @@ export async function seedDefaultAdmin() {
       [DEFAULT_ADMIN_EMAIL.toLowerCase(), DEFAULT_ADMIN_NAME, hash, salt]
     );
 
-    console.log(`[Auth] Default admin account initialized for: ${DEFAULT_ADMIN_EMAIL}`);
+    if (!DEFAULT_ADMIN_PASSWORD) {
+      console.warn(`[SECURITY WARNING] ADMIN_PASSWORD was not set in environment.`);
+      console.warn(`[SECURITY NOTICE] Generated initial bootstrap password for ${DEFAULT_ADMIN_EMAIL}: ${adminPassword}`);
+      console.warn(`[SECURITY NOTICE] Please set ADMIN_PASSWORD in your environment immediately.`);
+    } else {
+      console.log(`[Auth] Admin account verified for: ${DEFAULT_ADMIN_EMAIL}`);
+    }
   } catch (err) {
     console.error(`[Auth Error] Failed to seed default admin:`, err.message);
   }
@@ -88,8 +97,8 @@ export async function loginUser(email, password, userAgent = '', ipAddress = '')
 
   // Create session token (64 hex chars = 32 random bytes)
   const token = crypto.randomBytes(32).toString('hex');
-  // Token valid for 30 days
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  // Token valid for 24 hours
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   await query(
     `INSERT INTO auth_sessions (token, user_id, email, expires_at, user_agent, ip_address)
@@ -166,8 +175,8 @@ export async function changeUserPassword(userId, currentPassword, newPassword) {
   if (!currentPassword) {
     return { success: false, error: 'Current password is required' };
   }
-  if (!newPassword || newPassword.length < 6) {
-    return { success: false, error: 'New password must be at least 6 characters long' };
+  if (!newPassword || newPassword.length < 10) {
+    return { success: false, error: 'New password must be at least 10 characters long' };
   }
 
   const rows = await query('SELECT * FROM admin_users WHERE id = ? LIMIT 1', [userId]);
@@ -188,7 +197,10 @@ export async function changeUserPassword(userId, currentPassword, newPassword) {
     [hash, salt, userId]
   );
 
-  await logActivity('SECURITY', `Password successfully updated for user ${user.email}`, 'INFO');
+  // Invalidate all active sessions for this user after password change
+  await query('DELETE FROM auth_sessions WHERE user_id = ?', [userId]);
+
+  await logActivity('SECURITY', `Password successfully updated for user ${user.email}. Active sessions invalidated.`, 'INFO');
 
   return {
     success: true,

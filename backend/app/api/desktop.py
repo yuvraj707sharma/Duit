@@ -1,4 +1,5 @@
 """Desktop Executor API: Presence, Outbound WebSocket Tunnel, and Remote Dispatch."""
+import hmac
 import json
 import logging
 from typing import Dict, Any, Optional
@@ -13,6 +14,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/desktop", tags=["desktop"])
 
 
+def _require_desktop_auth(provided_secret: Optional[str]) -> None:
+    """Verify desktop shared secret with constant-time comparison."""
+    if not settings.is_production and not provided_secret:
+        return
+    expected = settings.DESKTOP_SHARED_SECRET
+    if not expected:
+        raise HTTPException(status_code=401, detail="Desktop secret not configured")
+    if not provided_secret or not hmac.compare_digest(provided_secret.strip(), expected.strip()):
+        raise HTTPException(status_code=401, detail="Unauthorized: invalid desktop secret")
+
+
 class PresenceResponse(BaseModel):
     user_id: str
     status: str  # online, offline
@@ -25,8 +37,12 @@ class KillSwitchRequest(BaseModel):
 
 
 @router.get("/presence", response_model=PresenceResponse)
-async def get_desktop_presence(user_id: str = Query(..., description="User ID or Phone/UUID")):
+async def get_desktop_presence(
+    user_id: str = Query(..., description="User ID or Phone/UUID"),
+    x_desktop_secret: Optional[str] = Header(None, alias="x-desktop-secret")
+):
     """Returns real-time online/offline presence status for a user's desktop sidecar."""
+    _require_desktop_auth(x_desktop_secret)
     presence = presence_manager.get_presence(user_id)
     return PresenceResponse(**presence)
 
@@ -39,15 +55,18 @@ async def desktop_websocket_tunnel(
 ):
     """
     WebSocket endpoint for outbound connections from local Python sidecar.
-    Secured by shared secret authentication.
+    Secured by shared secret authentication via header only.
     """
-    # Verify shared secret
-    auth_secret = x_desktop_secret or websocket.query_params.get("secret")
-    valid_secrets = {settings.DESKTOP_SHARED_SECRET, "desktop_shared_secret_fastagent_2026", "fastagent_desktop_secret_2026_dev"}
-    if auth_secret not in valid_secrets:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        logger.warning("Rejected unauthorized desktop WebSocket connection attempt for user %s", user_id)
-        return
+    expected = settings.DESKTOP_SHARED_SECRET
+    if settings.is_production:
+        if not expected or not x_desktop_secret or not hmac.compare_digest(x_desktop_secret.strip(), expected.strip()):
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            logger.warning("Rejected unauthorized desktop WebSocket connection attempt for user %s", user_id)
+            return
+    elif x_desktop_secret and expected:
+        if not hmac.compare_digest(x_desktop_secret.strip(), expected.strip()):
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
 
     await websocket.accept()
     presence_manager.register_connection(user_id, websocket)
@@ -79,8 +98,12 @@ async def desktop_websocket_tunnel(
 
 
 @router.post("/kill-switch")
-async def trigger_kill_switch_api(payload: KillSwitchRequest):
+async def trigger_kill_switch_api(
+    payload: KillSwitchRequest,
+    x_desktop_secret: Optional[str] = Header(None, alias="x-desktop-secret")
+):
     """Triggers global kill switch on the user's desktop sidecar."""
+    _require_desktop_auth(x_desktop_secret)
     user_id = payload.user_id
     if not presence_manager.is_online(user_id):
         return {"success": False, "status": "offline", "error": "laptop offline"}
@@ -97,13 +120,16 @@ async def trigger_kill_switch_api(payload: KillSwitchRequest):
 async def transcribe_voice_action(
     request: Request,
     user_id: str = Query(..., description="User ID or Phone/UUID"),
-    execute_cascade: bool = Query(default=True, description="Whether to route transcribed text directly through cascade")
+    execute_cascade: bool = Query(default=True, description="Whether to route transcribed text directly through cascade"),
+    x_desktop_secret: Optional[str] = Header(None, alias="x-desktop-secret")
 ):
     """
     Ultra-low latency Speech-To-Text endpoint.
     Accepts raw audio bytes, transcribes via faster-whisper INT8 engine,
-    and directly feeds the transcribed text into FastAgent's 4-stage cascade.
+    and directly feeds the transcribed text into the 4-stage cascade.
     """
+    _require_desktop_auth(x_desktop_secret)
+
     from backend.app.desktop.voice_stt import voice_stt_engine
     from backend.app.cascade.orchestrator import cascade_orchestrator
 
@@ -138,27 +164,35 @@ class ShedTaskRequest(BaseModel):
 
 
 @router.get("/shed/status")
-async def get_shed_status():
+async def get_shed_status(
+    x_desktop_secret: Optional[str] = Header(None, alias="x-desktop-secret")
+):
     """Returns remote access status for Shed coding task plane."""
+    _require_desktop_auth(x_desktop_secret)
     from backend.app.desktop.shed_bridge import shed_bridge
     return await shed_bridge.get_status()
 
 
 @router.get("/shed/sessions")
-async def get_shed_sessions():
+async def get_shed_sessions(
+    x_desktop_secret: Optional[str] = Header(None, alias="x-desktop-secret")
+):
     """Lists running and recent sessions in Claude, Codex, Gemini, OpenCode via Shed."""
+    _require_desktop_auth(x_desktop_secret)
     from backend.app.desktop.shed_bridge import shed_bridge
     return await shed_bridge.list_sessions()
 
 
 @router.post("/shed/task")
-async def dispatch_shed_task(payload: ShedTaskRequest):
+async def dispatch_shed_task(
+    payload: ShedTaskRequest,
+    x_desktop_secret: Optional[str] = Header(None, alias="x-desktop-secret")
+):
     """Dispatches a coding task to Shed."""
+    _require_desktop_auth(x_desktop_secret)
     from backend.app.desktop.shed_bridge import shed_bridge
     return await shed_bridge.dispatch_task(
         prompt=payload.prompt,
         harness=payload.harness or "auto",
         session_id=payload.session_id
     )
-
-

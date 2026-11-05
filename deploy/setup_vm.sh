@@ -37,3 +37,4 @@ echo "    echo 'DOMAIN=yourdomain.com' > deploy/.env.prod       "
 echo " 2. Launch production stack:                              "
 echo "    docker compose -f deploy/docker-compose.prod.yml up -d"
 echo "=========================================================="
+

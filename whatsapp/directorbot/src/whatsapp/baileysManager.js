@@ -66,12 +66,18 @@ const USE_CASE_MAP = { '1': 'Personal productivity', '2': 'Business & work', '3'
 
 // ── Backend API Call ─────────────────────────────────────────────────────────
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const GATEWAY_SHARED_SECRET = process.env.GATEWAY_SHARED_SECRET || '';
 
 async function callFastAgentBackend(phoneNumber, message) {
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (GATEWAY_SHARED_SECRET) {
+      headers['x-gateway-secret'] = GATEWAY_SHARED_SECRET;
+    }
+
     const resp = await fetch(`${BACKEND_URL}/api/webhooks/whatsapp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         from: phoneNumber,
         text: message,

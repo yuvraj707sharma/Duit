@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:20.18.0-alpine3.20
 
 WORKDIR /app
 
@@ -6,7 +6,7 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ git
 
 COPY package*.json ./
-RUN npm install --production
+RUN npm ci --omit=dev
 
 COPY . .
 
@@ -16,3 +16,4 @@ ENV PORT=5122
 EXPOSE 5122
 
 CMD ["node", "server.js"]
+

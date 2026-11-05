@@ -38,25 +38,25 @@ async def receive_evolution_webhook(
         return {"status": "ignored", "reason": "non_message_or_non_individual_event"}
 
 
-    # 1. Whitelist Security Gate (protects against unauthorized external numbers)
+    # Whitelist Security Gate (protects against unauthorized external numbers)
     from backend.app.db.repository import repository
     phone = inbound.user_phone_or_id
     clean_phone = phone.strip().lstrip("+")
     is_whitelisted = (
-        "*" in settings.WHATSAPP_AUTHORIZED_NUMBERS or
+        ("*" in settings.WHATSAPP_AUTHORIZED_NUMBERS and not settings.is_production) or
         clean_phone in settings.WHATSAPP_AUTHORIZED_NUMBERS or
         phone in settings.WHATSAPP_AUTHORIZED_NUMBERS
     )
     if not is_whitelisted:
         return {"status": "dropped", "reason": "unauthorized_phone_whitelist"}
 
-    # 2. Registration / Onboarding Gate
+    # Registration / Onboarding Gate
     if settings.WHATSAPP_REQUIRE_REGISTRATION:
         is_registered = await repository.is_user_registered(clean_phone)
         if not is_registered:
             onboarding_url = f"{settings.APP_WEB_URL}/connect?phone={clean_phone}"
             onboarding_msg = (
-                f"Welcome to *FastAgent*.\n\n"
+                f"Welcome to *DUIT*.\n\n"
                 f"Your phone number (+{clean_phone}) is not yet connected.\n\n"
                 f"Link here to connect your Google Calendar, Email, and Desktop apps:\n"
                 f"{onboarding_url}\n\n"
@@ -69,7 +69,7 @@ async def receive_evolution_webhook(
                 "reason": "new_unregistered_user"
             }
 
-    # Process message through FastAgent 4-stage cascade with message_id for deduplication
+    # Process message through 4-stage cascade with message_id for deduplication
     res = await cascade_orchestrator.handle_message(
         user_id=inbound.user_phone_or_id,
         message_text=inbound.text,
@@ -95,8 +95,20 @@ class WhatsAppGatewayMessage(BaseModel):
 
 
 @router.post("/whatsapp")
-async def receive_whatsapp_gateway_message(payload: WhatsAppGatewayMessage):
-    """Direct webhook endpoint for FastAgent WhatsApp bot gateway (Baileys)."""
+async def receive_whatsapp_gateway_message(
+    payload: WhatsAppGatewayMessage,
+    x_gateway_secret: Optional[str] = Header(default=None, alias="x-gateway-secret")
+):
+    """Direct webhook endpoint for DUIT WhatsApp bot gateway (Baileys). Requires gateway secret."""
+    # Authenticate gateway-to-backend communication
+    if settings.is_production:
+        expected = settings.GATEWAY_SHARED_SECRET
+        if not expected or not x_gateway_secret or not hmac.compare_digest(x_gateway_secret.strip(), expected.strip()):
+            raise HTTPException(status_code=401, detail="Unauthorized: invalid or missing gateway secret")
+    elif x_gateway_secret and settings.GATEWAY_SHARED_SECRET:
+        if not hmac.compare_digest(x_gateway_secret.strip(), settings.GATEWAY_SHARED_SECRET.strip()):
+            raise HTTPException(status_code=401, detail="Unauthorized: invalid gateway secret")
+
     clean_phone = payload.from_phone.strip().lstrip("+")
     if not clean_phone:
         raise HTTPException(status_code=400, detail="Invalid phone number.")
@@ -118,4 +130,3 @@ async def receive_whatsapp_gateway_message(payload: WhatsAppGatewayMessage):
         "request_id": res.request_id,
         "stage_latencies_ms": res.stage_latencies_ms
     }
-

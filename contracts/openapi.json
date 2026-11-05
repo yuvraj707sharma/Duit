@@ -39,8 +39,10 @@
         },
         "responses": {
           "200": { "description": "Processed message response" },
-          "400": { "description": "Invalid payload format" }
-        }
+          "400": { "description": "Invalid payload format" },
+          "401": { "description": "Unauthorized: missing or invalid gateway secret" }
+        },
+        "security": [{ "gatewaySecret": [] }]
       }
     },
     "/api/approvals": {
@@ -242,8 +244,10 @@
           }
         },
         "responses": {
-          "200": { "description": "Skill successfully registered" }
-        }
+          "200": { "description": "Skill successfully registered" },
+          "401": { "description": "Unauthorized: admin authentication required" }
+        },
+        "security": [{ "gatewaySecret": [] }]
       }
     },
     "/api/skills/{skill_id}": {
@@ -253,8 +257,20 @@
           { "name": "skill_id", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "responses": {
-          "200": { "description": "Skill deleted" }
-        }
+          "200": { "description": "Skill deleted" },
+          "401": { "description": "Unauthorized: admin authentication required" }
+        },
+        "security": [{ "gatewaySecret": [] }]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "gatewaySecret": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-gateway-secret",
+        "description": "Shared secret for server-to-server authentication between gateway and backend"
       }
     }
   }

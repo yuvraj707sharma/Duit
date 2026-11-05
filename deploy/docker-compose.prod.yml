@@ -30,7 +30,7 @@ services:
       - whatsapp_storage:/app/storage
 
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.8.4-alpine
     container_name: duit-caddy
     restart: unless-stopped
     ports:
@@ -51,3 +51,4 @@ volumes:
   whatsapp_storage:
   caddy_data:
   caddy_config:
+

@@ -206,13 +206,37 @@ class CascadeOrchestrator:
                 if webhook_url:
                     try:
                         import httpx
-                        async with httpx.AsyncClient(timeout=10.0) as client:
-                            resp = await client.post(webhook_url, json={"user_id": user_id, "message": message_text, "skill": matching_skill})
-                            if resp.status_code == 200:
-                                data = resp.json()
-                                skill_reply = data.get("response") or data.get("reply") or str(data)
-                    except Exception as e:
-                        skill_reply = f"Error communicating with skill webhook: {str(e)}"
+                        from urllib.parse import urlparse
+                        import ipaddress
+                        
+                        parsed = urlparse(webhook_url)
+                        is_safe = parsed.scheme == "https" and parsed.hostname
+                        if is_safe:
+                            try:
+                                addr = ipaddress.ip_address(parsed.hostname)
+                                if addr.is_private or addr.is_loopback or addr.is_link_local:
+                                    is_safe = False
+                            except ValueError:
+                                if parsed.hostname.lower() in ("localhost", "metadata.google.internal") or parsed.hostname.lower().endswith((".local", ".internal")):
+                                    is_safe = False
+                        
+                        if is_safe:
+                            async with httpx.AsyncClient(timeout=10.0) as client:
+                                resp = await client.post(
+                                    webhook_url,
+                                    json={
+                                        "user_id": user_id,
+                                        "message": message_text,
+                                        "skill_name": skill_name
+                                    }
+                                )
+                                if resp.status_code == 200:
+                                    data = resp.json()
+                                    skill_reply = data.get("response") or data.get("reply") or str(data)
+                        else:
+                            skill_reply = "Skill webhook blocked due to invalid or unsafe destination URL."
+                    except Exception:
+                        skill_reply = "Error communicating with skill webhook service."
 
                 if not skill_reply:
                     skill_reply = await self.llm_provider.generate_response(
