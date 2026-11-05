@@ -1,15 +1,583 @@
-<!doctype html>
-<html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>FastAgent — Fast, Cheap & Safe AI Assistant</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-slate-950 text-slate-100 antialiased font-sans">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DUIT - Your Desktop, on WhatsApp | Autonomous AI Chief of Staff</title>
+  <meta name="description" content="Control your desktop, manage emails, launch browser profiles, and search chats remotely from WhatsApp with Meta AI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090b;
+      --card-bg: #121216;
+      --card-border: #22222a;
+      --text-main: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.35);
+      --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ambient Glow Background */
+    .glow-sphere {
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, rgba(9, 9, 11, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Navigation */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      background: rgba(9, 9, 11, 0.85);
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .nav-brand img.mascot {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+      object-fit: cover;
+    }
+
+    .nav-brand img.logo {
+      height: 26px;
+      object-fit: contain;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: #fff;
+    }
+
+    .btn-nav {
+      background: var(--accent);
+      color: #000;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .btn-nav:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    /* Hero Section */
+    .hero {
+      position: relative;
+      z-index: 1;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 80px 24px 60px;
+      text-align: center;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #6ee7b7;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    h1.hero-title {
+      font-size: 3.4rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.15;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #ffffff 40%, #a1a1aa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.hero-sub {
+      font-size: 1.22rem;
+      color: var(--text-muted);
+      max-width: 720px;
+      margin: 0 auto 36px;
+      font-weight: 400;
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 800;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 20px var(--accent-glow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 26px rgba(16, 185, 129, 0.5);
+    }
+
+    .btn-secondary {
+      background: #18181b;
+      color: #ffffff;
+      border: 1px solid var(--card-border);
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: #27272a;
+      border-color: #3f3f46;
+    }
+
+    /* Live Interactive Demo Preview */
+    .preview-card {
+      background: #0d0d11;
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      max-width: 960px;
+      margin: 0 auto 80px;
+      text-align: left;
+    }
+
+    .preview-bar {
+      background: #141418;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .bar-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #27272a;
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 24px;
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .preview-grid { grid-template-columns: 1fr; }
+      h1.hero-title { font-size: 2.3rem; }
+    }
+
+    .chat-pane {
+      background: #17171d;
+      border: 1px solid #272730;
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      font-size: 0.88rem;
+    }
+
+    .msg-user {
+      align-self: flex-end;
+      background: #064e3b;
+      color: #ecfdf5;
+      padding: 10px 14px;
+      border-radius: 12px 12px 2px 12px;
+      max-width: 85%;
+    }
+
+    .msg-duit {
+      align-self: flex-start;
+      background: #23232b;
+      color: #f4f4f5;
+      padding: 10px 14px;
+      border-radius: 12px 12px 12px 2px;
+      max-width: 90%;
+      border-left: 3px solid var(--accent);
+    }
+
+    .desktop-pane {
+      background: #101014;
+      border: 1px solid #22222a;
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+
+    .log-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #94a3b8;
+    }
+
+    .log-line span.green { color: var(--accent); font-weight: 600; }
+    .log-line span.cyan { color: #38bdf8; }
+
+    /* Features Grid */
+    .features-section {
+      max-width: 1100px;
+      margin: 0 auto 100px;
+      padding: 0 24px;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    .section-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+
+    .section-sub {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    .feature-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 28px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      margin-bottom: 18px;
+    }
+
+    .feature-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .feature-desc {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    /* Google OAuth Connect Box */
+    .connect-box {
+      background: linear-gradient(135deg, #101014 0%, #15151c 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 860px;
+      margin: 0 auto 100px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    }
+
+    .btn-google {
+      background: #ffffff;
+      color: #000000;
+      border: none;
+      padding: 12px 26px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      margin-top: 20px;
+      box-shadow: 0 4px 16px rgba(255,255,255,0.15);
+      transition: transform 0.2s;
+    }
+
+    .btn-google:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding: 40px 24px;
+      text-align: center;
+      color: #71717a;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-sphere"></div>
+
+  <!-- Top Navigation -->
+  <nav>
+    <a href="#" class="nav-brand">
+      <img src="/static/duit-mascot.jpg" alt="DUIT Mascot" class="mascot">
+      <img src="/static/duit-logo.jpg" alt="DUIT" class="logo">
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">Architecture</a>
+      <a href="#google-connect">Connect Google</a>
+      <a href="/download/DUITDesktop.exe" class="btn-nav">Download App (.exe)</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="badge-pill">
+      <span class="badge-dot"></span>
+      DUIT v1.0 Production Release - Powered by Meta AI
+    </div>
+    <h1 class="hero-title">Your Desktop, on WhatsApp.</h1>
+    <p class="hero-sub">
+      Just say it, ho gaya. Remote desktop control, smart multi-profile browser launching, and WhatsApp chat intelligence - powered by Meta Muse Spark and SAM 3.1.
+    </p>
+    <div class="hero-actions">
+      <a href="/download/DUITDesktop.exe" class="btn-primary">
+        Download DUIT Desktop (.exe)
+      </a>
+      <a href="https://wa.me/?text=Hi%20DUIT" target="_blank" class="btn-secondary">
+        Chat with DUIT on WhatsApp
+      </a>
+    </div>
+  </section>
+
+  <!-- Live Action Preview Card -->
+  <div class="preview-card" id="how-it-works">
+    <div class="preview-bar">
+      <div class="bar-dot"></div>
+      <div class="bar-dot"></div>
+      <div class="bar-dot"></div>
+      <span style="font-size: 0.76rem; color: #71717a; margin-left: 8px;">DUIT Autonomous Execution Pipeline</span>
+    </div>
+    <div class="preview-grid">
+      <!-- WhatsApp Simulation -->
+      <div class="chat-pane">
+        <div style="font-size: 0.75rem; color: #a1a1aa; border-bottom: 1px solid #272730; padding-bottom: 6px; font-weight: 600;">
+          WhatsApp Command Channel
+        </div>
+        <div class="msg-user">
+          Duit, open Chrome in my college profile and send mail to Yash confirming I will be at his place today at 5 PM.
+        </div>
+        <div class="msg-duit">
+          <strong>DUIT AI:</strong><br>
+          Targeting Profile: <em>jecrcu.edu.in</em> (Profile 4)<br>
+          Drafting email: <em>"Reaching today at 5 PM"</em><br>
+          Reply <strong>YES</strong> to confirm sending email.
+        </div>
+        <div class="msg-user">
+          YES
+        </div>
+        <div class="msg-duit">
+          Email sent via Gmail API and verified Chrome launch with SAM 3.1. Ho gaya!
+        </div>
+      </div>
+
+      <!-- Desktop Sidecar Simulation -->
+      <div class="desktop-pane">
+        <div style="color: #64748b; margin-bottom: 4px; font-size: 0.75rem; border-bottom: 1px solid #1e293b; padding-bottom: 4px;">
+          Local Sidecar Daemon [DUITDesktop.exe]
+        </div>
+        <div class="log-line">
+          <span class="cyan">[PRESENCE]</span> WebSocket Heartbeat OK (5s)
+        </div>
+        <div class="log-line">
+          <span class="green">[META-MUSE]</span> Extracted intent: open_url + send_email
+        </div>
+        <div class="log-line">
+          <span class="cyan">[BROWSER]</span> Matched Chrome profile: Profile 4
+        </div>
+        <div class="log-line">
+          <span>&gt; chrome.exe --profile-directory="Profile 4"</span>
+        </div>
+        <div class="log-line">
+          <span class="green">[SAM-3.1]</span> Visual grounding verified window: 1920x1080
+        </div>
+        <div class="log-line">
+          <span class="green">[WAL]</span> Action state transitioned: started -&gt; completed
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features Grid -->
+  <section class="features-section" id="features">
+    <div class="section-header">
+      <h2 class="section-title">Built for Real-World Work</h2>
+      <p class="section-sub">No complex setups. No new apps to learn. Works the way you communicate.</p>
+    </div>
+
+    <div class="feature-cards">
+      <div class="feature-card">
+        <div class="feature-icon">WA</div>
+        <h3 class="feature-title">Remote Desktop via WhatsApp</h3>
+        <p class="feature-desc">Control your laptop when away from your desk. Open IDEs, run scripts, and view files remotely using conversational Hindi, English, or Hinglish.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">MP</div>
+        <h3 class="feature-title">Multi-Profile Browser Support</h3>
+        <p class="feature-desc">Smart Chromium inspection for Google Chrome and Edge. Launches portals straight into your work, college, or personal profiles dynamically.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">GS</div>
+        <h3 class="feature-title">Real Google Calendar &amp; Gmail</h3>
+        <p class="feature-desc">Direct OAuth integration. Generates custom email subjects and bodies from conversation context without canned placeholder templates.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">AI</div>
+        <h3 class="feature-title">Meta Muse Spark &amp; SAM 3.1</h3>
+        <p class="feature-desc">Sub-second reasoning with Meta's Muse model family, backed by SAM 3.1 computer-use visual UI grounding for physical window verification.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">CD</div>
+        <h3 class="feature-title">8-Character Phone Pairing</h3>
+        <p class="feature-desc">Pair your WhatsApp account instantly with an 8-character pairing code. Zero camera QR hurdles, zero fragile third-party client apps.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">SEC</div>
+        <h3 class="feature-title">Safety &amp; Local Privacy</h3>
+        <p class="feature-desc">In-code policy engine blocks destructive commands. SQLite Write-Ahead Journaling (WAL) guarantees crash recovery and zero duplicate actions.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Google Services Connection Box -->
+  <section class="connect-box" id="google-connect">
+    <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 12px;">Link Your Google Services</h2>
+    <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">
+      Enable Google Calendar, Gmail, and Contacts integration with one click. Tokens are encrypted at rest with AES-256-GCM.
+    </p>
+    <a href="/api/auth/google/url?redirect=true" class="btn-google">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+      Sign in with Google
+    </a>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>DUIT - Built for Bharat. Powered by Meta AI.</p>
+    <p style="margin-top: 6px;">
+      <a href="https://github.com/yuvraj707sharma/Duit" style="color: #94a3b8; text-decoration: none;" target="_blank">GitHub Repository: yuvraj707sharma/Duit</a>
+    </p>
+  </footer>
+</body>
 </html>
