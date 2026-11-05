@@ -41,7 +41,12 @@ const API_BASE = '/api';
 export async function fetchPendingApprovals(userId?: string): Promise<PendingApproval[]> {
   const url = userId ? `${API_BASE}/approvals?user_id=${userId}` : `${API_BASE}/approvals`;
   const res = await fetch(url);
-  if (!res.ok) return [];
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error('401 Unauthorized: Please authenticate to view pending approvals.');
+    }
+    throw new Error(`Failed to fetch approvals (${res.status} ${res.statusText})`);
+  }
   return res.json();
 }
 

@@ -39,12 +39,29 @@ export const App: React.FC = () => {
 
   const cancelTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const triggerBackendKillSwitch = async () => {
+    try {
+      await fetch('http://127.0.0.1:8000/api/desktop/kill-switch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-desktop-secret': 'fastagent_desktop_secret_2026_dev'
+        },
+        body: JSON.stringify({ user_id: 'default_user' })
+      });
+    } catch (err) {
+      console.error('Failed to notify backend kill switch:', err);
+    }
+  };
+
   useEffect(() => {
     // Listen for global electron kill switch shortcut
     if (window.electronAPI?.onKillSwitchActivated) {
       window.electronAPI.onKillSwitchActivated(() => {
         setIsKillSwitchActive(true);
         handleCancelAction();
+        triggerBackendKillSwitch();
+        setContextSummary('Emergency Stop: in-flight backend actions aborted and pending approvals cancelled.');
       });
     }
 
@@ -71,8 +88,8 @@ export const App: React.FC = () => {
   const handlePushToTalkEnd = () => {
     if (!isPushToTalkHeld) return;
     setIsPushToTalkHeld(false);
-    // Simulate voice recognized sample command
-    triggerSimulatedVoiceCommand("open notepad on my laptop", "open_app (notepad)");
+    // Explicitly labeled simulation demo command (real audio requires microphone device input)
+    triggerSimulatedVoiceCommand("[Demo] open notepad on my laptop", "open_app (notepad)");
   };
 
   const triggerSimulatedVoiceCommand = (heard: string, action: string) => {
@@ -93,9 +110,9 @@ export const App: React.FC = () => {
       setOverlay((prev) => ({ ...prev, status: 'completed' }));
       setOperations((prev) => [
         ...prev.slice(-19),
-        { intent: action, target: heard, status: 'completed', timestamp: Date.now() }
+        { intent: action, target: heard, status: 'simulated_demo', timestamp: Date.now() }
       ]);
-      setContextSummary(`Executed ${action}. Context sanitized.`);
+      setContextSummary(`Simulated preview for ${action}. No system files modified.`);
 
       setTimeout(() => {
         setOverlay((prev) => ({ ...prev, active: false }));

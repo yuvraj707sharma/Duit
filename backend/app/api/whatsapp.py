@@ -2,10 +2,11 @@
 from typing import Dict, Any, Optional
 import httpx
 from pydantic import BaseModel
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.responses import HTMLResponse
 from backend.app.config import settings
 from backend.app.db.repository import repository
+from backend.app.security.auth_deps import get_current_user, AuthenticatedUser
 
 router = APIRouter(tags=["WhatsApp & Onboarding"])
 
@@ -53,8 +54,11 @@ async def get_whatsapp_status():
 
 
 @router.get("/api/whatsapp/qr")
-async def get_whatsapp_qr():
-    """Returns the pairing QR code for scanning."""
+async def get_whatsapp_qr(current_user: AuthenticatedUser = Depends(get_current_user)):
+    """Returns the pairing QR code for scanning. Protected by admin authentication."""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden: Admin privileges required to view WhatsApp pairing QR")
+
     if settings.MESSAGING_CHANNEL == "mock":
         return {
             "status": "ready",

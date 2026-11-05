@@ -3,10 +3,11 @@ import hmac
 import ipaddress
 from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
-from fastapi import APIRouter, HTTPException, Query, Header
+from fastapi import APIRouter, HTTPException, Query, Header, Depends
 from pydantic import BaseModel
 from backend.app.db.repository import repository
 from backend.app.config import settings
+from backend.app.security.auth_deps import get_current_user, AuthenticatedUser, require_user_access
 
 router = APIRouter(prefix="/api/skills", tags=["Skills"])
 
@@ -67,9 +68,20 @@ class CreateSkillRequest(BaseModel):
 
 
 @router.get("", response_model=List[Dict[str, Any]])
-async def list_skills(user_id: Optional[str] = Query(default=None)):
-    """Lists global skill templates and user-specific skills."""
-    return await repository.list_skills(user_id=user_id)
+async def list_skills(
+    user_id: Optional[str] = Query(default=None),
+    current_user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Lists global skill templates and user-specific skills. Requires authentication."""
+    if user_id:
+        require_user_access(user_id, current_user)
+        target_user = user_id
+    elif not current_user.is_admin:
+        target_user = current_user.user_id
+    else:
+        target_user = None
+
+    return await repository.list_skills(user_id=target_user)
 
 
 @router.post("", response_model=Dict[str, Any], status_code=201)
@@ -115,8 +127,10 @@ async def delete_skill(
 
 
 @router.get("/library", response_model=List[Dict[str, Any]])
-async def get_skills_library():
-    """Returns curated skills from the @hasna/skills library."""
+async def get_skills_library(
+    current_user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Returns curated skills from the @hasna/skills library. Requires authentication."""
     from backend.app.desktop.skills_library import skills_library
     return skills_library.get_catalog()
 

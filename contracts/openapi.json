@@ -195,11 +195,14 @@
     "/api/whatsapp/qr": {
       "get": {
         "summary": "WhatsApp Pairing QR Code",
-        "description": "Returns pairing QR code (data URL or base64) for scanning",
+        "description": "Returns pairing QR code (data URL or base64) for scanning. Requires administrator authentication.",
         "responses": {
           "200": { "description": "QR code for pairing" },
+          "401": { "description": "Unauthorized: admin authentication required" },
+          "403": { "description": "Forbidden: admin privileges required" },
           "404": { "description": "Session already connected or QR unavailable" }
-        }
+        },
+        "security": [{ "userAuth": [] }]
       }
     },
     "/api/users/onboard": {
@@ -230,13 +233,15 @@
     "/api/skills": {
       "get": {
         "summary": "List Available and Installed Skills",
-        "description": "Lists global skill templates and user-specific skills",
+        "description": "Lists global skill templates and user-specific skills. Requires authentication.",
         "parameters": [
           { "name": "user_id", "in": "query", "required": false, "schema": { "type": "string" } }
         ],
         "responses": {
-          "200": { "description": "List of active and available skills" }
-        }
+          "200": { "description": "List of active and available skills" },
+          "401": { "description": "Unauthorized: authentication required" }
+        },
+        "security": [{ "userAuth": [] }]
       },
       "post": {
         "summary": "Create or Install a Skill",

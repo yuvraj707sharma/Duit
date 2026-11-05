@@ -198,3 +198,56 @@ def test_oauth_csrf_protection_and_state_lifecycle(monkeypatch):
     res_bad = client.get("/api/auth/google/callback?code=fake_code&state=forged_state")
     assert res_bad.status_code == 400
     assert "Invalid, expired, or reused" in res_bad.json()["detail"]
+
+
+def test_oauth_initiation_requires_auth_in_production(monkeypatch):
+    """Verify initiating Google OAuth URL requires authentication in production."""
+    monkeypatch.setattr(settings, "APP_ENV", "production")
+    monkeypatch.setattr(settings, "GATEWAY_SHARED_SECRET", "gw_secret_123")
+
+    # Without authentication header -> 401
+    res = client.get("/api/auth/google/url?user_id=arbitrary_target")
+    assert res.status_code == 401
+
+    # With authenticated gateway proxy header -> 200
+    res_auth = client.get(
+        "/api/auth/google/url",
+        headers={"x-user-id": "legit_user_123", "x-gateway-secret": "gw_secret_123"}
+    )
+    assert res_auth.status_code == 200
+    assert "auth_url" in res_auth.json()
+    assert "state" in res_auth.json()
+
+
+def test_whatsapp_qr_requires_admin_auth():
+    """Verify /api/whatsapp/qr requires administrator authentication."""
+    # 1. Non-admin user -> 403 Forbidden
+    res_user = client.get(
+        "/api/whatsapp/qr",
+        headers={"x-user-id": "regular_user"}
+    )
+    assert res_user.status_code == 403
+
+    # 2. Admin user -> 200 OK
+    res_admin = client.get(
+        "/api/whatsapp/qr",
+        headers={"x-user-id": "admin"}
+    )
+    assert res_admin.status_code == 200
+
+
+def test_skills_listing_requires_auth_in_production(monkeypatch):
+    """Verify /api/skills requires authentication in production."""
+    monkeypatch.setattr(settings, "APP_ENV", "production")
+    monkeypatch.setattr(settings, "GATEWAY_SHARED_SECRET", "gw_secret_123")
+
+    # Unauthenticated -> 401
+    res = client.get("/api/skills")
+    assert res.status_code == 401
+
+    # Authenticated with gateway credentials -> 200
+    res_auth = client.get(
+        "/api/skills",
+        headers={"x-user-id": "authorized_user", "x-gateway-secret": "gw_secret_123"}
+    )
+    assert res_auth.status_code == 200

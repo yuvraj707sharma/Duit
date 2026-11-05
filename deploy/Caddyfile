@@ -21,6 +21,11 @@
         reverse_proxy whatsapp:5122
     }
 
+    # WhatsApp Google OAuth callbacks
+    handle /auth/google* {
+        reverse_proxy whatsapp:5122
+    }
+
     # Default to FastAPI backend (serves the editorial landing page)
     handle {
         reverse_proxy backend:8000

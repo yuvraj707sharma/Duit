@@ -1,10 +1,11 @@
 """Google OAuth 2.0 Auth API with AES-GCM Encrypted Token Storage and CSRF Protection."""
 import hmac
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query, Request, Header
+from fastapi import APIRouter, HTTPException, Query, Request, Header, Depends
 from fastapi.responses import RedirectResponse
 from backend.app.security.oauth import generate_auth_url, get_oauth_flow, oauth_state_store
 from backend.app.security.crypto import encrypt_token
+from backend.app.security.auth_deps import get_optional_current_user, AuthenticatedUser
 from backend.app.db.repository import repository
 from backend.app.config import settings
 from backend.app.channels.evolution import EvolutionChannel
@@ -17,13 +18,22 @@ outbound_channel = EvolutionChannel() if settings.MESSAGING_CHANNEL == "evolutio
 
 @router.get("/google/url")
 async def get_google_auth_url(
-    user_id: str = Query(default="default_user"),
-    redirect: bool = Query(default=False)
+    user_id: Optional[str] = Query(default=None),
+    redirect: bool = Query(default=False),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user)
 ):
+    # Enforce authentication in production to prevent account-linking attacks
+    if settings.is_production:
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required to initiate OAuth flow")
+        effective_user = current_user.user_id
+    else:
+        effective_user = current_user.user_id if current_user else (user_id or "default_user")
+
     try:
-        url, state = generate_auth_url(user_id=user_id)
+        url, state = generate_auth_url(user_id=effective_user)
     except Exception:
-        state = oauth_state_store.create_state(user_id=user_id)
+        state = oauth_state_store.create_state(user_id=effective_user)
         url = f"https://accounts.google.com/o/oauth2/auth?state={state}"
 
     if redirect:

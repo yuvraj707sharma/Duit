@@ -12,25 +12,18 @@ class AuthenticatedUser:
     is_admin: bool = False
 
 
-async def get_current_user(
+async def get_optional_current_user(
     request: Request,
     x_user_id: Optional[str] = Header(None, alias="x-user-id"),
     x_gateway_secret: Optional[str] = Header(None, alias="x-gateway-secret"),
     x_admin_token: Optional[str] = Header(None, alias="x-admin-token"),
     authorization: Optional[str] = Header(None, alias="authorization")
-) -> AuthenticatedUser:
-    """
-    Centralized authentication dependency.
-    Requires verified identity from gateway, admin token, or authenticated user header.
-    Rejects unauthenticated requests with 401 Unauthorized.
-    """
-    is_admin = False
-
+) -> Optional[AuthenticatedUser]:
+    """Extracts authenticated user if credentials are valid, otherwise returns None without raising 401."""
     # Check for admin token
     if x_admin_token:
         expected_secret = settings.SECRET_KEY or settings.GATEWAY_SHARED_SECRET
         if expected_secret and hmac.compare_digest(x_admin_token.strip(), expected_secret.strip()):
-            is_admin = True
             user_id = x_user_id.strip() if x_user_id else "admin"
             return AuthenticatedUser(user_id=user_id, is_admin=True)
 
@@ -55,7 +48,35 @@ async def get_current_user(
         is_admin_user = clean_user.lower() == "admin"
         return AuthenticatedUser(user_id=clean_user, is_admin=is_admin_user)
 
-    # Unauthenticated
+    return None
+
+
+async def get_current_user(
+    request: Request,
+    x_user_id: Optional[str] = Header(None, alias="x-user-id"),
+    x_gateway_secret: Optional[str] = Header(None, alias="x-gateway-secret"),
+    x_admin_token: Optional[str] = Header(None, alias="x-admin-token"),
+    authorization: Optional[str] = Header(None, alias="authorization")
+) -> AuthenticatedUser:
+    """
+    Centralized authentication dependency.
+    Requires verified identity from gateway, admin token, or authenticated user header.
+    Rejects unauthenticated requests with 401 Unauthorized.
+    """
+    user = await get_optional_current_user(
+        request=request,
+        x_user_id=x_user_id,
+        x_gateway_secret=x_gateway_secret,
+        x_admin_token=x_admin_token,
+        authorization=authorization
+    )
+    if user:
+        return user
+
+    # In dev mode, return default user only if not in production and x_user_id was omitted
+    if not settings.is_production and not x_user_id:
+        return AuthenticatedUser(user_id="default_user", is_admin=True)
+
     raise HTTPException(status_code=401, detail="Authentication required")
 
 

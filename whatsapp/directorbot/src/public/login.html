@@ -404,14 +404,7 @@
         const data = await response.json();
 
         if (response.ok && data.success) {
-          // Store token in localStorage
-          if (data.token) {
-            localStorage.setItem('auth_token', data.token);
-          }
-          if (data.user) {
-            localStorage.setItem('auth_user', JSON.stringify(data.user));
-          }
-
+          // Session cookie is set with HttpOnly by server
           showAlert('Authenticated successfully. Redirecting to Executive Hub...', true);
           
           setTimeout(() => {

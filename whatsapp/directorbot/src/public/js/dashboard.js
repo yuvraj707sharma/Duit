@@ -14,35 +14,18 @@ function resolveUrl(url) {
   return `${basePath}${clean}`;
 }
 
-// Auto-prefix relative API calls, attach auth token, handle 401
+// Auto-prefix relative API calls, ensure cookie credentials, handle 401
 const originalFetch = window.fetch;
 window.fetch = function(url, options = {}) {
   if (typeof url === 'string' && url.startsWith('/api/')) {
     url = resolveUrl(url);
   }
 
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    options.headers = options.headers || {};
-    if (options.headers instanceof Headers) {
-      if (!options.headers.has('Authorization')) {
-        options.headers.append('Authorization', `Bearer ${token}`);
-      }
-    } else if (Array.isArray(options.headers)) {
-      if (!options.headers.some(([k]) => k.toLowerCase() === 'authorization')) {
-        options.headers.push(['Authorization', `Bearer ${token}`]);
-      }
-    } else {
-      if (!options.headers['Authorization'] && !options.headers['authorization']) {
-        options.headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
-  }
+  // Use HttpOnly secure cookie for session auth (never read raw bearer from localStorage)
+  options.credentials = options.credentials || 'same-origin';
 
   return originalFetch.call(this, url, options).then(res => {
     if (res.status === 401 && typeof url === 'string' && !url.includes('/api/auth/login')) {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
       window.location.replace(resolveUrl('/login.html'));
     }
     return res;

@@ -22,6 +22,7 @@ let botStatus = 'DISCONNECTED';
 let botPhoneNumber = null;
 let isManualDisconnect = false;
 let ioInstance = null;
+const blockedNotifyCache = new Map();
 const processedMessageIds = new Set();
 const messageStore = new Map();
 
@@ -182,7 +183,19 @@ async function handleFastAgentMessage(jid, phone, text) {
 
   // ── Handle blocked users ─────────────────────────────────────────────────
   if (user.state === 'BLOCKED') {
-    // Silent drop
+    const now = Date.now();
+    const lastNotified = blockedNotifyCache.get(cleanPhone) || 0;
+    if (now - lastNotified > 30 * 60 * 1000) {
+      blockedNotifyCache.set(cleanPhone, now);
+      const blockedMsg = (
+        `*Account Notice*\n\n` +
+        `Your DUIT access has been restricted by the administrator.\n` +
+        `Timestamp: ${new Date().toUTCString()}\n` +
+        `Reason: Administrative policy restriction\n\n` +
+        `To request an account review or appeal this hold, please reply with *APPEAL* and your request details.`
+      );
+      await sendMessage(jid, blockedMsg);
+    }
     return;
   }
 

@@ -5,13 +5,16 @@ import { AlertTriangle, CheckCircle2, XCircle, Edit3, ShieldAlert, Clock } from 
 interface Props {
   approvals: PendingApproval[];
   onRefresh: () => void;
+  error?: string | null;
 }
 
-export const ApprovalsList: React.FC<Props> = ({ approvals, onRefresh }) => {
+export const ApprovalsList: React.FC<Props> = ({ approvals, onRefresh, error }) => {
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [confirmingHighRiskId, setConfirmingHighRiskId] = useState<string | null>(null);
 
   const handleAction = async (id: string, decision: 'approve' | 'reject') => {
     setLoadingId(id);
+    setConfirmingHighRiskId(null);
     try {
       await resolveApproval(id, decision);
       onRefresh();
@@ -35,7 +38,18 @@ export const ApprovalsList: React.FC<Props> = ({ approvals, onRefresh }) => {
         </span>
       </div>
 
-      {pendingOnly.length === 0 ? (
+      {error ? (
+        <div className="p-6 bg-rose-950/40 border border-rose-500/30 rounded-xl text-center space-y-2">
+          <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto" />
+          <p className="text-rose-200 font-semibold">{error}</p>
+          <button
+            onClick={onRefresh}
+            className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium rounded-lg transition-all"
+          >
+            Retry Connection
+          </button>
+        </div>
+      ) : pendingOnly.length === 0 ? (
         <div className="p-8 text-center bg-slate-900/40 border border-slate-800 rounded-xl">
           <CheckCircle2 className="w-10 h-10 text-emerald-400/80 mx-auto mb-3" />
           <p className="text-slate-300 font-medium">All caught up!</p>
@@ -77,23 +91,50 @@ export const ApprovalsList: React.FC<Props> = ({ approvals, onRefresh }) => {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 min-w-[120px]">
-                  <button
-                    onClick={() => handleAction(item.id, 'approve')}
-                    disabled={loadingId === item.id}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleAction(item.id, 'reject')}
-                    disabled={loadingId === item.id}
-                    className="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 active:scale-95 text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    Reject
-                  </button>
+                <div className="flex flex-col gap-2 min-w-[130px]">
+                  {item.risk === 'high' && confirmingHighRiskId === item.id ? (
+                    <div className="flex flex-col gap-1.5 p-2 bg-rose-950/60 border border-rose-500/40 rounded-lg">
+                      <p className="text-[10px] text-rose-300 font-semibold text-center uppercase tracking-wider">Confirm High Risk</p>
+                      <button
+                        onClick={() => handleAction(item.id, 'approve')}
+                        disabled={loadingId === item.id}
+                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded shadow-sm transition-all"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setConfirmingHighRiskId(null)}
+                        className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          if (item.risk === 'high') {
+                            setConfirmingHighRiskId(item.id);
+                          } else {
+                            handleAction(item.id, 'approve');
+                          }
+                        }}
+                        disabled={loadingId === item.id}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'reject')}
+                        disabled={loadingId === item.id}
+                        className="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 active:scale-95 text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Reject
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

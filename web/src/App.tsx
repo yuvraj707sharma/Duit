@@ -35,6 +35,7 @@ export const App: React.FC = () => {
     stage_latencies_ms: {}
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
     setIsRefreshing(true);
@@ -47,6 +48,9 @@ export const App: React.FC = () => {
       setApprovals(apprs);
       setLogs(lgs);
       setMetrics(mtrs);
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message || 'Error loading dashboard data');
     } finally {
       setIsRefreshing(false);
     }
@@ -170,7 +174,7 @@ export const App: React.FC = () => {
 
       {/* Main Content View */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        {activeTab === 'approvals' && <ApprovalsList approvals={approvals} onRefresh={loadData} />}
+        {activeTab === 'approvals' && <ApprovalsList approvals={approvals} onRefresh={loadData} error={error} />}
         {activeTab === 'stats' && <StatsDashboard metrics={metrics} />}
         {activeTab === 'logs' && <ActionLog logs={logs} />}
         {activeTab === 'learning' && <LearningCurveChart />}

@@ -107,7 +107,7 @@ function parseCookies(req) {
   return list;
 }
 
-// Token Extractor
+// Token Extractor - Never accept tokens in query parameters (mitigates log leakage & token sharing)
 function extractToken(req) {
   const authHeader = req.headers['authorization'];
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -119,9 +119,6 @@ function extractToken(req) {
   const cookies = parseCookies(req);
   if (cookies['auth_token']) {
     return cookies['auth_token'];
-  }
-  if (req.query && req.query.token) {
-    return req.query.token;
   }
   return null;
 }
@@ -180,6 +177,18 @@ function getGoogleRedirectUri(req) {
 }
 
 // --- Google OAuth2 Routes (Per-User, phone-keyed) ---
+// Server-side one-time OAuth state cache (CSRF and account linking mitigation)
+const pendingOAuthStates = new Map();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [st, entry] of pendingOAuthStates.entries()) {
+    if (now - entry.createdAt > 10 * 60 * 1000) {
+      pendingOAuthStates.delete(st);
+    }
+  }
+}, 60 * 1000);
+
 // The /auth/google?user=<base64phone> route initiates OAuth for a specific WhatsApp user.
 app.get('/auth/google', async (req, res) => {
   try {
@@ -200,13 +209,27 @@ app.get('/auth/google', async (req, res) => {
       'https://www.googleapis.com/auth/userinfo.profile'
     ];
 
-    // Preserve phone in state param so callback can link token back to user
+    // Decode and validate user phone from parameter
+    let phone = '';
     const userParam = req.query.user || '';
+    if (userParam) {
+      try {
+        phone = Buffer.from(userParam, 'base64url').toString('utf8');
+      } catch {
+        phone = userParam;
+      }
+      phone = phone.replace(/[^0-9]/g, '');
+    }
+
+    // Generate random, server-validated CSRF state token
+    const stateToken = crypto.randomBytes(24).toString('hex');
+    pendingOAuthStates.set(stateToken, { phone, createdAt: Date.now() });
+
     const authUrl = oAuth2Client.generateAuthUrl({
       access_type: 'offline',
       prompt: 'consent',
       scope: scopes,
-      state: userParam
+      state: stateToken
     });
 
     res.redirect(authUrl);
@@ -225,6 +248,15 @@ app.get('/auth/google/callback', async (req, res) => {
     return res.send('<h3>Missing authorization code.</h3>');
   }
 
+  // Validate state token against server-side session cache (one-time use)
+  const pending = state ? pendingOAuthStates.get(state) : null;
+  if (!pending || (Date.now() - pending.createdAt > 10 * 60 * 1000)) {
+    return res.status(400).send('<h3>Invalid or expired OAuth state</h3><p>Please initiate authorization again from WhatsApp.</p>');
+  }
+  pendingOAuthStates.delete(state); // One-time consumption
+
+  const phone = pending.phone;
+
   try {
     const { google } = await import('googleapis');
     const clientId = (await getSetting('GOOGLE_CLIENT_ID')) || process.env.GOOGLE_CLIENT_ID;
@@ -239,12 +271,6 @@ app.get('/auth/google/callback', async (req, res) => {
     const oauth2 = google.oauth2({ version: 'v2', auth: oAuth2Client });
     const userInfo = await oauth2.userinfo.get();
     const googleEmail = userInfo.data.email || '';
-
-    // Decode phone from state
-    let phone = '';
-    if (state) {
-      try { phone = Buffer.from(state, 'base64url').toString('utf8'); } catch {}
-    }
 
     // Save token keyed by phone (and email)
     await query(
@@ -267,19 +293,19 @@ app.get('/auth/google/callback', async (req, res) => {
       ]
     );
 
-    // Mark user as google-connected
+    // Sync tokens with FastAgent Python backend for immediate live tool execution
     if (phone) {
-      await query(
-        'UPDATE fastagent_users SET google_connected = 1, google_email = ?, state = IF(state = \'ONBOARDING_AUTH\', \'ACTIVE\', state) WHERE phone = ?',
-        [googleEmail, phone]
-      );
-
-      // Sync tokens with FastAgent Python backend for immediate live tool execution
       try {
         const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
-        await fetch(`${backendUrl}/api/auth/save-token`, {
+        const gatewaySecret = process.env.GATEWAY_SHARED_SECRET || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (gatewaySecret) {
+          headers['x-gateway-secret'] = gatewaySecret;
+        }
+
+        const syncResp = await fetch(`${backendUrl}/api/auth/save-token`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             user_id: phone,
             access_token: tokens.access_token,
@@ -289,9 +315,20 @@ app.get('/auth/google/callback', async (req, res) => {
             provider: 'google'
           })
         });
+
+        if (!syncResp.ok) {
+          throw new Error(`Backend token sync returned HTTP ${syncResp.status}`);
+        }
+
+        // Only update connection status after confirmed synchronization
+        await query(
+          'UPDATE fastagent_users SET google_connected = 1, google_email = ?, state = IF(state = \'ONBOARDING_AUTH\', \'ACTIVE\', state) WHERE phone = ?',
+          [googleEmail, phone]
+        );
         console.log(`[Google OAuth] Synced tokens to FastAgent backend for user ${phone}`);
       } catch (syncErr) {
         console.error('[Google OAuth] Failed to sync token to FastAgent backend:', syncErr.message);
+        return res.status(502).send('<h3>Connection Incomplete</h3><p>Could not securely synchronize your account with the DUIT processing engine. Please retry from WhatsApp.</p>');
       }
     }
 
@@ -333,8 +370,9 @@ app.post('/api/auth/login', async (req, res) => {
 
     const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('auth_token', result.token, {
-      maxAge: 30 * 24 * 60 * 60 * 1000,
+      maxAge: 24 * 60 * 60 * 1000,
       path: '/',
+      httpOnly: true,
       sameSite: 'lax',
       secure: isHttps
     });
@@ -389,6 +427,14 @@ app.use('/api', async (req, res, next) => {
   next();
 });
 
+// Centralized Role-Based Access Control Middleware
+function requireAdmin(req, res, next) {
+  if (!req.user || (req.user.role !== 'director' && req.user.role !== 'admin')) {
+    return res.status(403).json({ success: false, error: 'Forbidden: Administrator privileges required.' });
+  }
+  next();
+}
+
 // Authenticated user profile
 app.get('/api/auth/me', (req, res) => {
   res.json({ success: true, user: req.user });
@@ -411,20 +457,20 @@ app.post('/api/auth/change-password', async (req, res) => {
   }
 });
 
-// Disconnect Google Account (per user by phone)
-app.post('/api/google/disconnect/:phone', async (req, res) => {
+// Disconnect Google Account (per user by phone, requires admin role or self-ownership)
+app.post('/api/google/disconnect/:phone', requireAdmin, async (req, res) => {
   try {
     const phone = req.params.phone.replace(/[^0-9]/g, '');
     await query('DELETE FROM google_tokens WHERE phone = ?', [phone]);
     await query('UPDATE fastagent_users SET google_connected = 0, google_email = NULL WHERE phone = ?', [phone]);
-    await logActivity('GOOGLE_AUTH', `Google disconnected for phone=${phone}`, 'INFO');
+    await logActivity('GOOGLE_AUTH', `Google disconnected for phone=${phone} by admin=${req.user.email}`, 'INFO');
     res.json({ success: true, message: 'Google account disconnected.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/test/whatsapp-ping', async (req, res) => {
+app.post('/api/test/whatsapp-ping', requireAdmin, async (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ success: false, error: 'phone is required' });
@@ -488,7 +534,7 @@ app.get('/api/stats', async (req, res) => {
 });
 
 // 3. WhatsApp Bot Control
-app.post('/api/whatsapp/disconnect', async (req, res) => {
+app.post('/api/whatsapp/disconnect', requireAdmin, async (req, res) => {
   try {
     await disconnectBotSession();
     res.json({ success: true, message: 'Bot disconnected. Rescan QR from dashboard to reconnect.' });
@@ -498,7 +544,7 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
 });
 
 // 4. System Reset (Admin Only)
-app.post('/api/system/reset', async (req, res) => {
+app.post('/api/system/reset', requireAdmin, async (req, res) => {
   try {
     const { clearUsers, clearLogs, clearTokens, disconnectBot } = req.body;
     const clearedItems = [];
@@ -526,7 +572,7 @@ app.get('/api/skills', async (req, res) => {
   }
 });
 
-app.post('/api/skills', async (req, res) => {
+app.post('/api/skills', requireAdmin, async (req, res) => {
   try {
     const { name, system_prompt, description, trigger_keywords, webhook_url, user_phone } = req.body;
     if (!name || !system_prompt) {
@@ -550,7 +596,7 @@ app.post('/api/skills', async (req, res) => {
   }
 });
 
-app.delete('/api/skills/:skill_id', async (req, res) => {
+app.delete('/api/skills/:skill_id', requireAdmin, async (req, res) => {
   try {
     const { skill_id } = req.params;
     const result = await deleteSkill(skill_id);
@@ -565,7 +611,7 @@ app.delete('/api/skills/:skill_id', async (req, res) => {
 });
 
 // 8. Settings Management
-app.get('/api/settings', async (req, res) => {
+app.get('/api/settings', requireAdmin, async (req, res) => {
   try {
     const keys = [
       'GOOGLE_CLIENT_ID',
@@ -592,7 +638,7 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
-app.post('/api/settings', async (req, res) => {
+app.post('/api/settings', requireAdmin, async (req, res) => {
   try {
     const allowed = [
       'GOOGLE_CLIENT_ID',
@@ -614,7 +660,7 @@ app.post('/api/settings', async (req, res) => {
 });
 
 // --- FastAgent Users API ---
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', requireAdmin, async (req, res) => {
   try {
     const users = await query('SELECT id, phone, name, use_case, state, google_connected, google_email, message_count, last_seen, created_at FROM fastagent_users ORDER BY id DESC LIMIT 100');
     res.json(users);
@@ -623,7 +669,7 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-app.post('/api/users/:phone/block', async (req, res) => {
+app.post('/api/users/:phone/block', requireAdmin, async (req, res) => {
   try {
     await query("UPDATE fastagent_users SET state = 'BLOCKED' WHERE phone = ?", [req.params.phone]);
     await logActivity('ADMIN', `User ${req.params.phone} blocked`, 'WARN');
@@ -633,7 +679,7 @@ app.post('/api/users/:phone/block', async (req, res) => {
   }
 });
 
-app.post('/api/users/:phone/unblock', async (req, res) => {
+app.post('/api/users/:phone/unblock', requireAdmin, async (req, res) => {
   try {
     await query("UPDATE fastagent_users SET state = 'ACTIVE' WHERE phone = ?", [req.params.phone]);
     await logActivity('ADMIN', `User ${req.params.phone} unblocked`, 'INFO');
@@ -644,7 +690,7 @@ app.post('/api/users/:phone/unblock', async (req, res) => {
 });
 
 // 9. Activity Logs Feed
-app.get('/api/logs', async (req, res) => {
+app.get('/api/logs', requireAdmin, async (req, res) => {
   try {
     const logs = await query('SELECT * FROM activity_logs ORDER BY id DESC LIMIT 40');
     res.json(logs);

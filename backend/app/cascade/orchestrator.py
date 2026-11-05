@@ -212,16 +212,21 @@ class CascadeOrchestrator:
                         parsed = urlparse(webhook_url)
                         is_safe = parsed.scheme == "https" and parsed.hostname
                         if is_safe:
+                            import socket
+                            # Resolve DNS at request time to prevent DNS rebinding to internal/private IPs
                             try:
-                                addr = ipaddress.ip_address(parsed.hostname)
-                                if addr.is_private or addr.is_loopback or addr.is_link_local:
-                                    is_safe = False
-                            except ValueError:
-                                if parsed.hostname.lower() in ("localhost", "metadata.google.internal") or parsed.hostname.lower().endswith((".local", ".internal")):
-                                    is_safe = False
+                                resolved_info = socket.getaddrinfo(parsed.hostname, 443, socket.AF_UNSPEC, socket.SOCK_STREAM)
+                                for _, _, _, _, sockaddr in resolved_info:
+                                    ip_obj = ipaddress.ip_address(sockaddr[0])
+                                    if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved or ip_obj.is_multicast:
+                                        is_safe = False
+                                        break
+                            except Exception:
+                                is_safe = False
                         
                         if is_safe:
-                            async with httpx.AsyncClient(timeout=10.0) as client:
+                            # follow_redirects=False prevents open redirect SSRF bypasses
+                            async with httpx.AsyncClient(timeout=10.0, follow_redirects=False) as client:
                                 resp = await client.post(
                                     webhook_url,
                                     json={
