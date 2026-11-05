@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
 import { query, logActivity } from '../database/db.js';
 
@@ -48,7 +50,12 @@ export async function seedDefaultAdmin() {
       }
     }
 
-    // If no ADMIN_PASSWORD is provided in environment, generate a cryptographically strong bootstrap password
+    const isProd = process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production';
+    if (!DEFAULT_ADMIN_PASSWORD && isProd) {
+      throw new Error('[FATAL] Missing required environment variable: ADMIN_PASSWORD must be configured in production.');
+    }
+
+    // In development, generate a one-time random bootstrap password and persist to secure file without logging
     const adminPassword = DEFAULT_ADMIN_PASSWORD || crypto.randomBytes(16).toString('base64url');
 
     // Seed default admin
@@ -61,9 +68,17 @@ export async function seedDefaultAdmin() {
     );
 
     if (!DEFAULT_ADMIN_PASSWORD) {
-      console.warn(`[SECURITY WARNING] ADMIN_PASSWORD was not set in environment.`);
-      console.warn(`[SECURITY NOTICE] Generated initial bootstrap password for ${DEFAULT_ADMIN_EMAIL}: ${adminPassword}`);
-      console.warn(`[SECURITY NOTICE] Please set ADMIN_PASSWORD in your environment immediately.`);
+      const storageDir = path.resolve('storage');
+      try {
+        if (!fs.existsSync(storageDir)) {
+          fs.mkdirSync(storageDir, { recursive: true });
+        }
+        const tokenFile = path.join(storageDir, '.initial_admin_password');
+        fs.writeFileSync(tokenFile, adminPassword, { mode: 0o600 });
+        console.warn(`[SECURITY NOTICE] ADMIN_PASSWORD was not set. Initial bootstrap password written to secure local file: ${tokenFile}`);
+      } catch (fErr) {
+        console.warn(`[SECURITY NOTICE] ADMIN_PASSWORD was not set. Please set ADMIN_PASSWORD in environment.`);
+      }
     } else {
       console.log(`[Auth] Admin account verified for: ${DEFAULT_ADMIN_EMAIL}`);
     }

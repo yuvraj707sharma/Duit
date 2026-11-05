@@ -48,17 +48,22 @@
     "/api/approvals": {
       "get": {
         "summary": "List Pending Approvals",
+        "description": "Lists pending approvals. User can only view their own approvals; administrators may view broader data.",
         "parameters": [
-          { "name": "user_id", "in": "query", "required": true, "schema": { "type": "string" } }
+          { "name": "user_id", "in": "query", "required": false, "schema": { "type": "string" } }
         ],
         "responses": {
-          "200": { "description": "List of pending approval requests" }
-        }
+          "200": { "description": "List of pending approval requests" },
+          "401": { "description": "Unauthorized: user authentication required" },
+          "403": { "description": "Forbidden: cannot access another user's approvals" }
+        },
+        "security": [{ "userAuth": [] }]
       }
     },
     "/api/approvals/{approval_id}/resolve": {
       "post": {
         "summary": "Approve, Edit, or Reject Action",
+        "description": "Resolves a pending approval. User can only resolve their own approvals.",
         "parameters": [
           { "name": "approval_id", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
@@ -80,20 +85,28 @@
         },
         "responses": {
           "200": { "description": "Approval decision applied and logged to learning dataset" },
-          "404": { "description": "Approval request not found" }
-        }
+          "401": { "description": "Unauthorized: user authentication required" },
+          "403": { "description": "Forbidden: cannot resolve another user's approval" },
+          "404": { "description": "Approval request not found" },
+          "410": { "description": "Approval request expired" }
+        },
+        "security": [{ "userAuth": [] }]
       }
     },
     "/api/audit-logs": {
       "get": {
         "summary": "Retrieve Audit and Action Logs",
+        "description": "Lists audit logs. User can only view their own audit logs.",
         "parameters": [
-          { "name": "user_id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "user_id", "in": "query", "required": false, "schema": { "type": "string" } },
           { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50 } }
         ],
         "responses": {
-          "200": { "description": "Action log history" }
-        }
+          "200": { "description": "Action log history" },
+          "401": { "description": "Unauthorized: user authentication required" },
+          "403": { "description": "Forbidden: cannot access another user's audit logs" }
+        },
+        "security": [{ "userAuth": [] }]
       }
     },
     "/api/metrics": {
@@ -113,11 +126,15 @@
     "/api/auth/google/callback": {
       "get": {
         "summary": "Google OAuth Callback",
+        "description": "Exchanges Google OAuth code for tokens with cryptographically verified CSRF state protection.",
         "parameters": [
           { "name": "code", "in": "query", "required": true, "schema": { "type": "string" } },
           { "name": "state", "in": "query", "required": true, "schema": { "type": "string" } }
         ],
-        "responses": { "200": { "description": "OAuth success and tokens encrypted" } }
+        "responses": {
+          "200": { "description": "OAuth success and tokens encrypted" },
+          "400": { "description": "Invalid, expired, or reused OAuth state" }
+        }
       }
     },
     "/connect": {
@@ -271,6 +288,12 @@
         "in": "header",
         "name": "x-gateway-secret",
         "description": "Shared secret for server-to-server authentication between gateway and backend"
+      },
+      "userAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-user-id",
+        "description": "Authenticated user identity header, paired with gateway or session token"
       }
     }
   }

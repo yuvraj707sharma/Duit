@@ -98,3 +98,103 @@ def test_save_token_requires_gateway_secret_in_production(monkeypatch):
         headers={"x-gateway-secret": "super_secure_gateway_token_123"}
     )
     assert res_good.status_code == 200
+
+
+def test_unauthenticated_approvals_return_401(monkeypatch):
+    """Verify unauthenticated access to /api/approvals returns 401."""
+    monkeypatch.setattr(settings, "APP_ENV", "production")
+    res = client.get("/api/approvals")
+    assert res.status_code == 401
+
+
+def test_user_cannot_access_or_resolve_another_users_approval():
+    """Verify users cannot view or resolve approvals belonging to other users."""
+    from backend.app.cascade.orchestrator import cascade_orchestrator
+    import uuid
+
+    appr_id = f"appr_test_{uuid.uuid4().hex[:8]}"
+    cascade_orchestrator.repo.approvals_store[appr_id] = {
+        "approval_id": appr_id,
+        "user_id": "alice_user",
+        "action_type": "send_email",
+        "status": "pending",
+        "created_at": 1000.0,
+        "expires_at": 9999999999.0
+    }
+
+    # 1. Bob attempts to list Alice's approvals -> 403 Forbidden
+    res_list = client.get(
+        "/api/approvals?user_id=alice_user",
+        headers={"x-user-id": "bob_attacker"}
+    )
+    assert res_list.status_code == 403
+
+    # 2. Bob attempts to resolve Alice's approval -> 403 Forbidden
+    res_resolve = client.post(
+        f"/api/approvals/{appr_id}/resolve",
+        json={"decision": "approve"},
+        headers={"x-user-id": "bob_attacker"}
+    )
+    assert res_resolve.status_code == 403
+
+    # 3. Alice accesses her own approvals -> 200 OK
+    res_alice = client.get(
+        "/api/approvals",
+        headers={"x-user-id": "alice_user"}
+    )
+    assert res_alice.status_code == 200
+    approval_ids = [a["approval_id"] for a in res_alice.json()]
+    assert appr_id in approval_ids
+
+
+def test_unauthenticated_audit_logs_return_401(monkeypatch):
+    """Verify unauthenticated access to /api/audit-logs returns 401 in production."""
+    monkeypatch.setattr(settings, "APP_ENV", "production")
+    res = client.get("/api/audit-logs")
+    assert res.status_code == 401
+
+
+def test_user_cannot_access_another_users_audit_logs():
+    """Verify users cannot request another user's audit logs."""
+    # Bob attempts to request Alice's audit logs -> 403 Forbidden
+    res = client.get(
+        "/api/audit-logs?user_id=alice_user",
+        headers={"x-user-id": "bob_attacker"}
+    )
+    assert res.status_code == 403
+
+    # Alice requests her own audit logs -> 200 OK
+    res_alice = client.get(
+        "/api/audit-logs?user_id=alice_user",
+        headers={"x-user-id": "alice_user"}
+    )
+    assert res_alice.status_code == 200
+
+
+def test_oauth_csrf_protection_and_state_lifecycle(monkeypatch):
+    """Verify OAuth state generation, one-time consumption, and rejection of invalid/reused tokens."""
+    from backend.app.security.oauth import oauth_state_store
+
+    user_id = "test_oauth_user_123"
+
+    # 1. State token is random and non-trivial (not equal to raw user_id)
+    token = oauth_state_store.create_state(user_id=user_id)
+    assert token != user_id
+    assert len(token) >= 32
+
+    # 2. First consumption succeeds and returns the bound user
+    consumed_user = oauth_state_store.validate_and_consume(token)
+    assert consumed_user == user_id
+
+    # 3. Second consumption of same token fails (one-time-use / replay protection)
+    reused_user = oauth_state_store.validate_and_consume(token)
+    assert reused_user is None
+
+    # 4. Unknown/tampered state returns None
+    assert oauth_state_store.validate_and_consume("tampered_state_token") is None
+
+    # 5. In production, callback rejects unseeded state with 400 Bad Request
+    monkeypatch.setattr(settings, "APP_ENV", "production")
+    res_bad = client.get("/api/auth/google/callback?code=fake_code&state=forged_state")
+    assert res_bad.status_code == 400
+    assert "Invalid, expired, or reused" in res_bad.json()["detail"]
