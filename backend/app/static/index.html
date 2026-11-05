@@ -417,6 +417,95 @@
       color: #71717a;
       font-size: 0.85rem;
     }
+
+    /* Duit Roamer Mascot Styles */
+    .roamer {
+      position: fixed;
+      width: 110px;
+      height: 135px;
+      z-index: 99999;
+      cursor: grab;
+      user-select: none;
+      transition: none;
+      pointer-events: auto;
+      transform-origin: center bottom;
+    }
+
+    .roamer.dragging { cursor: grabbing; }
+    .roamer:active { cursor: grabbing; }
+
+    .mascot-body {
+      width: 100px;
+      height: 125px;
+      animation: roamer-bob 2.2s ease-in-out infinite;
+    }
+
+    .roamer.walking .mascot-body { animation: roamer-walk 0.35s infinite; }
+    .roamer.jumping .mascot-body { animation: roamer-jump 0.65s ease-out; }
+    .roamer.dancing .mascot-body { animation: roamer-dance 0.5s infinite; }
+    .roamer.sleeping .mascot-body { animation: roamer-sleep 2.4s infinite; }
+    .roamer.waving .mascot-body { animation: roamer-wave 0.6s infinite; }
+
+    @keyframes roamer-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+    @keyframes roamer-walk { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+    @keyframes roamer-jump { 0% { transform: translateY(0) scale(1); } 50% { transform: translateY(-45px) scale(1.08); } 100% { transform: translateY(0) scale(1); } }
+    @keyframes roamer-dance { 0% { transform: rotate(-10deg); } 50% { transform: rotate(10deg) translateY(-8px); } 100% { transform: rotate(-10deg); } }
+    @keyframes roamer-sleep { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes roamer-wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+
+    .speech-bubble {
+      position: absolute;
+      bottom: 125px;
+      left: -24px;
+      width: 165px;
+      background: #ffffff;
+      color: #09090b;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 8px 12px;
+      border: 2px solid #18181b;
+      border-radius: 10px;
+      box-shadow: 3px 3px 0 #10b981;
+      text-align: center;
+      white-space: normal;
+      animation: pop-bubble 0.25s ease-out;
+      pointer-events: none;
+      z-index: 100000;
+    }
+
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -7px;
+      left: 45px;
+      width: 11px;
+      height: 11px;
+      background: #ffffff;
+      border-right: 2px solid #18181b;
+      border-bottom: 2px solid #18181b;
+      transform: rotate(45deg);
+    }
+
+    @keyframes pop-bubble { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .shadow-ground {
+      position: absolute;
+      bottom: -4px;
+      left: 15px;
+      width: 70px;
+      height: 10px;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 50%;
+      filter: blur(3px);
+    }
+
+    .roamer.jumping .shadow-ground {
+      animation: shadow-shrink 0.65s;
+    }
+
+    @keyframes shadow-shrink { 50% { transform: scale(0.4); opacity: 0.15; } }
+
   </style>
 </head>
 <body>
@@ -579,5 +668,251 @@
       <a href="https://github.com/yuvraj707sharma/Duit" style="color: #94a3b8; text-decoration: none;" target="_blank">GitHub Repository: yuvraj707sharma/Duit</a>
     </p>
   </footer>
+
+  <!-- Live Roaming DUIT Mascot Pet -->
+  <div id="duit-roamer" class="roamer idle" style="left: 140px; top: 320px;">
+    <div id="roamer-bubble" class="speech-bubble" style="display: none;"></div>
+    <div class="mascot-body">
+      <svg viewBox="0 0 300 320" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+        <ellipse cx="150" cy="300" rx="65" ry="12" fill="#000" opacity="0.15" />
+        <line x1="150" y1="42" x2="150" y2="18" stroke="#10b981" stroke-width="4" stroke-linecap="round" />
+        <circle cx="150" cy="14" r="10" fill="#10b981" style="filter: drop-shadow(0 0 6px #10b981);" />
+        <circle cx="150" cy="14" r="4" fill="#ffffff" />
+        <path d="M144 56 C144 48 156 48 156 56 C156 72 150 78 150 78 C150 78 144 72 144 56 Z" fill="#f97316" stroke="#ea580c" stroke-width="1.5" />
+        <rect x="28" y="150" width="28" height="80" rx="12" fill="#1e293b" stroke="#334155" stroke-width="3" />
+        <rect x="28" y="168" width="28" height="12" fill="#10b981" />
+        <circle cx="150" cy="175" r="105" fill="#fef3c7" stroke="#1c1917" stroke-width="4" />
+        <circle cx="95" cy="145" r="5" fill="#fde68a" />
+        <circle cx="205" cy="145" r="5" fill="#fde68a" />
+        <circle cx="110" cy="220" r="4" fill="#fde68a" />
+        <circle cx="190" cy="220" r="4" fill="#fde68a" />
+        <circle cx="150" cy="250" r="4" fill="#fde68a" />
+        <circle cx="150" cy="155" r="44" fill="#18181b" stroke="#27272a" stroke-width="3" />
+        <circle cx="150" cy="155" r="36" fill="url(#rVisorGlow)" />
+        <circle cx="150" cy="155" r="22" fill="#ea580c" />
+        <circle cx="144" cy="148" r="7" fill="#fed7aa" opacity="0.8" />
+        <path d="M136 215 Q150 225 164 215" stroke="#78716c" stroke-width="4" stroke-linecap="round" fill="none" />
+        <g id="roamer-arm-left">
+          <rect x="38" y="210" width="42" height="22" rx="11" fill="#fef3c7" stroke="#1c1917" stroke-width="3" />
+          <circle cx="42" cy="221" r="10" fill="#fff" stroke="#1c1917" stroke-width="3" />
+        </g>
+        <g id="roamer-arm-right">
+          <rect x="220" y="210" width="42" height="22" rx="11" fill="#fef3c7" stroke="#1c1917" stroke-width="3" />
+          <circle cx="258" cy="221" r="10" fill="#fff" stroke="#1c1917" stroke-width="3" />
+        </g>
+        <rect x="110" y="268" width="28" height="28" rx="10" fill="#e2e8f0" stroke="#1c1917" stroke-width="3" />
+        <rect x="162" y="268" width="28" height="28" rx="10" fill="#e2e8f0" stroke="#1c1917" stroke-width="3" />
+        <rect x="125" y="235" width="50" height="22" rx="11" fill="#10b981" />
+        <text x="150" y="250" text-anchor="middle" fill="#000000" font-size="12" font-family="Arial, sans-serif" font-weight="800" letter-spacing="0.5">DUIT</text>
+        <defs>
+          <radialGradient id="rVisorGlow" cx="0.5" cy="0.5" r="0.5" fx="0.35" fy="0.35">
+            <stop offset="0%" stop-color="#fb923c" />
+            <stop offset="60%" stop-color="#f97316" />
+            <stop offset="100%" stop-color="#c2410c" />
+          </radialGradient>
+        </defs>
+      </svg>
+    </div>
+    <div class="shadow-ground"></div>
+  </div>
+
+  <script>
+    (function() {
+      const roamer = document.getElementById('duit-roamer');
+      const bubble = document.getElementById('roamer-bubble');
+      if (!roamer) return;
+
+      const PHRASES = {
+        idle: [
+          "Just say it, ho gaya.",
+          "Searching your files...",
+          "Kya karna hai boss?",
+          "WhatsApp check kar raha hu...",
+          "Chrome profile 4 ready hai!",
+          "Presence Online!"
+        ],
+        wave: [
+          "Hey! Main DUIT hu!",
+          "Namaste! Aapka desktop sambhal liya!",
+          "Boliye boss, kya automate kare?"
+        ],
+        happy: [
+          "Ho gaya! Action complete!",
+          "Done boss! Next task?",
+          "Desktop task executed!",
+          "Calendar updated!"
+        ],
+        sleep: [
+          "Zzz... thoda standby rest...",
+          "Heartbeat alive (5s)..."
+        ],
+        features: [
+          "Yeh dekho, multi-profile Chrome features!",
+          "WhatsApp se direct laptop control!"
+        ],
+        connect: [
+          "Yahan se Google account link kar lo!"
+        ]
+      };
+
+      let pos = { x: 120, y: 280 };
+      let target = { x: 320, y: 280 };
+      let mood = 'idle';
+      let facing = 1;
+      let isDragging = false;
+      let dragOffset = { x: 0, y: 0 };
+      let idleTimer = 0;
+      let bubbleTimeout = null;
+
+      function showBubble(text, duration = 2600) {
+        if (!bubble) return;
+        bubble.textContent = text;
+        bubble.style.display = 'block';
+        bubble.style.transform = `scaleX(${facing})`;
+        clearTimeout(bubbleTimeout);
+        bubbleTimeout = setTimeout(() => {
+          bubble.style.display = 'none';
+        }, duration);
+      }
+
+      function setMood(newMood) {
+        mood = newMood;
+        roamer.className = `roamer ${mood} ${isDragging ? 'dragging' : ''}`;
+      }
+
+      function pickNewTarget() {
+        const padX = 70;
+        const padYTop = 100;
+        const padYBottom = 220;
+        const newX = padX + Math.random() * Math.max(window.innerWidth - padX * 2, 200);
+        const newY = padYTop + Math.random() * Math.max(window.innerHeight - padYTop - padYBottom, 200);
+        target = { x: newX, y: newY };
+        facing = newX > pos.x ? 1 : -1;
+        roamer.style.transform = `scaleX(${facing})`;
+      }
+
+      // 60 FPS physics loop
+      function updatePhysics() {
+        if (!isDragging && mood !== 'sleeping' && mood !== 'dancing') {
+          const dx = target.x - pos.x;
+          const dy = target.y - pos.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist > 5) {
+            if (mood !== 'walking') setMood('walking');
+            const speed = 1.5;
+            pos.x += (dx / dist) * speed;
+            pos.y += (dy / dist) * speed;
+            idleTimer = 0;
+          } else {
+            if (mood === 'walking') setMood('idle');
+            idleTimer++;
+            if (idleTimer > 120) {
+              const actions = ['walk', 'walk', 'wave', 'dance', 'talk', 'sleep'];
+              const pick = actions[Math.floor(Math.random() * actions.length)];
+
+              if (pick === 'walk') {
+                pickNewTarget();
+              } else if (pick === 'wave') {
+                setMood('waving');
+                showBubble(PHRASES.wave[Math.floor(Math.random() * PHRASES.wave.length)]);
+                setTimeout(() => { setMood('idle'); pickNewTarget(); }, 2500);
+              } else if (pick === 'dance') {
+                setMood('dancing');
+                setTimeout(() => { setMood('idle'); pickNewTarget(); }, 3000);
+              } else if (pick === 'talk') {
+                showBubble(PHRASES.idle[Math.floor(Math.random() * PHRASES.idle.length)]);
+              } else if (pick === 'sleep') {
+                setMood('sleeping');
+                showBubble(PHRASES.sleep[0], 3500);
+                setTimeout(() => { setMood('idle'); pickNewTarget(); }, 3800);
+              }
+              idleTimer = 0;
+            }
+          }
+        }
+
+        roamer.style.left = pos.x + 'px';
+        roamer.style.top = pos.y + 'px';
+        requestAnimationFrame(updatePhysics);
+      }
+
+      requestAnimationFrame(updatePhysics);
+      setTimeout(pickNewTarget, 1000);
+
+      // Click to Jump & Happy
+      roamer.addEventListener('click', (e) => {
+        if (isDragging) return;
+        setMood('jumping');
+        showBubble(PHRASES.happy[Math.floor(Math.random() * PHRASES.happy.length)], 1600);
+        setTimeout(() => { setMood('idle'); pickNewTarget(); }, 1400);
+      });
+
+      // Mouse Dragging
+      roamer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        setMood('jumping');
+        dragOffset.x = e.clientX - pos.x;
+        dragOffset.y = e.clientY - pos.y;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+          pos.x = e.clientX - dragOffset.x;
+          pos.y = e.clientY - dragOffset.y;
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          setMood('idle');
+          pickNewTarget();
+        }
+      });
+
+      // Touch Dragging for Mobile
+      roamer.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 0) {
+          isDragging = true;
+          setMood('jumping');
+          dragOffset.x = e.touches[0].clientX - pos.x;
+          dragOffset.y = e.touches[0].clientY - pos.y;
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchmove', (e) => {
+        if (isDragging && e.touches.length > 0) {
+          pos.x = e.touches[0].clientX - dragOffset.x;
+          pos.y = e.touches[0].clientY - dragOffset.y;
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchend', () => {
+        if (isDragging) {
+          isDragging = false;
+          setMood('idle');
+          pickNewTarget();
+        }
+      });
+
+      // Scroll Awareness Trigger
+      let hasScrolledFeatures = false;
+      let hasScrolledConnect = false;
+      window.addEventListener('scroll', () => {
+        const scY = window.scrollY;
+        if (scY > 350 && scY < 950 && !hasScrolledFeatures) {
+          hasScrolledFeatures = true;
+          showBubble(PHRASES.features[0], 2800);
+        } else if (scY > 1100 && !hasScrolledConnect) {
+          hasScrolledConnect = true;
+          showBubble(PHRASES.connect[0], 2800);
+        }
+      }, { passive: true });
+
+    })();
+  </script>
+
 </body>
 </html>
+
