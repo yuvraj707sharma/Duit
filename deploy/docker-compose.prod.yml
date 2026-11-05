@@ -1,0 +1,53 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: duit-backend
+    restart: unless-stopped
+    env_file:
+      - ../backend/.env
+    environment:
+      - APP_ENV=production
+      - PORT=8000
+    expose:
+      - "8000"
+
+  whatsapp:
+    build:
+      context: ../whatsapp/directorbot
+      dockerfile: Dockerfile
+    container_name: duit-whatsapp
+    restart: unless-stopped
+    env_file:
+      - ../whatsapp/directorbot/.env
+    environment:
+      - PORT=5122
+      - BACKEND_URL=http://backend:8000
+    expose:
+      - "5122"
+    volumes:
+      - whatsapp_storage:/app/storage
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: duit-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@duit.local}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - whatsapp
+
+volumes:
+  whatsapp_storage:
+  caddy_data:
+  caddy_config:

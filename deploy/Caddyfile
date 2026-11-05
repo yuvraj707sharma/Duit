@@ -1,0 +1,28 @@
+{
+    email {$ACME_EMAIL:admin@duit.local}
+}
+
+{$DOMAIN:localhost} {
+    # Serve landing page and backend APIs
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /download/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /static/* {
+        reverse_proxy backend:8000
+    }
+
+    # WhatsApp Gateway & QR/Pairing portal
+    handle_path /gateway/* {
+        reverse_proxy whatsapp:5122
+    }
+
+    # Default to FastAPI backend (serves the editorial landing page)
+    handle {
+        reverse_proxy backend:8000
+    }
+}
