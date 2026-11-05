@@ -577,43 +577,57 @@
       color: var(--primary-red);
     }
 
-    /* Duit Roamer Live Mascot */
-    .roamer {
+    /* Corner Docked Companion Mascot */
+    .corner-mascot {
       position: fixed;
-      width: 105px;
-      height: 130px;
+      bottom: 24px;
+      right: 28px;
+      width: 80px;
+      height: 98px;
       z-index: 99999;
-      cursor: grab;
       user-select: none;
-      transition: none;
+      cursor: pointer;
       pointer-events: auto;
-      transform-origin: center bottom;
+      transform-origin: bottom center;
+      transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
-    .roamer.dragging { cursor: grabbing; }
-    .roamer:active { cursor: grabbing; }
-
-    .mascot-body {
-      width: 95px;
-      height: 120px;
-      animation: roamer-bob 2.2s ease-in-out infinite;
+    .mascot-seated {
+      width: 100%;
+      height: 100%;
+      transform-origin: bottom center;
+      animation: corner-breathe 3.2s ease-in-out infinite;
     }
 
-    .roamer.walking .mascot-body { animation: roamer-walk 0.35s infinite; }
-    .roamer.jumping .mascot-body { animation: roamer-jump 0.65s ease-out; }
-    .roamer.dancing .mascot-body { animation: roamer-dance 0.5s infinite; }
-    .roamer.sleeping .mascot-body { animation: roamer-sleep 2.4s infinite; }
+    .corner-mascot.scrolling .mascot-seated {
+      animation: corner-scroll-bounce 0.3s ease-in-out infinite alternate;
+    }
 
-    @keyframes roamer-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
-    @keyframes roamer-walk { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
-    @keyframes roamer-jump { 0% { transform: translateY(0) scale(1); } 50% { transform: translateY(-40px) scale(1.08); } 100% { transform: translateY(0) scale(1); } }
-    @keyframes roamer-dance { 0% { transform: rotate(-10deg); } 50% { transform: rotate(10deg) translateY(-8px); } 100% { transform: rotate(-10deg); } }
-    @keyframes roamer-sleep { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    .corner-mascot.jump .mascot-seated {
+      animation: corner-jump 0.55s ease-out;
+    }
 
-    .speech-bubble {
+    @keyframes corner-breathe {
+      0%, 100% { transform: translateY(0) scale(1, 1); }
+      50% { transform: translateY(-3px) scale(0.99, 1.02); }
+    }
+
+    @keyframes corner-scroll-bounce {
+      0% { transform: translateY(0) rotate(-3deg); }
+      100% { transform: translateY(-8px) rotate(3deg); }
+    }
+
+    @keyframes corner-jump {
+      0% { transform: translateY(0) scale(1); }
+      40% { transform: translateY(-24px) scale(1.08, 0.95); }
+      70% { transform: translateY(-10px) scale(0.98, 1.04); }
+      100% { transform: translateY(0) scale(1); }
+    }
+
+    .corner-speech-bubble {
       position: absolute;
-      bottom: 120px;
-      left: -20px;
+      bottom: 100px;
+      right: 0;
       width: 160px;
       background: #ffffff;
       color: #09090b;
@@ -625,16 +639,16 @@
       border-radius: 10px;
       box-shadow: 3px 3px 0 var(--primary-red);
       text-align: center;
-      animation: pop-bubble 0.25s ease-out;
       pointer-events: none;
       z-index: 100000;
+      animation: pop-bubble 0.2s ease-out;
     }
 
-    .speech-bubble::after {
+    .corner-speech-bubble::after {
       content: '';
       position: absolute;
       bottom: -6px;
-      left: 36px;
+      right: 28px;
       width: 10px;
       height: 10px;
       background: #ffffff;
@@ -643,13 +657,18 @@
       transform: rotate(45deg);
     }
 
-    .shadow-ground {
+    @keyframes pop-bubble {
+      0% { opacity: 0; transform: scale(0.85) translateY(6px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .corner-shadow {
       position: absolute;
       bottom: -4px;
-      left: 12px;
-      width: 75px;
-      height: 10px;
-      background: radial-gradient(ellipse at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 70%);
+      left: 10px;
+      width: 60px;
+      height: 8px;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 70%);
       border-radius: 50%;
     }
 
@@ -811,13 +830,13 @@
     </footer>
   </div>
 
-  <!-- Live Roaming Mascot Pet -->
-  <div id="duit-roamer" class="roamer idle" style="left: 120px; top: 280px;">
-    <div id="roamer-bubble" class="speech-bubble" style="display: none;"></div>
-    <div class="mascot-body">
-      <img src="/static/duit-mascot.png" alt="DUIT Mascot" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3)); pointer-events: none;">
+  <!-- Corner-Docked Companion Mascot -->
+  <div id="duit-corner-mascot" class="corner-mascot" title="Click to interact with DUIT!">
+    <div id="corner-bubble" class="corner-speech-bubble" style="display: none;"></div>
+    <div class="mascot-seated" id="mascot-seated-body">
+      <img src="/static/duit-mascot.png" alt="DUIT Companion Mascot" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.25)); pointer-events: none;">
     </div>
-    <div class="shadow-ground"></div>
+    <div class="corner-shadow"></div>
   </div>
 
   <script>
@@ -867,46 +886,30 @@
       event.target.classList.add('active');
     }
 
-    // Live Roaming Engine
+    // Corner-Docked Companion Engine (Moves Strictly on Scroll)
     (function() {
-      const roamer = document.getElementById('duit-roamer');
-      const bubble = document.getElementById('roamer-bubble');
-      if (!roamer) return;
+      const mascot = document.getElementById('duit-corner-mascot');
+      const bubble = document.getElementById('corner-bubble');
+      if (!mascot) return;
 
       const PHRASES = {
-        idle: [
+        scroll: [
           "Just say it, ho gaya.",
-          "Searching your files...",
+          "Browsing DUIT features...",
+          "WhatsApp bridge active!",
+          "Multi-profile Chrome ready!",
+          "Calendar & Gmail connected!"
+        ],
+        click: [
           "Kya karna hai boss?",
-          "WhatsApp check kar raha hu...",
-          "Chrome profile ready hai!"
-        ],
-        wave: [
-          "Hey! Main DUIT hu!",
-          "Namaste! Aapka desktop sambhal liya!",
-          "Boliye boss, kya automate kare?"
-        ],
-        happy: [
-          "Ho gaya! Action complete!",
-          "Done boss! Next task?",
-          "Desktop task executed!"
-        ],
-        sleep: [
-          "Zzz... standby rest...",
-          "Heartbeat online..."
+          "Ho gaya! Next task?",
+          "Namaste! Desktop sambhal liya!",
+          "Boliye boss, command ready!"
         ]
       };
 
-      let pos = { x: 120, y: 280 };
-      let target = { x: 280, y: 320 };
-      let mood = 'idle';
-      let facing = 1;
-      let isDragging = false;
-      let dragOffset = { x: 0, y: 0 };
-      let idleTimer = 0;
       let bubbleTimeout = null;
-
-      function showBubble(text, duration = 2400) {
+      function showBubble(text, duration = 2200) {
         if (!bubble) return;
         bubble.innerText = text;
         bubble.style.display = 'block';
@@ -914,95 +917,49 @@
         bubbleTimeout = setTimeout(() => { bubble.style.display = 'none'; }, duration);
       }
 
-      function setMood(m) {
-        mood = m;
-        roamer.className = 'roamer ' + m + (isDragging ? ' dragging' : '');
-      }
+      // Scroll Tracking: only moves little in its corner when user scrolls!
+      let lastScrollY = window.scrollY;
+      let scrollTimer = null;
+      let lastBubbleSection = -1;
 
-      function pickNewTarget() {
-        if (isDragging) return;
-        const pad = 80;
-        const newX = pad + Math.random() * (window.innerWidth - pad * 2);
-        const newY = 100 + Math.random() * (window.innerHeight - 260);
-        target.x = newX;
-        target.y = newY;
-        facing = newX > pos.x ? 1 : -1;
-        roamer.style.transform = `scaleX(${facing})`;
-        if (bubble) bubble.style.transform = `scaleX(${facing})`;
-      }
+      window.addEventListener('scroll', () => {
+        const currentY = window.scrollY;
+        const delta = currentY - lastScrollY;
+        lastScrollY = currentY;
 
-      function updatePhysics() {
-        if (!isDragging && mood !== 'sleeping') {
-          const dx = target.x - pos.x;
-          const dy = target.y - pos.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+        // Add scrolling bounce class
+        mascot.classList.add('scrolling');
 
-          if (dist > 5) {
-            if (mood !== 'walking') setMood('walking');
-            const speed = 1.4;
-            pos.x += (dx / dist) * speed;
-            pos.y += (dy / dist) * speed;
-            idleTimer = 0;
-          } else {
-            if (mood === 'walking') setMood('idle');
-            idleTimer++;
-            if (idleTimer > 130) {
-              const actions = ['walk', 'walk', 'wave', 'talk', 'sleep'];
-              const pick = actions[Math.floor(Math.random() * actions.length)];
+        // Micro-movement within its corner (at most 8px tilt/shift)
+        const tilt = Math.max(-6, Math.min(6, delta * 0.15));
+        const microY = Math.max(-8, Math.min(0, -Math.abs(delta * 0.2)));
+        mascot.style.transform = `translateY(${microY}px) rotate(${tilt}deg)`;
 
-              if (pick === 'walk') {
-                pickNewTarget();
-              } else if (pick === 'wave') {
-                setMood('waving');
-                showBubble(PHRASES.wave[Math.floor(Math.random() * PHRASES.wave.length)]);
-                setTimeout(() => { setMood('idle'); pickNewTarget(); }, 2400);
-              } else if (pick === 'talk') {
-                showBubble(PHRASES.idle[Math.floor(Math.random() * PHRASES.idle.length)]);
-              } else if (pick === 'sleep') {
-                setMood('sleeping');
-                showBubble(PHRASES.sleep[0], 3000);
-                setTimeout(() => { setMood('idle'); pickNewTarget(); }, 3500);
-              }
-              idleTimer = 0;
-            }
-          }
+        // Contextual speech bubble based on scroll depth
+        const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = totalHeight > 0 ? currentY / totalHeight : 0;
+        const sectionIdx = Math.floor(progress * 4);
+
+        if (sectionIdx !== lastBubbleSection && Math.abs(delta) > 5) {
+          lastBubbleSection = sectionIdx;
+          showBubble(PHRASES.scroll[sectionIdx % PHRASES.scroll.length], 2000);
         }
 
-        roamer.style.left = pos.x + 'px';
-        roamer.style.top = pos.y + 'px';
-        requestAnimationFrame(updatePhysics);
-      }
+        // When scrolling stops, settle back into seated resting position
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+          mascot.classList.remove('scrolling');
+          mascot.style.transform = 'translateY(0) rotate(0deg)';
+        }, 160);
+      }, { passive: true });
 
-      requestAnimationFrame(updatePhysics);
-      setTimeout(pickNewTarget, 800);
-
-      roamer.addEventListener('click', () => {
-        if (isDragging) return;
-        setMood('jumping');
-        showBubble(PHRASES.happy[Math.floor(Math.random() * PHRASES.happy.length)], 1800);
-        setTimeout(() => { setMood('idle'); pickNewTarget(); }, 1200);
-      });
-
-      roamer.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        setMood('jumping');
-        dragOffset.x = e.clientX - pos.x;
-        dragOffset.y = e.clientY - pos.y;
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (isDragging) {
-          pos.x = e.clientX - dragOffset.x;
-          pos.y = e.clientY - dragOffset.y;
-        }
-      });
-
-      window.addEventListener('mouseup', () => {
-        if (isDragging) {
-          isDragging = false;
-          setMood('idle');
-          pickNewTarget();
-        }
+      // Click to hop in place
+      mascot.addEventListener('click', () => {
+        mascot.classList.add('jump');
+        showBubble(PHRASES.click[Math.floor(Math.random() * PHRASES.click.length)], 2400);
+        setTimeout(() => {
+          mascot.classList.remove('jump');
+        }, 600);
       });
     })();
   </script>
