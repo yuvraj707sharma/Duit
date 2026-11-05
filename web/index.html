@@ -3,334 +3,430 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DUIT - Your Desktop, on WhatsApp | Autonomous AI Chief of Staff</title>
-  <meta name="description" content="Control your desktop, manage emails, launch browser profiles, and search chats remotely from WhatsApp with Meta AI.">
+  <title>DUIT - A New World of Desktop Control | Built for Bharat</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #09090b;
-      --card-bg: #121216;
-      --card-border: #22222a;
-      --text-main: #f4f4f5;
-      --text-muted: #a1a1aa;
-      --accent: #10b981;
-      --accent-glow: rgba(16, 185, 129, 0.35);
-      --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      --mono: 'JetBrains Mono', monospace;
+      --primary-red: #e11d48;
+      --red-hover: #be123c;
+      --red-light: #fff1f2;
+      --red-border: #fecdd3;
+      --text-dark: #09090b;
+      --text-muted: #52525b;
+      --card-bg: #18181b;
+      --card-border: #27272a;
+      --accent-green: #10b981;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      background-color: var(--bg);
-      color: var(--text-main);
-      font-family: var(--font);
-      line-height: 1.6;
+      background: var(--primary-red);
+      padding: 14px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--text-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Outer Red Framed Canvas */
+    .site-wrapper {
+      background: #ffffff;
+      border-radius: 14px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
       overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
     }
 
-    /* Ambient Glow Background */
-    .glow-sphere {
-      position: absolute;
-      top: -120px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 700px;
-      height: 400px;
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, rgba(9, 9, 11, 0) 70%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* Navigation */
+    /* Top Navigation */
     nav {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      backdrop-filter: blur(16px);
-      background: rgba(9, 9, 11, 0.85);
-      border-bottom: 1px solid var(--card-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 32px;
-      max-width: 1240px;
-      margin: 0 auto;
+      padding: 20px 40px;
+      border-bottom: 1px solid #f1f5f9;
+      background: #ffffff;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
-    .nav-brand {
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--text-dark);
+      font-weight: 900;
+      font-size: 26px;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-logo .dot {
+      color: var(--accent-green);
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-menu a {
+      text-decoration: none;
+      color: #3f3f46;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.15s;
+    }
+
+    .nav-menu a:hover {
+      color: var(--primary-red);
+    }
+
+    .nav-actions {
       display: flex;
       align-items: center;
       gap: 12px;
-      text-decoration: none;
     }
 
-    .nav-brand img.mascot {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 2px solid var(--accent);
-      box-shadow: 0 0 12px var(--accent-glow);
-      object-fit: cover;
-    }
-
-    .nav-brand img.logo {
-      height: 26px;
-      object-fit: contain;
-    }
-
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-
-    .nav-links a {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-
-    .nav-links a:hover {
-      color: #fff;
-    }
-
-    .btn-nav {
-      background: var(--accent);
-      color: #000;
-      padding: 8px 18px;
-      border-radius: 8px;
+    .btn-pill-connect {
+      padding: 7px 18px;
+      border: 1.5px solid var(--red-border);
+      border-radius: 9999px;
+      background: var(--red-light);
+      color: var(--primary-red);
+      font-size: 13px;
       font-weight: 700;
-      font-size: 0.88rem;
       text-decoration: none;
-      transition: opacity 0.2s, transform 0.15s;
+      transition: all 0.2s;
     }
 
-    .btn-nav:hover {
-      opacity: 0.9;
+    .btn-pill-connect:hover {
+      background: var(--primary-red);
+      color: #ffffff;
+    }
+
+    .btn-pill-download {
+      padding: 7px 20px;
+      border-radius: 9999px;
+      background: var(--primary-red);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25);
+      transition: all 0.2s;
+    }
+
+    .btn-pill-download:hover {
+      background: var(--red-hover);
       transform: translateY(-1px);
     }
 
     /* Hero Section */
-    .hero {
+    .hero-container {
       position: relative;
-      z-index: 1;
-      max-width: 1080px;
-      margin: 0 auto;
-      padding: 80px 24px 60px;
-      text-align: center;
-    }
-
-    .badge-pill {
-      display: inline-flex;
+      padding: 30px 24px 0;
+      display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 8px;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.35);
-      color: #6ee7b7;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      margin-bottom: 24px;
+      justify-content: center;
+      background: #ffffff;
     }
 
-    .badge-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--accent);
-      border-radius: 50%;
-      box-shadow: 0 0 8px var(--accent);
-    }
-
-    h1.hero-title {
-      font-size: 3.4rem;
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      line-height: 1.15;
-      margin-bottom: 20px;
-      background: linear-gradient(180deg, #ffffff 40%, #a1a1aa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    p.hero-sub {
-      font-size: 1.22rem;
-      color: var(--text-muted);
-      max-width: 720px;
-      margin: 0 auto 36px;
-      font-weight: 400;
-    }
-
-    .hero-actions {
+    .hero-art-wrapper {
+      max-width: 620px;
+      width: 100%;
       display: flex;
       justify-content: center;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-bottom: 48px;
+      align-items: flex-end;
     }
 
-    .btn-primary {
-      background: var(--accent);
-      color: #000;
-      padding: 14px 28px;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 800;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 4px 20px var(--accent-glow);
-      transition: transform 0.2s, box-shadow 0.2s;
+    .hero-art-img {
+      width: 100%;
+      height: auto;
+      max-height: 440px;
+      object-fit: contain;
+      display: block;
     }
 
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 26px rgba(16, 185, 129, 0.5);
-    }
-
-    .btn-secondary {
-      background: #18181b;
-      color: #ffffff;
-      border: 1px solid var(--card-border);
-      padding: 14px 28px;
-      border-radius: 10px;
-      font-size: 1rem;
+    .giant-pixel-duit {
+      font-family: 'Silkscreen', monospace;
+      font-size: clamp(80px, 17vw, 175px);
       font-weight: 700;
-      text-decoration: none;
+      line-height: 0.9;
+      letter-spacing: 2px;
+      color: #111111;
+      text-align: center;
+      user-select: none;
+      z-index: 1;
+    }
+
+    .hero-mascot-center {
+      position: relative;
+      margin-top: -65px;
+      z-index: 2;
+      width: clamp(220px, 32vw, 310px);
+      display: flex;
+      justify-content: center;
+    }
+
+    .hero-mascot-center img {
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.12));
+    }
+
+    /* Boxed Headline Grid */
+    .headline-box {
+      width: 100%;
+      border-top: 2px solid #000000;
+      border-bottom: 2px solid #000000;
+      margin-top: 20px;
+      z-index: 3;
+    }
+
+    .headline-row {
+      font-family: 'Silkscreen', monospace;
+      font-size: clamp(16px, 3.4vw, 36px);
+      text-align: center;
+      padding: 14px 10px;
+      letter-spacing: clamp(2px, 0.6vw, 6px);
+      color: #000000;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .headline-row.top-row {
+      border-bottom: 2px solid #000000;
+    }
+
+    /* Two-Column Intro Section */
+    .intro-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 60px 32px 50px;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 50px;
+      align-items: center;
+    }
+
+    .intro-content .tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #71717a;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+
+    .intro-content h2 {
+      font-size: clamp(26px, 3.2vw, 38px);
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+      color: #000000;
+      margin-bottom: 18px;
+    }
+
+    .intro-content p {
+      font-size: 15px;
+      line-height: 1.65;
+      color: #4b5563;
+      margin-bottom: 28px;
+      max-width: 520px;
+    }
+
+    .btn-pill-get {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      transition: background 0.2s, border-color 0.2s;
-    }
-
-    .btn-secondary:hover {
-      background: #27272a;
-      border-color: #3f3f46;
-    }
-
-    /* Live Interactive Demo Preview */
-    .preview-card {
-      background: #0d0d11;
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      overflow: hidden;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-      max-width: 960px;
-      margin: 0 auto 80px;
-      text-align: left;
-    }
-
-    .preview-bar {
-      background: #141418;
-      padding: 12px 18px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border-bottom: 1px solid var(--card-border);
-    }
-
-    .bar-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #27272a;
-    }
-
-    .preview-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      padding: 24px;
-      gap: 24px;
-    }
-
-    @media (max-width: 768px) {
-      .preview-grid { grid-template-columns: 1fr; }
-      h1.hero-title { font-size: 2.3rem; }
-    }
-
-    .chat-pane {
-      background: #17171d;
-      border: 1px solid #272730;
-      border-radius: 12px;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      font-size: 0.88rem;
-    }
-
-    .msg-user {
-      align-self: flex-end;
-      background: #064e3b;
-      color: #ecfdf5;
-      padding: 10px 14px;
-      border-radius: 12px 12px 2px 12px;
-      max-width: 85%;
-    }
-
-    .msg-duit {
-      align-self: flex-start;
-      background: #23232b;
-      color: #f4f4f5;
-      padding: 10px 14px;
-      border-radius: 12px 12px 12px 2px;
-      max-width: 90%;
-      border-left: 3px solid var(--accent);
-    }
-
-    .desktop-pane {
-      background: #101014;
-      border: 1px solid #22222a;
-      border-radius: 12px;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      font-family: var(--mono);
-      font-size: 0.8rem;
-    }
-
-    .log-line {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #94a3b8;
-    }
-
-    .log-line span.green { color: var(--accent); font-weight: 600; }
-    .log-line span.cyan { color: #38bdf8; }
-
-    /* Features Grid */
-    .features-section {
-      max-width: 1100px;
-      margin: 0 auto 100px;
-      padding: 0 24px;
-    }
-
-    .section-header {
-      text-align: center;
-      margin-bottom: 50px;
-    }
-
-    .section-title {
-      font-size: 2.2rem;
+      gap: 12px;
+      padding: 9px 12px 9px 24px;
+      border: 1.5px solid #e4e4e7;
+      border-radius: 9999px;
+      text-decoration: none;
+      color: #000000;
       font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 12px;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      transition: all 0.2s;
     }
 
-    .section-sub {
-      color: var(--text-muted);
-      font-size: 1.05rem;
+    .btn-pill-get:hover {
+      border-color: var(--primary-red);
+      box-shadow: 0 4px 14px rgba(225, 29, 72, 0.15);
     }
 
-    .feature-cards {
+    .btn-pill-get .pill-arrow {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary-red);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .intro-card {
+      background: #ededef;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+
+    .intro-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Capabilities Strip (Tabs / Pill Bar) */
+    .capabilities-strip {
+      background: #fafafa;
+      border-top: 1px solid #f1f5f9;
+      border-bottom: 1px solid #f1f5f9;
+      padding: 40px 24px;
+    }
+
+    .strip-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .strip-title {
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #a1a1aa;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 18px;
+    }
+
+    .pills-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .pill-tab {
+      padding: 8px 18px;
+      background: #ffffff;
+      border: 1px solid #e4e4e7;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #52525b;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pill-tab:hover, .pill-tab.active {
+      background: var(--text-dark);
+      color: #ffffff;
+      border-color: var(--text-dark);
+    }
+
+    .tab-content-panel {
+      background: #ffffff;
+      border: 1.5px solid #e4e4e7;
+      border-radius: 14px;
+      padding: 30px;
+      text-align: left;
+      display: flex;
+      gap: 30px;
+      align-items: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.03);
+    }
+
+    .tab-icon-box {
+      width: 64px;
+      height: 64px;
+      border-radius: 12px;
+      background: var(--red-light);
+      border: 1px solid var(--red-border);
+      color: var(--primary-red);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .tab-desc h3 {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .tab-desc p {
+      font-size: 14px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    .tab-example-code {
+      margin-top: 10px;
+      background: #f8fafc;
+      padding: 8px 14px;
+      border-radius: 6px;
+      border-left: 3px solid var(--primary-red);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #0f172a;
+    }
+
+    /* Cards Carousel / Grid Section */
+    .cards-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 60px 24px;
+    }
+
+    .cards-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .cards-header h2 {
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+    }
+
+    .cards-header p {
+      color: #71717a;
+      font-size: 15px;
+    }
+
+    .cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 20px;
@@ -341,88 +437,151 @@
       border: 1px solid var(--card-border);
       border-radius: 14px;
       padding: 28px;
-      transition: transform 0.2s, border-color 0.2s;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .feature-card:hover {
       transform: translateY(-3px);
-      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
     }
 
-    .feature-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      color: var(--accent);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 1.1rem;
+    .card-badge {
+      display: inline-block;
+      align-self: flex-start;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
       margin-bottom: 18px;
+      background: rgba(225, 29, 72, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(225, 29, 72, 0.3);
     }
 
-    .feature-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      margin-bottom: 8px;
+    .card-badge.green {
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border-color: rgba(16, 185, 129, 0.3);
     }
 
-    .feature-desc {
-      color: var(--text-muted);
-      font-size: 0.92rem;
-      line-height: 1.55;
+    .feature-card h3 {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      color: #ffffff;
     }
 
-    /* Google OAuth Connect Box */
-    .connect-box {
-      background: linear-gradient(135deg, #101014 0%, #15151c 100%);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+    .feature-card p {
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: #a1a1aa;
+      flex: 1;
+    }
+
+    /* Bottom Action Banner */
+    .cta-banner-wrapper {
+      padding: 0 24px 60px;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .cta-banner {
+      background: linear-gradient(135deg, #111113 0%, #1f2937 100%);
       border-radius: 16px;
-      padding: 40px;
-      max-width: 860px;
-      margin: 0 auto 100px;
+      padding: 50px 40px;
+      color: #ffffff;
       text-align: center;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #334155;
     }
 
-    .btn-google {
-      background: #ffffff;
-      color: #000000;
-      border: none;
-      padding: 12px 26px;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
+    .cta-banner h2 {
+      font-size: clamp(24px, 3.2vw, 36px);
+      font-weight: 900;
+      margin-bottom: 14px;
+    }
+
+    .cta-banner p {
+      color: #94a3b8;
+      font-size: 15px;
+      max-width: 600px;
+      margin: 0 auto 30px;
+      line-height: 1.6;
+    }
+
+    .cta-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .btn-cta-primary {
+      background: var(--primary-red);
+      color: #ffffff;
+      padding: 13px 30px;
+      border-radius: 9999px;
+      font-weight: 800;
+      font-size: 15px;
       text-decoration: none;
-      margin-top: 20px;
-      box-shadow: 0 4px 16px rgba(255,255,255,0.15);
-      transition: transform 0.2s;
+      transition: all 0.2s;
+      box-shadow: 0 6px 20px rgba(225, 29, 72, 0.4);
     }
 
-    .btn-google:hover {
+    .btn-cta-primary:hover {
+      background: var(--red-hover);
       transform: translateY(-2px);
+    }
+
+    .btn-cta-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 13px 26px;
+      border-radius: 9999px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-cta-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
 
     /* Footer */
     footer {
-      border-top: 1px solid var(--card-border);
-      padding: 40px 24px;
-      text-align: center;
+      border-top: 1px solid #f1f5f9;
+      padding: 28px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
       color: #71717a;
-      font-size: 0.85rem;
+      background: #ffffff;
     }
 
-    /* Duit Roamer Mascot Styles */
+    footer a {
+      color: #3f3f46;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    footer a:hover {
+      color: var(--primary-red);
+    }
+
+    /* Duit Roamer Live Mascot */
     .roamer {
       position: fixed;
-      width: 110px;
-      height: 135px;
+      width: 105px;
+      height: 130px;
       z-index: 99999;
       cursor: grab;
       user-select: none;
@@ -435,8 +594,8 @@
     .roamer:active { cursor: grabbing; }
 
     .mascot-body {
-      width: 100px;
-      height: 125px;
+      width: 95px;
+      height: 120px;
       animation: roamer-bob 2.2s ease-in-out infinite;
     }
 
@@ -444,20 +603,18 @@
     .roamer.jumping .mascot-body { animation: roamer-jump 0.65s ease-out; }
     .roamer.dancing .mascot-body { animation: roamer-dance 0.5s infinite; }
     .roamer.sleeping .mascot-body { animation: roamer-sleep 2.4s infinite; }
-    .roamer.waving .mascot-body { animation: roamer-wave 0.6s infinite; }
 
     @keyframes roamer-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
     @keyframes roamer-walk { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
-    @keyframes roamer-jump { 0% { transform: translateY(0) scale(1); } 50% { transform: translateY(-45px) scale(1.08); } 100% { transform: translateY(0) scale(1); } }
+    @keyframes roamer-jump { 0% { transform: translateY(0) scale(1); } 50% { transform: translateY(-40px) scale(1.08); } 100% { transform: translateY(0) scale(1); } }
     @keyframes roamer-dance { 0% { transform: rotate(-10deg); } 50% { transform: rotate(10deg) translateY(-8px); } 100% { transform: rotate(-10deg); } }
     @keyframes roamer-sleep { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
-    @keyframes roamer-wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
 
     .speech-bubble {
       position: absolute;
-      bottom: 125px;
-      left: -24px;
-      width: 165px;
+      bottom: 120px;
+      left: -20px;
+      width: 160px;
       background: #ffffff;
       color: #09090b;
       font-family: 'JetBrains Mono', monospace;
@@ -466,9 +623,8 @@
       padding: 8px 12px;
       border: 2px solid #18181b;
       border-radius: 10px;
-      box-shadow: 3px 3px 0 #10b981;
+      box-shadow: 3px 3px 0 var(--primary-red);
       text-align: center;
-      white-space: normal;
       animation: pop-bubble 0.25s ease-out;
       pointer-events: none;
       z-index: 100000;
@@ -477,208 +633,241 @@
     .speech-bubble::after {
       content: '';
       position: absolute;
-      bottom: -7px;
-      left: 45px;
-      width: 11px;
-      height: 11px;
+      bottom: -6px;
+      left: 36px;
+      width: 10px;
+      height: 10px;
       background: #ffffff;
       border-right: 2px solid #18181b;
       border-bottom: 2px solid #18181b;
       transform: rotate(45deg);
     }
 
-    @keyframes pop-bubble { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
     .shadow-ground {
       position: absolute;
       bottom: -4px;
-      left: 15px;
-      width: 70px;
+      left: 12px;
+      width: 75px;
       height: 10px;
-      background: rgba(0, 0, 0, 0.45);
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 70%);
       border-radius: 50%;
-      filter: blur(3px);
     }
 
-    .roamer.jumping .shadow-ground {
-      animation: shadow-shrink 0.65s;
+    @media (max-width: 860px) {
+      .intro-section {
+        grid-template-columns: 1fr;
+        padding: 40px 20px;
+      }
+      .nav-menu { display: none; }
+      nav { padding: 16px 20px; }
+      .headline-row { font-size: 18px; letter-spacing: 2px; }
+      .hero-mascot-center { margin-top: -30px; }
+      footer { flex-direction: column; gap: 10px; text-align: center; }
     }
-
-    @keyframes shadow-shrink { 50% { transform: scale(0.4); opacity: 0.15; } }
-
   </style>
 </head>
 <body>
-  <div class="glow-sphere"></div>
 
-  <!-- Top Navigation -->
-  <nav>
-    <a href="#" class="nav-brand">
-      <img src="/duit-mascot.png" alt="DUIT Mascot" class="mascot">
-      <img src="/duit-logo-white.png" alt="DUIT" class="logo">
-    </a>
-    <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#how-it-works">Architecture</a>
-      <a href="#google-connect">Connect Google</a>
-      <a href="/download/DUITDesktop.exe" class="btn-nav">Download App (.exe)</a>
-    </div>
-  </nav>
-
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="badge-pill">
-      <span class="badge-dot"></span>
-      DUIT v1.0 Production Release - Powered by Meta AI
-    </div>
-    <h1 class="hero-title">Your Desktop, on WhatsApp.</h1>
-    <p class="hero-sub">
-      Just say it, ho gaya. Remote desktop control, smart multi-profile browser launching, and WhatsApp chat intelligence - powered by Meta Muse Spark and SAM 3.1.
-    </p>
-    <div class="hero-actions">
-      <a href="/download/DUITDesktop.exe" class="btn-primary">
-        Download DUIT Desktop (.exe)
+  <div class="site-wrapper">
+    <!-- Navigation Bar -->
+    <nav>
+      <a href="#" class="brand-logo">
+        DUIT<span class="dot">.</span>
       </a>
-      <a href="https://wa.me/?text=Hi%20DUIT" target="_blank" class="btn-secondary">
-        Chat with DUIT on WhatsApp
-      </a>
-    </div>
-  </section>
 
-  <!-- Live Action Preview Card -->
-  <div class="preview-card" id="how-it-works">
-    <div class="preview-bar">
-      <div class="bar-dot"></div>
-      <div class="bar-dot"></div>
-      <div class="bar-dot"></div>
-      <span style="font-size: 0.76rem; color: #71717a; margin-left: 8px;">DUIT Autonomous Execution Pipeline</span>
-    </div>
-    <div class="preview-grid">
-      <!-- WhatsApp Simulation -->
-      <div class="chat-pane">
-        <div style="font-size: 0.75rem; color: #a1a1aa; border-bottom: 1px solid #272730; padding-bottom: 6px; font-weight: 600;">
-          WhatsApp Command Channel
-        </div>
-        <div class="msg-user">
-          Duit, open Chrome in my college profile and send mail to Yash confirming I will be at his place today at 5 PM.
-        </div>
-        <div class="msg-duit">
-          <strong>DUIT AI:</strong><br>
-          Targeting Profile: <em>jecrcu.edu.in</em> (Profile 4)<br>
-          Drafting email: <em>"Reaching today at 5 PM"</em><br>
-          Reply <strong>YES</strong> to confirm sending email.
-        </div>
-        <div class="msg-user">
-          YES
-        </div>
-        <div class="msg-duit">
-          Email sent via Gmail API and verified Chrome launch with SAM 3.1. Ho gaya!
-        </div>
+      <ul class="nav-menu">
+        <li><a href="#discover">Discover</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#connect">Connect</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="/api/auth/google/login" class="btn-pill-connect">Connect Google</a>
+        <a href="/download/DUITDesktop.exe" class="btn-pill-download">Download App</a>
+      </div>
+    </nav>
+
+    <!-- Hero Section (Poster Template Match) -->
+    <section class="hero-container" id="discover">
+      <div class="hero-art-wrapper">
+        <img src="/static/duit-hero-art.jpg" alt="DUIT Mascot Artwork" class="hero-art-img">
       </div>
 
-      <!-- Desktop Sidecar Simulation -->
-      <div class="desktop-pane">
-        <div style="color: #64748b; margin-bottom: 4px; font-size: 0.75rem; border-bottom: 1px solid #1e293b; padding-bottom: 4px;">
-          Local Sidecar Daemon [DUITDesktop.exe]
+      <div class="headline-box">
+        <div class="headline-row top-row">A NEW WORLD OF</div>
+        <div class="headline-row">DESKTOP CONTROL</div>
+      </div>
+    </section>
+
+    <!-- Two-Column Editorial Intro -->
+    <section class="intro-section" id="features">
+      <div class="intro-content">
+        <div class="tag">DUIT AI —</div>
+        <h2>WHATSAPP DESKTOP CONTROL</h2>
+        <p>
+          Automate your WhatsApp desktop with AI. Send messages, manage chats, control files and workflows — all from one interface. Secure, fast, built for control and productivity. Built for teams and power users who want full command of WhatsApp on desktop.
+        </p>
+        <a href="/download/DUITDesktop.exe" class="btn-pill-get">
+          <span>GET DUIT</span>
+          <span class="pill-arrow">→</span>
+        </a>
+      </div>
+
+      <div class="intro-card">
+        <img src="/static/duit-astronaut-card.jpg" alt="DUIT Mascot in Space Suit">
+      </div>
+    </section>
+
+    <!-- Interactive Capabilities Strip (Pills from Wireframe 2) -->
+    <section class="capabilities-strip" id="architecture">
+      <div class="strip-inner">
+        <div class="strip-title">Autonomous Action Plane</div>
+        
+        <div class="pills-tabs">
+          <button class="pill-tab active" onclick="switchTab('whatsapp')">WhatsApp Bridge</button>
+          <button class="pill-tab" onclick="switchTab('browser')">Multi-Profile Chromium</button>
+          <button class="pill-tab" onclick="switchTab('google')">Calendar & Gmail</button>
+          <button class="pill-tab" onclick="switchTab('meta')">Meta Muse & SAM 3.1</button>
+          <button class="pill-tab" onclick="switchTab('security')">Strict In-Code Policy</button>
         </div>
-        <div class="log-line">
-          <span class="cyan">[PRESENCE]</span> WebSocket Heartbeat OK (5s)
+
+        <div class="tab-content-panel" id="tab-panel">
+          <div class="tab-icon-box" id="tab-icon">WA</div>
+          <div class="tab-desc">
+            <h3 id="tab-title">Remote Desktop via WhatsApp</h3>
+            <p id="tab-body">Send a voice note or natural text in Hindi, English, or Hinglish from your mobile phone. DUIT translates intent into verified local desktop actions across your Windows workstation.</p>
+            <div class="tab-example-code" id="tab-code">"Duit, college profile me Chrome kholo aur kal ki report Rahul ko bhej do"</div>
+          </div>
         </div>
-        <div class="log-line">
-          <span class="green">[META-MUSE]</span> Extracted intent: open_url + send_email
+      </div>
+    </section>
+
+    <!-- Cards Grid (from Wireframe 3) -->
+    <section class="cards-section">
+      <div class="cards-header">
+        <h2>Engineered for Power Users</h2>
+        <p>Enterprise-grade safety, local execution, and zero cloud lock-in.</p>
+      </div>
+
+      <div class="cards-grid">
+        <div class="feature-card">
+          <div class="card-badge">DESKTOP PLANE</div>
+          <h3>Autonomous Desktop Operations</h3>
+          <p>Discovers and launches installed applications, manages windows, inspects directory files, and executes policy-governed local workflows autonomously.</p>
         </div>
-        <div class="log-line">
-          <span class="cyan">[BROWSER]</span> Matched Chrome profile: Profile 4
+
+        <div class="feature-card">
+          <div class="card-badge green">CHROMIUM ADAPTER</div>
+          <h3>Smart Multi-Profile Targeting</h3>
+          <p>Directly reads Chromium Local State across Google Chrome and Microsoft Edge to target specific user profiles (e.g. Work, College, Personal) by name.</p>
         </div>
-        <div class="log-line">
-          <span>&gt; chrome.exe --profile-directory="Profile 4"</span>
+
+        <div class="feature-card">
+          <div class="card-badge">WORKSPACE OAUTH</div>
+          <h3>Google Suite Dynamic Drafting</h3>
+          <p>Sends custom email drafts without canned templates, queries calendar availability, schedules events, and syncs contacts with user approval.</p>
         </div>
-        <div class="log-line">
-          <span class="green">[SAM-3.1]</span> Visual grounding verified window: 1920x1080
+
+        <div class="feature-card">
+          <div class="card-badge green">SEAMLESS ONBOARDING</div>
+          <h3>8-Character Device Pairing</h3>
+          <p>Pair any mobile phone in seconds via the standard 8-character Baileys WhatsApp pairing code. Zero camera QR hurdles, zero third-party client apps.</p>
         </div>
-        <div class="log-line">
-          <span class="green">[WAL]</span> Action state transitioned: started -&gt; completed
+
+        <div class="feature-card">
+          <div class="card-badge">VERIFICATION</div>
+          <h3>Visual UI Grounding</h3>
+          <p>Validates UI interactions with SAM 3.1 computer-use grounding. Confirms target application windows are visually active before execution.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="card-badge green">SECURITY FIRST</div>
+          <h3>In-Code Policy & WAL Engine</h3>
+          <p>All destructive operations are blocked by strict code-level guardrails. SQLite Write-Ahead Journaling guarantees audit trails and crash-resilience.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Action Banner (from Wireframe 3) -->
+    <div class="cta-banner-wrapper" id="connect">
+      <div class="cta-banner">
+        <h2>Take Command of Your Desktop Remotely</h2>
+        <p>Download the standalone Windows executor or connect your Google Workspace credentials to start delegating tasks via WhatsApp.</p>
+        <div class="cta-actions">
+          <a href="/download/DUITDesktop.exe" class="btn-cta-primary">Download DUIT Desktop (.exe)</a>
+          <a href="/api/auth/google/login" class="btn-cta-secondary">Link Google OAuth</a>
+          <a href="http://localhost:5122" class="btn-cta-secondary" target="_blank">Pair WhatsApp Gateway</a>
         </div>
       </div>
     </div>
+
+    <!-- Minimalist Editorial Footer -->
+    <footer>
+      <div>DUIT — Built for Bharat. Powered by Meta AI.</div>
+      <div>
+        <a href="https://github.com/yuvraj707sharma/Duit" target="_blank">GitHub: yuvraj707sharma/Duit</a>
+      </div>
+    </footer>
   </div>
 
-  <!-- Features Grid -->
-  <section class="features-section" id="features">
-    <div class="section-header">
-      <h2 class="section-title">Built for Real-World Work</h2>
-      <p class="section-sub">No complex setups. No new apps to learn. Works the way you communicate.</p>
-    </div>
-
-    <div class="feature-cards">
-      <div class="feature-card">
-        <div class="feature-icon">WA</div>
-        <h3 class="feature-title">Remote Desktop via WhatsApp</h3>
-        <p class="feature-desc">Control your laptop when away from your desk. Open IDEs, run scripts, and view files remotely using conversational Hindi, English, or Hinglish.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">MP</div>
-        <h3 class="feature-title">Multi-Profile Browser Support</h3>
-        <p class="feature-desc">Smart Chromium inspection for Google Chrome and Edge. Launches portals straight into your work, college, or personal profiles dynamically.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">GS</div>
-        <h3 class="feature-title">Real Google Calendar &amp; Gmail</h3>
-        <p class="feature-desc">Direct OAuth integration. Generates custom email subjects and bodies from conversation context without canned placeholder templates.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">AI</div>
-        <h3 class="feature-title">Meta Muse Spark &amp; SAM 3.1</h3>
-        <p class="feature-desc">Sub-second reasoning with Meta's Muse model family, backed by SAM 3.1 computer-use visual UI grounding for physical window verification.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">CD</div>
-        <h3 class="feature-title">8-Character Phone Pairing</h3>
-        <p class="feature-desc">Pair your WhatsApp account instantly with an 8-character pairing code. Zero camera QR hurdles, zero fragile third-party client apps.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">SEC</div>
-        <h3 class="feature-title">Safety &amp; Local Privacy</h3>
-        <p class="feature-desc">In-code policy engine blocks destructive commands. SQLite Write-Ahead Journaling (WAL) guarantees crash recovery and zero duplicate actions.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Google Services Connection Box -->
-  <section class="connect-box" id="google-connect">
-    <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 12px;">Link Your Google Services</h2>
-    <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">
-      Enable Google Calendar, Gmail, and Contacts integration with one click. Tokens are encrypted at rest with AES-256-GCM.
-    </p>
-    <a href="/api/auth/google/url?redirect=true" class="btn-google">
-      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
-      Sign in with Google
-    </a>
-  </section>
-
-  <!-- Footer -->
-  <footer>
-    <p>DUIT - Built for Bharat. Powered by Meta AI.</p>
-    <p style="margin-top: 6px;">
-      <a href="https://github.com/yuvraj707sharma/Duit" style="color: #94a3b8; text-decoration: none;" target="_blank">GitHub Repository: yuvraj707sharma/Duit</a>
-    </p>
-  </footer>
-
-  <!-- Live Roaming DUIT Mascot Pet -->
-  <div id="duit-roamer" class="roamer idle" style="left: 140px; top: 320px;">
+  <!-- Live Roaming Mascot Pet -->
+  <div id="duit-roamer" class="roamer idle" style="left: 120px; top: 280px;">
     <div id="roamer-bubble" class="speech-bubble" style="display: none;"></div>
     <div class="mascot-body">
-      <img src="/duit-mascot.png" alt="DUIT Mascot" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5)); user-select: none; pointer-events: none;">
+      <img src="/static/duit-mascot.png" alt="DUIT Mascot" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3)); pointer-events: none;">
     </div>
     <div class="shadow-ground"></div>
   </div>
 
   <script>
+    // Tab Data
+    const TAB_DATA = {
+      whatsapp: {
+        icon: "WA",
+        title: "Remote Desktop via WhatsApp",
+        body: "Send a voice note or natural text in Hindi, English, or Hinglish from your mobile phone. DUIT translates intent into verified local desktop actions across your Windows workstation.",
+        code: '"Duit, college profile me Chrome kholo aur kal ki report Rahul ko bhej do"'
+      },
+      browser: {
+        icon: "CR",
+        title: "Multi-Profile Chromium Targeting",
+        body: "Automatically inspects Chrome and Edge User Data state to launch tasks inside designated profiles without profile collisions or browser session confusion.",
+        code: '"Duit, open Edge on my Work profile and navigate to staging dashboard"'
+      },
+      google: {
+        icon: "GO",
+        title: "Real Google Calendar & Gmail Integration",
+        body: "Generates custom subject lines and bodies matching conversation context. Audits, schedules, and reschedules calendar events seamlessly through official OAuth tokens.",
+        code: '"Duit, reschedule my 4 PM sync with Priya to tomorrow 11 AM"'
+      },
+      meta: {
+        icon: "AI",
+        title: "Meta Muse Spark & SAM 3.1 Grounding",
+        body: "Powered by Meta's fast Muse reasoning models with SAM 3.1 computer-use vision grounding to visually confirm windows and button positions before execution.",
+        code: "SAM 3.1 bounding box verification: Chrome (Profile 2) window ready"
+      },
+      security: {
+        icon: "SEC",
+        title: "Strict Policy Allowlist & Kill-Switch",
+        body: "Hardcoded confirmation rules and write-ahead journaling prevent accidental deletes. Instant hardware hotkey (Ctrl+Shift+K) triggers emergency system halt.",
+        code: "Action blocked by policy: 'del /f /s C:\*' -> Confirmation rejected"
+      }
+    };
+
+    function switchTab(key) {
+      const data = TAB_DATA[key];
+      if (!data) return;
+      document.getElementById('tab-icon').innerText = data.icon;
+      document.getElementById('tab-title').innerText = data.title;
+      document.getElementById('tab-body').innerText = data.body;
+      document.getElementById('tab-code').innerText = data.code;
+
+      document.querySelectorAll('.pill-tab').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    // Live Roaming Engine
     (function() {
       const roamer = document.getElementById('duit-roamer');
       const bubble = document.getElementById('roamer-bubble');
@@ -690,8 +879,7 @@
           "Searching your files...",
           "Kya karna hai boss?",
           "WhatsApp check kar raha hu...",
-          "Chrome profile 4 ready hai!",
-          "Presence Online!"
+          "Chrome profile ready hai!"
         ],
         wave: [
           "Hey! Main DUIT hu!",
@@ -701,24 +889,16 @@
         happy: [
           "Ho gaya! Action complete!",
           "Done boss! Next task?",
-          "Desktop task executed!",
-          "Calendar updated!"
+          "Desktop task executed!"
         ],
         sleep: [
-          "Zzz... thoda standby rest...",
-          "Heartbeat alive (5s)..."
-        ],
-        features: [
-          "Yeh dekho, multi-profile Chrome features!",
-          "WhatsApp se direct laptop control!"
-        ],
-        connect: [
-          "Yahan se Google account link kar lo!"
+          "Zzz... standby rest...",
+          "Heartbeat online..."
         ]
       };
 
       let pos = { x: 120, y: 280 };
-      let target = { x: 320, y: 280 };
+      let target = { x: 280, y: 320 };
       let mood = 'idle';
       let facing = 1;
       let isDragging = false;
@@ -726,51 +906,48 @@
       let idleTimer = 0;
       let bubbleTimeout = null;
 
-      function showBubble(text, duration = 2600) {
+      function showBubble(text, duration = 2400) {
         if (!bubble) return;
-        bubble.textContent = text;
+        bubble.innerText = text;
         bubble.style.display = 'block';
-        bubble.style.transform = `scaleX(${facing})`;
         clearTimeout(bubbleTimeout);
-        bubbleTimeout = setTimeout(() => {
-          bubble.style.display = 'none';
-        }, duration);
+        bubbleTimeout = setTimeout(() => { bubble.style.display = 'none'; }, duration);
       }
 
-      function setMood(newMood) {
-        mood = newMood;
-        roamer.className = `roamer ${mood} ${isDragging ? 'dragging' : ''}`;
+      function setMood(m) {
+        mood = m;
+        roamer.className = 'roamer ' + m + (isDragging ? ' dragging' : '');
       }
 
       function pickNewTarget() {
-        const padX = 70;
-        const padYTop = 100;
-        const padYBottom = 220;
-        const newX = padX + Math.random() * Math.max(window.innerWidth - padX * 2, 200);
-        const newY = padYTop + Math.random() * Math.max(window.innerHeight - padYTop - padYBottom, 200);
-        target = { x: newX, y: newY };
+        if (isDragging) return;
+        const pad = 80;
+        const newX = pad + Math.random() * (window.innerWidth - pad * 2);
+        const newY = 100 + Math.random() * (window.innerHeight - 260);
+        target.x = newX;
+        target.y = newY;
         facing = newX > pos.x ? 1 : -1;
         roamer.style.transform = `scaleX(${facing})`;
+        if (bubble) bubble.style.transform = `scaleX(${facing})`;
       }
 
-      // 60 FPS physics loop
       function updatePhysics() {
-        if (!isDragging && mood !== 'sleeping' && mood !== 'dancing') {
+        if (!isDragging && mood !== 'sleeping') {
           const dx = target.x - pos.x;
           const dy = target.y - pos.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist > 5) {
             if (mood !== 'walking') setMood('walking');
-            const speed = 1.5;
+            const speed = 1.4;
             pos.x += (dx / dist) * speed;
             pos.y += (dy / dist) * speed;
             idleTimer = 0;
           } else {
             if (mood === 'walking') setMood('idle');
             idleTimer++;
-            if (idleTimer > 120) {
-              const actions = ['walk', 'walk', 'wave', 'dance', 'talk', 'sleep'];
+            if (idleTimer > 130) {
+              const actions = ['walk', 'walk', 'wave', 'talk', 'sleep'];
               const pick = actions[Math.floor(Math.random() * actions.length)];
 
               if (pick === 'walk') {
@@ -778,16 +955,13 @@
               } else if (pick === 'wave') {
                 setMood('waving');
                 showBubble(PHRASES.wave[Math.floor(Math.random() * PHRASES.wave.length)]);
-                setTimeout(() => { setMood('idle'); pickNewTarget(); }, 2500);
-              } else if (pick === 'dance') {
-                setMood('dancing');
-                setTimeout(() => { setMood('idle'); pickNewTarget(); }, 3000);
+                setTimeout(() => { setMood('idle'); pickNewTarget(); }, 2400);
               } else if (pick === 'talk') {
                 showBubble(PHRASES.idle[Math.floor(Math.random() * PHRASES.idle.length)]);
               } else if (pick === 'sleep') {
                 setMood('sleeping');
-                showBubble(PHRASES.sleep[0], 3500);
-                setTimeout(() => { setMood('idle'); pickNewTarget(); }, 3800);
+                showBubble(PHRASES.sleep[0], 3000);
+                setTimeout(() => { setMood('idle'); pickNewTarget(); }, 3500);
               }
               idleTimer = 0;
             }
@@ -800,17 +974,15 @@
       }
 
       requestAnimationFrame(updatePhysics);
-      setTimeout(pickNewTarget, 1000);
+      setTimeout(pickNewTarget, 800);
 
-      // Click to Jump & Happy
-      roamer.addEventListener('click', (e) => {
+      roamer.addEventListener('click', () => {
         if (isDragging) return;
         setMood('jumping');
-        showBubble(PHRASES.happy[Math.floor(Math.random() * PHRASES.happy.length)], 1600);
-        setTimeout(() => { setMood('idle'); pickNewTarget(); }, 1400);
+        showBubble(PHRASES.happy[Math.floor(Math.random() * PHRASES.happy.length)], 1800);
+        setTimeout(() => { setMood('idle'); pickNewTarget(); }, 1200);
       });
 
-      // Mouse Dragging
       roamer.addEventListener('mousedown', (e) => {
         isDragging = true;
         setMood('jumping');
@@ -832,49 +1004,7 @@
           pickNewTarget();
         }
       });
-
-      // Touch Dragging for Mobile
-      roamer.addEventListener('touchstart', (e) => {
-        if (e.touches.length > 0) {
-          isDragging = true;
-          setMood('jumping');
-          dragOffset.x = e.touches[0].clientX - pos.x;
-          dragOffset.y = e.touches[0].clientY - pos.y;
-        }
-      }, { passive: true });
-
-      window.addEventListener('touchmove', (e) => {
-        if (isDragging && e.touches.length > 0) {
-          pos.x = e.touches[0].clientX - dragOffset.x;
-          pos.y = e.touches[0].clientY - dragOffset.y;
-        }
-      }, { passive: true });
-
-      window.addEventListener('touchend', () => {
-        if (isDragging) {
-          isDragging = false;
-          setMood('idle');
-          pickNewTarget();
-        }
-      });
-
-      // Scroll Awareness Trigger
-      let hasScrolledFeatures = false;
-      let hasScrolledConnect = false;
-      window.addEventListener('scroll', () => {
-        const scY = window.scrollY;
-        if (scY > 350 && scY < 950 && !hasScrolledFeatures) {
-          hasScrolledFeatures = true;
-          showBubble(PHRASES.features[0], 2800);
-        } else if (scY > 1100 && !hasScrolledConnect) {
-          hasScrolledConnect = true;
-          showBubble(PHRASES.connect[0], 2800);
-        }
-      }, { passive: true });
-
     })();
   </script>
-
 </body>
 </html>
-

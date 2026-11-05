@@ -67,3 +67,4 @@ export default function DuitMascot({ mood = 'idle', size = 120 }) {
     </div>
   );
 }
+

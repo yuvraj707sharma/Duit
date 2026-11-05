@@ -78,3 +78,6 @@ fastagent-tools-kit/
 shed/
 skills/
 
+
+# Electron build
+desktop/dist-electron/
