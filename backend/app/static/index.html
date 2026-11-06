@@ -402,12 +402,12 @@
       color: #0f172a;
     }
 
-    /* Pinned Horizontal Cards Scroll Container (Matches Reference Layout) */
+    /* Pinned Horizontal Cards Scroll Container - Indian Premium Jaipur Aesthetic */
     .cards-pin-container {
       position: relative;
       height: 320vh;
       width: 100%;
-      background: #ffffff;
+      background: #FFFBF5;
     }
 
     .cards-sticky-wrapper {
@@ -420,12 +420,13 @@
       justify-content: center;
       overflow: hidden;
       box-sizing: border-box;
-      padding: 10px 0 20px;
+      padding: 10px 0 16px;
+      background: #FFFBF5;
     }
 
-    .cards-header-container {
+    .duit-head {
       max-width: 1100px;
-      margin: 0 auto 24px;
+      margin: 0 auto;
       padding: 0 40px;
       display: flex;
       justify-content: space-between;
@@ -435,69 +436,65 @@
       box-sizing: border-box;
     }
 
-    .cards-header-text .tag {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: 2px;
-      color: #71717a;
+    .duit-label {
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: #B48A1A;
+      font-weight: 700;
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
-    .cards-header-text h2 {
-      font-size: clamp(26px, 3.4vw, 40px);
+    .duit-head h2 {
+      font-size: clamp(30px, 4.2vw, 48px);
+      line-height: 0.98;
+      letter-spacing: -1.2px;
       font-weight: 900;
-      letter-spacing: -0.5px;
-      line-height: 1.15;
-      color: #000000;
+      color: #111113;
+      margin: 8px 0 10px;
       text-transform: uppercase;
-      margin-bottom: 8px;
-      max-width: 700px;
     }
 
-    .cards-header-text p {
-      color: #71717a;
+    .duit-head p {
+      color: #666;
       font-size: 15px;
-      max-width: 580px;
+      max-width: 520px;
     }
 
-    .cards-nav-controls {
+    .duit-arrows {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       flex-shrink: 0;
     }
 
-    .cards-nav-btn {
-      width: 46px;
-      height: 46px;
+    .duit-arrows button {
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
+      border: none;
+      background: #111;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      font-size: 18px;
-      font-weight: 800;
-      transition: all 0.2s ease;
-      user-select: none;
+      transition: background 0.2s, transform 0.2s;
     }
 
-    .cards-nav-btn.btn-prev {
-      background: #111113;
-      color: #ffffff;
-      border: 1.5px solid #111113;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .cards-nav-btn.btn-next {
-      background: #ffffff;
-      color: #111113;
-      border: 1.5px solid #e4e4e7;
-    }
-
-    .cards-nav-btn:hover {
+    .duit-arrows button:hover {
+      background: #FF9933;
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .duit-arrows svg {
+      width: 20px;
+      height: 20px;
+      stroke: #fff;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     /* Horizontal Cards Viewport & Strip Track */
@@ -506,7 +503,7 @@
       overflow-x: hidden;
       cursor: grab;
       user-select: none;
-      padding: 30px 0 40px;
+      padding: 30px 0 16px;
       position: relative;
     }
 
@@ -516,96 +513,124 @@
 
     .cards-strip-track {
       display: flex;
-      gap: 24px;
+      gap: 22px;
       padding: 0 60px;
       width: max-content;
       will-change: transform;
       transition: transform 0.1s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .feature-card {
-      width: 350px;
-      min-height: 360px;
-      background: #0d0d10;
-      border: 1.5px solid #222226;
-      border-radius: 20px;
-      padding: 32px 28px;
-      color: #ffffff;
+    .indian-card {
+      width: 320px;
+      min-height: 450px;
+      background: #0A0A0A;
+      border-radius: 22px;
+      padding: 26px 24px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      flex-shrink: 0;
-      position: relative;
-      transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), 
-                  box-shadow 0.35s ease, 
-                  border-color 0.35s ease;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.12), 0 18px 40px rgba(0, 0, 0, 0.22);
+      transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, border-color 0.35s ease;
     }
 
-    .feature-card:hover, .feature-card.is-center {
-      transform: scale(1.08) translateY(-6px);
-      border-color: rgba(225, 29, 72, 0.6);
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.42), 0 0 28px rgba(225, 29, 72, 0.22);
+    .indian-card:hover, .indian-card.active, .indian-card.is-center {
+      transform: translateY(-12px) scale(1.04);
+      border-color: rgba(212, 175, 55, 0.85);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45), 0 0 25px rgba(212, 175, 55, 0.3), inset 0 0 0 1px rgba(212, 175, 55, 0.4);
       z-index: 10;
     }
 
-    .card-badge {
+    .mandala { position: absolute; top: 10px; left: 10px; opacity: 0.85; pointer-events: none; }
+    .mandala-r { position: absolute; bottom: 10px; right: 10px; opacity: 0.85; transform: rotate(180deg); pointer-events: none; }
+    .peacock-watermark { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); opacity: 0.08; pointer-events: none; }
+
+    .pill {
       display: inline-block;
-      align-self: flex-start;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-family: 'JetBrains Mono', monospace;
+      padding: 7px 12px;
+      border-radius: 7px;
       font-size: 11px;
-      font-weight: 700;
-      margin-bottom: 18px;
-      background: rgba(225, 29, 72, 0.15);
-      color: #fb7185;
-      border: 1px solid rgba(225, 29, 72, 0.3);
-      letter-spacing: 0.5px;
-    }
-
-    .card-badge.green {
-      background: rgba(16, 185, 129, 0.15);
-      color: #6ee7b7;
-      border-color: rgba(16, 185, 129, 0.3);
-    }
-
-    .feature-card h3 {
-      font-size: 19px;
+      letter-spacing: 1.2px;
       font-weight: 800;
-      margin-bottom: 12px;
+      color: #fff;
+      width: fit-content;
+      margin-bottom: 4px;
+    }
+    .pill-saffron { background: #FF9933; }
+    .pill-blue { background: #2B3FE0; }
+    .pill-teal { background: #0E7C7B; }
+    .pill-purple { background: #6B21A8; }
+    .pill-gold { background: #B48A1A; }
+    .pill-pink { background: #A8325A; }
+
+    .indian-card h3 {
       color: #ffffff;
-      line-height: 1.3;
+      font-size: 21px;
+      line-height: 1.15;
+      margin: 16px 0 10px;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.3px;
     }
 
-    .feature-card p {
-      font-size: 13.5px;
-      line-height: 1.65;
-      color: #a1a1aa;
+    .indian-card p {
+      color: #A8A8A8;
+      font-size: 14px;
+      line-height: 1.6;
       flex: 1;
     }
 
-    .card-bottom-icon {
+    .indian-card .foot {
+      margin-top: auto;
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 14px;
+    }
+
+    .icon-btn {
       width: 48px;
       height: 48px;
-      border-radius: 12px;
-      background: var(--primary-red);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 13px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-top: 24px;
-      align-self: flex-end;
-      color: #ffffff;
-      box-shadow: 0 6px 18px rgba(225, 29, 72, 0.45);
+      background: linear-gradient(135deg, #FFB347, #FF7A00);
+      box-shadow: 0 8px 20px rgba(255, 122, 0, 0.35);
+      border: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .icon-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 10px 24px rgba(255, 122, 0, 0.5);
+    }
+
+    .icon-btn svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .duit-dots {
+      text-align: center;
+      padding: 12px 0 4px;
+    }
+
+    .duit-dots span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #DDD;
+      margin: 0 4px;
       transition: all 0.25s ease;
     }
 
-    .feature-card:hover .card-bottom-icon,
-    .feature-card.is-center .card-bottom-icon {
-      transform: scale(1.08);
-      box-shadow: 0 8px 24px rgba(225, 29, 72, 0.65);
+    .duit-dots span.on {
+      background: #FF9933;
+      width: 24px;
+      border-radius: 10px;
     }
 
     /* Bottom Action Banner */
@@ -916,79 +941,101 @@
       </div>
     </section>
 
-    <!-- Pinned Horizontal Cards Scroll Section (Matches Reference Image) -->
+    <!-- Pinned Horizontal Cards Scroll Section (Indian Premium Jaipur Aesthetic) -->
     <div class="cards-pin-container" id="capabilities">
       <div class="cards-sticky-wrapper">
-        <div class="cards-header-container">
-          <div class="cards-header-text">
-            <div class="tag">DUIT</div>
-            <h2>Everything To Know Before Getting Started.</h2>
+        <div class="duit-head">
+          <div>
+            <div class="duit-label">DUIT</div>
+            <h2>Everything To Know<br>Before Getting Started.</h2>
             <p>Simple voice commands. Instant computer actions. Complete privacy.</p>
           </div>
-          <div class="cards-nav-controls">
-            <button class="cards-nav-btn btn-prev" id="cards-prev-btn" title="Previous card" aria-label="Previous card">←</button>
-            <button class="cards-nav-btn btn-next" id="cards-next-btn" title="Next card" aria-label="Next card">→</button>
+          <div class="duit-arrows">
+            <button onclick="duitScroll(-1)" id="cards-prev-btn" aria-label="Previous card"><svg viewBox="0 0 24 24"><path d="M19 12 H5 M11 6 L5 12 L11 18"/></svg></button>
+            <button onclick="duitScroll(1)" id="cards-next-btn" aria-label="Next card"><svg viewBox="0 0 24 24"><path d="M5 12 H19 M13 6 L19 12 L13 18"/></svg></button>
           </div>
         </div>
 
         <div class="cards-strip-viewport" id="cards-viewport">
           <div class="cards-strip-track" id="cards-horizontal-track">
             
-            <div class="feature-card" data-index="0">
-              <div class="card-badge">VOICE & CHAT</div>
-              <h3>Just Speak Like You Talk to a Friend</h3>
-              <p>Send a quick WhatsApp voice note or message in Hindi, English, or Hinglish. Say "Kal subah ki meeting schedule kar do" or "Rahul ko report bhej do" — DUIT understands your intent without robotic commands.</p>
-              <div class="card-bottom-icon" title="Voice & Speech">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-              </div>
+            <!-- ===== CARD 1 - VOICE & CHAT ===== -->
+            <div class="indian-card" data-index="0">
+              <svg class="mandala" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg class="mandala-r" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg width="100%" height="16" viewBox="0 0 200 16" fill="none" style="display:block; margin-bottom:14px;"><path d="M0 8 Q10 2 20 8 T40 8 T60 8 T80 8 T100 8 T120 8 T140 8 T160 8 T180 8 T200 8" stroke="#D4AF37" stroke-width="1"/><path d="M100 2 C104 6 104 10 100 12 C96 10 96 6 100 2 Z" fill="#FF9933"/><circle cx="20" cy="8" r="1.5" fill="#D4AF37"/><circle cx="180" cy="8" r="1.5" fill="#D4AF37"/></svg>
+              <span class="pill pill-gold">VOICE & CHAT</span>
+              <h3>Just Speak Like You Talk To A Friend</h3>
+              <p>Send a quick WhatsApp voice note or message in Hindi, English, or Hinglish. DUIT samajh jayega. No commands to learn, no app to open.</p>
+              <div class="foot"><span class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3" fill="#fff" stroke="none"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span></div>
+              <div class="peacock-watermark"><svg width="110" height="140" viewBox="0 0 48 64" fill="none"><path d="M24 64 C24 40 24 20 24 6" stroke="#D4AF37" stroke-width="1.5"/><ellipse cx="24" cy="22" rx="16" ry="20" fill="#0E7C7B"/><ellipse cx="24" cy="22" rx="12" ry="15" fill="#FF9933"/><ellipse cx="24" cy="20" rx="8" ry="10" fill="#0B3D3D"/><ellipse cx="24" cy="20" rx="5.5" ry="7" fill="#1E6BFF"/><ellipse cx="24" cy="20" rx="2.5" ry="3.5" fill="#FFD700"/></svg></div>
             </div>
 
-            <div class="feature-card" data-index="1">
-              <div class="card-badge green">INSTANT SPEED</div>
-              <h3>Happens in the Blink of an Eye</h3>
-              <p>Common tasks happen in less than a second directly on your machine. You do not have to wait around for slow cloud servers or clunky loading screens.</p>
-              <div class="card-bottom-icon" title="Instant Speed">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              </div>
+            <!-- ===== CARD 2 - INSTANT SPEED ===== -->
+            <div class="indian-card" data-index="1">
+              <svg class="mandala" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg class="mandala-r" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg width="100%" height="16" viewBox="0 0 200 16" fill="none" style="display:block; margin-bottom:14px;"><path d="M0 8 Q10 2 20 8 T40 8 T60 8 T80 8 T100 8 T120 8 T140 8 T160 8 T180 8 T200 8" stroke="#D4AF37" stroke-width="1"/><path d="M100 2 C104 6 104 10 100 12 C96 10 96 6 100 2 Z" fill="#FF9933"/></svg>
+              <span class="pill pill-saffron">INSTANT SPEED</span>
+              <h3>Happens In The Blink Of An Eye</h3>
+              <p>Common tasks happen in less than a second on your own machine. You do not have to wait on slow cloud servers or clunky extensions.</p>
+              <div class="foot"><span class="icon-btn"><svg viewBox="0 0 24 24"><path d="M13 2 L4 14 H11 L10 22 L19 9 H12 L13 2 Z" fill="#fff" stroke="#fff" stroke-width="1" stroke-linejoin="round"/></svg></span></div>
+              <div class="peacock-watermark"><svg width="110" height="140" viewBox="0 0 48 64" fill="none"><path d="M24 64 C24 40 24 20 24 6" stroke="#D4AF37" stroke-width="1.5"/><ellipse cx="24" cy="22" rx="16" ry="20" fill="#0E7C7B"/><ellipse cx="24" cy="22" rx="12" ry="15" fill="#FF9933"/><ellipse cx="24" cy="20" rx="8" ry="10" fill="#0B3D3D"/><ellipse cx="24" cy="20" rx="5.5" ry="7" fill="#1E6BFF"/><ellipse cx="24" cy="20" rx="2.5" ry="3.5" fill="#FFD700"/></svg></div>
             </div>
 
-            <div class="feature-card is-center" data-index="2">
-              <div class="card-badge">SMART BROWSING</div>
+            <!-- ===== CARD 3 - SMART BROWSING (CENTER) ===== -->
+            <div class="indian-card active" data-index="2">
+              <svg class="mandala" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg class="mandala-r" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg width="100%" height="16" viewBox="0 0 200 16" fill="none" style="display:block; margin-bottom:14px;"><path d="M0 8 Q10 2 20 8 T40 8 T60 8 T80 8 T100 8 T120 8 T140 8 T160 8 T180 8 T200 8" stroke="#D4AF37" stroke-width="1"/><path d="M100 2 C104 6 104 10 100 12 C96 10 96 6 100 2 Z" fill="#FF9933"/></svg>
+              <span class="pill pill-blue">SMART BROWSING</span>
               <h3>Never Mix Up Your Accounts Again</h3>
               <p>DUIT knows which Chrome or Edge profile to use. Ask it to open your college portal, office dashboard, or personal tabs, and it opens the right account without messing up your logins.</p>
-              <div class="card-bottom-icon" title="Multi-Profile Browser">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-              </div>
+              <div class="foot"><span class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12 H21 M12 3 C14 7 14 17 12 21 C10 17 10 7 12 3"/></svg></span></div>
+              <div class="peacock-watermark"><svg width="110" height="140" viewBox="0 0 48 64" fill="none"><path d="M24 64 C24 40 24 20 24 6" stroke="#D4AF37" stroke-width="1.5"/><ellipse cx="24" cy="22" rx="16" ry="20" fill="#0E7C7B"/><ellipse cx="24" cy="22" rx="12" ry="15" fill="#FF9933"/><ellipse cx="24" cy="20" rx="8" ry="10" fill="#0B3D3D"/><ellipse cx="24" cy="20" rx="5.5" ry="7" fill="#1E6BFF"/><ellipse cx="24" cy="20" rx="2.5" ry="3.5" fill="#FFD700"/></svg></div>
             </div>
 
-            <div class="feature-card" data-index="3">
-              <div class="card-badge green">100% SAFE</div>
+            <!-- ===== CARD 4 - 100% SAFE ===== -->
+            <div class="indian-card" data-index="3">
+              <svg class="mandala" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg class="mandala-r" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg width="100%" height="16" viewBox="0 0 200 16" fill="none" style="display:block; margin-bottom:14px;"><path d="M0 8 Q10 2 20 8 T40 8 T60 8 T80 8 T100 8 T120 8 T140 8 T160 8 T180 8 T200 8" stroke="#D4AF37" stroke-width="1"/><path d="M100 2 C104 6 104 10 100 12 C96 10 96 6 100 2 Z" fill="#FF9933"/></svg>
+              <span class="pill pill-teal">100% SAFE</span>
               <h3>Nothing Happens Without Your Permission</h3>
               <p>DUIT never deletes a file or sends an important email without asking you first. You get an instant WhatsApp message with simple Approve and Reject buttons, plus a one-key emergency stop switch.</p>
-              <div class="card-bottom-icon" title="100% Safe">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-              </div>
+              <div class="foot"><span class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M12 2 L20 5 V11 C20 16 16.5 20 12 22 C7.5 20 4 16 4 11 V5 L12 2 Z"/><path d="M8.5 12 L11 14.5 L15.5 9" stroke-width="2.5" stroke-linecap="round"/></svg></span></div>
+              <div class="peacock-watermark"><svg width="110" height="140" viewBox="0 0 48 64" fill="none"><path d="M24 64 C24 40 24 20 24 6" stroke="#D4AF37" stroke-width="1.5"/><ellipse cx="24" cy="22" rx="16" ry="20" fill="#0E7C7B"/><ellipse cx="24" cy="22" rx="12" ry="15" fill="#FF9933"/><ellipse cx="24" cy="20" rx="8" ry="10" fill="#0B3D3D"/><ellipse cx="24" cy="20" rx="5.5" ry="7" fill="#1E6BFF"/><ellipse cx="24" cy="20" rx="2.5" ry="3.5" fill="#FFD700"/></svg></div>
             </div>
 
-            <div class="feature-card" data-index="4">
-              <div class="card-badge">GOOGLE WORKSPACE</div>
-              <h3>Drive, Docs, Calendar, and Gmail in Your Pocket</h3>
+            <!-- ===== CARD 5 - GOOGLE WORKSPACE ===== -->
+            <div class="indian-card" data-index="4">
+              <svg class="mandala" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg class="mandala-r" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg width="100%" height="16" viewBox="0 0 200 16" fill="none" style="display:block; margin-bottom:14px;"><path d="M0 8 Q10 2 20 8 T40 8 T60 8 T80 8 T100 8 T120 8 T140 8 T160 8 T180 8 T200 8" stroke="#D4AF37" stroke-width="1"/><path d="M100 2 C104 6 104 10 100 12 C96 10 96 6 100 2 Z" fill="#FF9933"/></svg>
+              <span class="pill pill-purple">GOOGLE WORKSPACE</span>
+              <h3>Drive, Docs, Calendar, And Gmail In Your Pocket</h3>
               <p>Search and share files from Google Drive, draft documents in Docs, review Sheets, check meeting availability on Calendar, and send emails via Gmail with official, secure Google integration.</p>
-              <div class="card-bottom-icon" title="Google Workspace">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-              </div>
+              <div class="foot"><span class="icon-btn"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2" fill="#fff"/><rect x="13" y="3" width="8" height="8" rx="2" fill="#fff" opacity="0.7"/><rect x="3" y="13" width="8" height="8" rx="2" fill="#fff" opacity="0.7"/><rect x="13" y="13" width="8" height="8" rx="2" fill="#fff" opacity="0.45"/></svg></span></div>
+              <div class="peacock-watermark"><svg width="110" height="140" viewBox="0 0 48 64" fill="none"><path d="M24 64 C24 40 24 20 24 6" stroke="#D4AF37" stroke-width="1.5"/><ellipse cx="24" cy="22" rx="16" ry="20" fill="#0E7C7B"/><ellipse cx="24" cy="22" rx="12" ry="15" fill="#FF9933"/><ellipse cx="24" cy="20" rx="8" ry="10" fill="#0B3D3D"/><ellipse cx="24" cy="20" rx="5.5" ry="7" fill="#1E6BFF"/><ellipse cx="24" cy="20" rx="2.5" ry="3.5" fill="#FFD700"/></svg></div>
             </div>
 
-            <div class="feature-card" data-index="5">
-              <div class="card-badge green">LOCAL & SECURE</div>
-              <h3>Your Data Stays on Your Computer</h3>
-              <p>Your files, photos, passwords, and private conversations never leave your workstation. Nothing is uploaded to public AI databases or sold to third parties.</p>
-              <div class="card-bottom-icon" title="Local & Secure">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              </div>
+            <!-- ===== CARD 6 - HOW DO I START ===== -->
+            <div class="indian-card" data-index="5">
+              <svg class="mandala" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg class="mandala-r" width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="10" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="5" stroke="#D4AF37" stroke-width="1"/><circle cx="14" cy="14" r="2" fill="#FF9933"/></svg>
+              <svg width="100%" height="16" viewBox="0 0 200 16" fill="none" style="display:block; margin-bottom:14px;"><path d="M0 8 Q10 2 20 8 T40 8 T60 8 T80 8 T100 8 T120 8 T140 8 T160 8 T180 8 T200 8" stroke="#D4AF37" stroke-width="1"/><path d="M100 2 C104 6 104 10 100 12 C96 10 96 6 100 2 Z" fill="#FF9933"/></svg>
+              <span class="pill pill-pink">HOW DO I START?</span>
+              <h3>2 Minutes. No Tech Skills Needed.</h3>
+              <p>Download DUIT, connect WhatsApp, connect Google. Done. Bol, aur ho gaya. Your ladoo mascot will guide you if you ever get stuck.</p>
+              <div class="foot"><span class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12 H19 M13 6 L19 12 L13 18"/></svg></span></div>
+              <div class="peacock-watermark"><svg width="110" height="140" viewBox="0 0 48 64" fill="none"><path d="M24 64 C24 40 24 20 24 6" stroke="#D4AF37" stroke-width="1.5"/><ellipse cx="24" cy="22" rx="16" ry="20" fill="#0E7C7B"/><ellipse cx="24" cy="22" rx="12" ry="15" fill="#FF9933"/><ellipse cx="24" cy="20" rx="8" ry="10" fill="#0B3D3D"/><ellipse cx="24" cy="20" rx="5.5" ry="7" fill="#1E6BFF"/><ellipse cx="24" cy="20" rx="2.5" ry="3.5" fill="#FFD700"/></svg></div>
             </div>
 
           </div>
+        </div>
+
+        <div class="duit-dots" id="duitDots">
+          <span></span><span></span><span class="on"></span><span></span><span></span><span></span>
         </div>
       </div>
     </div>
@@ -1071,6 +1118,13 @@
       event.target.classList.add('active');
     }
 
+    // Global scroll helper for arrows
+    window.duitScroll = function(dir) {
+      if (window._duitScrollStep) {
+        window._duitScrollStep(dir);
+      }
+    };
+
     // Pinned Horizontal Cards Scroll (Locks in viewport while sliding horizontally)
     (function() {
       const pinContainer = document.querySelector('.cards-pin-container');
@@ -1078,9 +1132,10 @@
       const track = document.getElementById('cards-horizontal-track');
       const prevBtn = document.getElementById('cards-prev-btn');
       const nextBtn = document.getElementById('cards-next-btn');
+      const dots = document.querySelectorAll('#duitDots span');
       if (!pinContainer || !viewport || !track) return;
 
-      const cards = Array.from(track.querySelectorAll('.feature-card'));
+      const cards = Array.from(track.querySelectorAll('.indian-card'));
       let currentActiveIndex = 2; // default center card
 
       function updateCenterCard() {
@@ -1103,31 +1158,14 @@
         });
 
         currentActiveIndex = closestIndex;
-        cards.forEach(card => {
-          if (card === closestCard) {
-            card.classList.add('is-center');
-          } else {
-            card.classList.remove('is-center');
-          }
+        cards.forEach((card, i) => {
+          card.classList.toggle('active', i === closestIndex);
+          card.classList.toggle('is-center', i === closestIndex);
         });
 
-        // Update button visual styles
-        if (prevBtn && nextBtn) {
-          if (currentActiveIndex === 0) {
-            prevBtn.classList.remove('btn-prev');
-            prevBtn.classList.add('btn-next');
-          } else {
-            prevBtn.classList.add('btn-prev');
-            prevBtn.classList.remove('btn-next');
-          }
-          if (currentActiveIndex === cards.length - 1) {
-            nextBtn.classList.remove('btn-prev');
-            nextBtn.classList.add('btn-next');
-          } else {
-            nextBtn.classList.add('btn-prev');
-            nextBtn.classList.remove('btn-next');
-          }
-        }
+        dots.forEach((dot, i) => {
+          dot.classList.toggle('on', i === closestIndex);
+        });
       }
 
       function onScroll() {
@@ -1137,7 +1175,6 @@
 
         if (totalPinScroll <= 0) return;
 
-        // Progress from 0 (container hits top sticky offset) to 1 (container finishes scrolling)
         const scrolled = pinTopOffset - rect.top;
         const progress = Math.max(0, Math.min(1, scrolled / totalPinScroll));
 
@@ -1151,7 +1188,6 @@
       window.addEventListener('scroll', onScroll, { passive: true });
       window.addEventListener('resize', onScroll, { passive: true });
 
-      // Button Stepping: Smoothly scrolls the window to the exact card position
       function scrollToCard(targetIdx) {
         targetIdx = Math.max(0, Math.min(cards.length - 1, targetIdx));
         const rect = pinContainer.getBoundingClientRect();
@@ -1166,6 +1202,10 @@
           behavior: 'smooth'
         });
       }
+
+      window._duitScrollStep = function(dir) {
+        scrollToCard(currentActiveIndex + dir);
+      };
 
       if (prevBtn) {
         prevBtn.addEventListener('click', () => scrollToCard(currentActiveIndex - 1));
