@@ -710,7 +710,7 @@
     <!-- Hero Section (Poster Template Match) -->
     <section class="hero-container" id="discover">
       <div class="hero-art-wrapper">
-        <img src="/static/duit-hero-art.jpg" alt="DUIT Mascot Artwork" class="hero-art-img">
+        <img src="./duit-hero-art.jpg" alt="DUIT Mascot Artwork" class="hero-art-img">
       </div>
 
       <div class="headline-box">
@@ -734,7 +734,7 @@
       </div>
 
       <div class="intro-card">
-        <img src="/static/duit-astronaut-card.jpg" alt="DUIT Mascot in Space Suit">
+        <img src="./duit-astronaut-card.jpg" alt="DUIT Mascot in Space Suit">
       </div>
     </section>
 
@@ -746,7 +746,7 @@
         <div class="pills-tabs">
           <button class="pill-tab active" onclick="switchTab('whatsapp')">WhatsApp Bridge</button>
           <button class="pill-tab" onclick="switchTab('browser')">Multi-Profile Chromium</button>
-          <button class="pill-tab" onclick="switchTab('google')">Calendar & Gmail</button>
+          <button class="pill-tab" onclick="switchTab('google')">Full Google Workspace</button>
           <button class="pill-tab" onclick="switchTab('meta')">Meta Muse & SAM 3.1</button>
           <button class="pill-tab" onclick="switchTab('security')">Strict In-Code Policy</button>
         </div>
@@ -765,45 +765,45 @@
     <!-- Cards Grid (from Wireframe 3) -->
     <section class="cards-section">
       <div class="cards-header">
-        <h2>Engineered for Power Users</h2>
-        <p>Enterprise-grade safety, local execution, and zero cloud lock-in.</p>
+        <h2>Everything You Need, Done from WhatsApp</h2>
+        <p>Simple voice commands. Instant computer actions. Complete privacy.</p>
       </div>
 
       <div class="cards-grid">
         <div class="feature-card">
-          <div class="card-badge">DESKTOP PLANE</div>
-          <h3>Autonomous Desktop Operations</h3>
-          <p>Discovers and launches installed applications, manages windows, inspects directory files, and executes policy-governed local workflows autonomously.</p>
+          <div class="card-badge">VOICE & CHAT</div>
+          <h3>Just Speak Like You Talk to a Friend</h3>
+          <p>Send a quick WhatsApp voice note or message in Hindi, English, or Hinglish. Say "Kal subah ki meeting schedule kar do" or "Rahul ko report bhej do" — DUIT understands your intent without robotic commands.</p>
         </div>
 
         <div class="feature-card">
-          <div class="card-badge green">CHROMIUM ADAPTER</div>
-          <h3>Smart Multi-Profile Targeting</h3>
-          <p>Directly reads Chromium Local State across Google Chrome and Microsoft Edge to target specific user profiles (e.g. Work, College, Personal) by name.</p>
+          <div class="card-badge green">INSTANT SPEED</div>
+          <h3>Happens in the Blink of an Eye</h3>
+          <p>Common tasks happen in less than a second directly on your machine. You do not have to wait around for slow cloud servers or clunky loading screens.</p>
         </div>
 
         <div class="feature-card">
-          <div class="card-badge">WORKSPACE OAUTH</div>
-          <h3>Google Suite Dynamic Drafting</h3>
-          <p>Sends custom email drafts without canned templates, queries calendar availability, schedules events, and syncs contacts with user approval.</p>
+          <div class="card-badge">SMART BROWSING</div>
+          <h3>Never Mix Up Your Accounts Again</h3>
+          <p>DUIT knows which Chrome or Edge profile to use. Ask it to open your college portal, office dashboard, or personal tabs, and it opens the right account without messing up your logins.</p>
         </div>
 
         <div class="feature-card">
-          <div class="card-badge green">SEAMLESS ONBOARDING</div>
-          <h3>8-Character Device Pairing</h3>
-          <p>Pair any mobile phone in seconds via the standard 8-character Baileys WhatsApp pairing code. Zero camera QR hurdles, zero third-party client apps.</p>
+          <div class="card-badge green">100% SAFE</div>
+          <h3>Nothing Happens Without Your Permission</h3>
+          <p>DUIT never deletes a file or sends an important email without asking you first. You get an instant WhatsApp message with simple Approve and Reject buttons, plus a one-key emergency stop switch.</p>
         </div>
 
         <div class="feature-card">
-          <div class="card-badge">VERIFICATION</div>
-          <h3>Visual UI Grounding</h3>
-          <p>Validates UI interactions with SAM 3.1 computer-use grounding. Confirms target application windows are visually active before execution.</p>
+          <div class="card-badge">GOOGLE WORKSPACE</div>
+          <h3>Drive, Docs, Calendar, and Gmail in Your Pocket</h3>
+          <p>Search and share files from Google Drive, draft documents in Docs, review Sheets, check meeting availability on Calendar, and send emails via Gmail with official, secure Google integration.</p>
         </div>
 
         <div class="feature-card">
-          <div class="card-badge green">SECURITY FIRST</div>
-          <h3>In-Code Policy & WAL Engine</h3>
-          <p>All destructive operations are blocked by strict code-level guardrails. SQLite Write-Ahead Journaling guarantees audit trails and crash-resilience.</p>
+          <div class="card-badge green">LOCAL & SECURE</div>
+          <h3>Your Data Stays on Your Computer</h3>
+          <p>Your files, photos, passwords, and private conversations never leave your workstation. Nothing is uploaded to public AI databases or sold to third parties.</p>
         </div>
       </div>
     </section>
@@ -834,7 +834,7 @@
   <div id="duit-corner-mascot" class="corner-mascot" title="Click to interact with DUIT!">
     <div id="corner-bubble" class="corner-speech-bubble" style="display: none;"></div>
     <div class="mascot-seated" id="mascot-seated-body">
-      <img src="/static/duit-mascot-wink.png" alt="DUIT Companion Mascot" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.25)); pointer-events: none;">
+      <img src="./duit-mascot-wink.png" alt="DUIT Companion Mascot" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.25)); pointer-events: none;">
     </div>
     <div class="corner-shadow"></div>
   </div>
@@ -855,10 +855,10 @@
         code: '"Duit, open Edge on my Work profile and navigate to staging dashboard"'
       },
       google: {
-        icon: "GO",
-        title: "Real Google Calendar & Gmail Integration",
-        body: "Generates custom subject lines and bodies matching conversation context. Audits, schedules, and reschedules calendar events seamlessly through official OAuth tokens.",
-        code: '"Duit, reschedule my 4 PM sync with Priya to tomorrow 11 AM"'
+        icon: "GW",
+        title: "Full Google Workspace Integration",
+        body: "Query Google Drive for recent files, check Calendar for schedule clashes, generate Gmail drafts, and create Google Docs on the fly from a simple voice note.",
+        code: '"Duit, Drive se physics assignment ka link nikal ke group me share kar do"'
       },
       meta: {
         icon: "AI",
@@ -898,7 +898,7 @@
           "Browsing DUIT features...",
           "WhatsApp bridge active!",
           "Multi-profile Chrome ready!",
-          "Calendar & Gmail connected!"
+          "Google Workspace connected!"
         ],
         click: [
           "Kya karna hai boss?",
