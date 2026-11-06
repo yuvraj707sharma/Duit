@@ -44,7 +44,7 @@
       display: flex;
       flex-direction: column;
       position: relative;
-      overflow-x: hidden;
+      overflow-x: clip;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
     }
 
@@ -402,40 +402,58 @@
       color: #0f172a;
     }
 
-    /* Horizontal Cards Strip Section (Matches Wireframe Mockup) */
-    .cards-section {
-      width: 100%;
-      padding: 60px 0 50px;
-      overflow: hidden;
+    /* Pinned Horizontal Cards Scroll Container (Matches Reference Layout) */
+    .cards-pin-container {
       position: relative;
+      height: 320vh;
+      width: 100%;
+      background: #ffffff;
+    }
+
+    .cards-sticky-wrapper {
+      position: sticky;
+      top: 72px;
+      height: calc(100vh - 72px);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+      box-sizing: border-box;
+      padding: 10px 0 20px;
     }
 
     .cards-header-container {
       max-width: 1100px;
-      margin: 0 auto 28px;
+      margin: 0 auto 24px;
       padding: 0 40px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
       gap: 20px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .cards-header-text .tag {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 2px;
       color: #71717a;
       text-transform: uppercase;
       margin-bottom: 8px;
     }
 
     .cards-header-text h2 {
-      font-size: clamp(24px, 3.2vw, 34px);
+      font-size: clamp(26px, 3.4vw, 40px);
       font-weight: 900;
       letter-spacing: -0.5px;
+      line-height: 1.15;
       color: #000000;
-      margin-bottom: 6px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      max-width: 700px;
     }
 
     .cards-header-text p {
@@ -446,17 +464,14 @@
 
     .cards-nav-controls {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-shrink: 0;
     }
 
     .cards-nav-btn {
-      width: 44px;
-      height: 44px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
-      border: 1.5px solid #e4e4e7;
-      background: #ffffff;
-      color: #18181b;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -464,16 +479,25 @@
       font-size: 18px;
       font-weight: 800;
       transition: all 0.2s ease;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
       user-select: none;
     }
 
-    .cards-nav-btn:hover {
-      background: #18181b;
+    .cards-nav-btn.btn-prev {
+      background: #111113;
       color: #ffffff;
-      border-color: #18181b;
-      transform: translateY(-2px);
+      border: 1.5px solid #111113;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .cards-nav-btn.btn-next {
+      background: #ffffff;
+      color: #111113;
+      border: 1.5px solid #e4e4e7;
+    }
+
+    .cards-nav-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     }
 
     /* Horizontal Cards Viewport & Strip Track */
@@ -493,19 +517,19 @@
     .cards-strip-track {
       display: flex;
       gap: 24px;
-      padding: 0 40px;
+      padding: 0 60px;
       width: max-content;
       will-change: transform;
-      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: transform 0.1s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .feature-card {
       width: 350px;
-      min-height: 330px;
-      background: var(--card-bg);
-      border: 1.5px solid var(--card-border);
-      border-radius: 18px;
-      padding: 30px 26px;
+      min-height: 360px;
+      background: #0d0d10;
+      border: 1.5px solid #222226;
+      border-radius: 20px;
+      padding: 32px 28px;
       color: #ffffff;
       display: flex;
       flex-direction: column;
@@ -514,13 +538,14 @@
       transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), 
                   box-shadow 0.35s ease, 
                   border-color 0.35s ease;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
     }
 
     .feature-card:hover, .feature-card.is-center {
-      transform: scale(1.05) translateY(-6px);
-      border-color: rgba(225, 29, 72, 0.45);
-      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.3), 0 0 20px rgba(225, 29, 72, 0.15);
+      transform: scale(1.08) translateY(-6px);
+      border-color: rgba(225, 29, 72, 0.6);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.42), 0 0 28px rgba(225, 29, 72, 0.22);
+      z-index: 10;
     }
 
     .card-badge {
@@ -550,6 +575,8 @@
       margin-bottom: 12px;
       color: #ffffff;
       line-height: 1.3;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     }
 
     .feature-card p {
@@ -560,26 +587,25 @@
     }
 
     .card-bottom-icon {
-      width: 44px;
-      height: 44px;
+      width: 48px;
+      height: 48px;
       border-radius: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--primary-red);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-top: 20px;
+      margin-top: 24px;
       align-self: flex-end;
-      color: #a1a1aa;
+      color: #ffffff;
+      box-shadow: 0 6px 18px rgba(225, 29, 72, 0.45);
       transition: all 0.25s ease;
     }
 
     .feature-card:hover .card-bottom-icon,
     .feature-card.is-center .card-bottom-icon {
-      background: rgba(225, 29, 72, 0.2);
-      border-color: rgba(225, 29, 72, 0.5);
-      color: #fb7185;
       transform: scale(1.08);
+      box-shadow: 0 8px 24px rgba(225, 29, 72, 0.65);
     }
 
     /* Bottom Action Banner */
@@ -781,20 +807,33 @@
       nav { padding: 16px 20px; }
       .headline-row { font-size: 18px; letter-spacing: 2px; }
       .hero-mascot-center { margin-top: -30px; }
+      .cards-pin-container {
+        height: auto;
+      }
+      .cards-sticky-wrapper {
+        position: static;
+        height: auto;
+        padding: 40px 0;
+      }
       .cards-header-container {
         flex-direction: column;
         align-items: flex-start;
         padding: 0 20px;
         gap: 16px;
       }
+      .cards-strip-viewport {
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+      }
       .cards-strip-track {
         padding: 0 20px;
         gap: 16px;
       }
       .feature-card {
-        width: 290px;
-        min-height: 310px;
+        width: 300px;
+        min-height: 330px;
         padding: 24px 20px;
+        scroll-snap-align: center;
       }
       footer { flex-direction: column; gap: 10px; text-align: center; }
     }
@@ -877,80 +916,82 @@
       </div>
     </section>
 
-    <!-- Horizontal Cards Strip Section (Matches Wireframe Mockup) -->
-    <section class="cards-section" id="capabilities">
-      <div class="cards-header-container">
-        <div class="cards-header-text">
-          <div class="tag">DUIT AI — CAPABILITIES</div>
-          <h2>Everything You Need, Done from WhatsApp</h2>
-          <p>Simple voice commands. Instant computer actions. Complete privacy.</p>
+    <!-- Pinned Horizontal Cards Scroll Section (Matches Reference Image) -->
+    <div class="cards-pin-container" id="capabilities">
+      <div class="cards-sticky-wrapper">
+        <div class="cards-header-container">
+          <div class="cards-header-text">
+            <div class="tag">DUIT</div>
+            <h2>Everything To Know Before Getting Started.</h2>
+            <p>Simple voice commands. Instant computer actions. Complete privacy.</p>
+          </div>
+          <div class="cards-nav-controls">
+            <button class="cards-nav-btn btn-prev" id="cards-prev-btn" title="Previous card" aria-label="Previous card">←</button>
+            <button class="cards-nav-btn btn-next" id="cards-next-btn" title="Next card" aria-label="Next card">→</button>
+          </div>
         </div>
-        <div class="cards-nav-controls">
-          <button class="cards-nav-btn" id="cards-prev-btn" title="Previous card" aria-label="Previous card">←</button>
-          <button class="cards-nav-btn" id="cards-next-btn" title="Next card" aria-label="Next card">→</button>
+
+        <div class="cards-strip-viewport" id="cards-viewport">
+          <div class="cards-strip-track" id="cards-horizontal-track">
+            
+            <div class="feature-card" data-index="0">
+              <div class="card-badge">VOICE & CHAT</div>
+              <h3>Just Speak Like You Talk to a Friend</h3>
+              <p>Send a quick WhatsApp voice note or message in Hindi, English, or Hinglish. Say "Kal subah ki meeting schedule kar do" or "Rahul ko report bhej do" — DUIT understands your intent without robotic commands.</p>
+              <div class="card-bottom-icon" title="Voice & Speech">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              </div>
+            </div>
+
+            <div class="feature-card" data-index="1">
+              <div class="card-badge green">INSTANT SPEED</div>
+              <h3>Happens in the Blink of an Eye</h3>
+              <p>Common tasks happen in less than a second directly on your machine. You do not have to wait around for slow cloud servers or clunky loading screens.</p>
+              <div class="card-bottom-icon" title="Instant Speed">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+            </div>
+
+            <div class="feature-card is-center" data-index="2">
+              <div class="card-badge">SMART BROWSING</div>
+              <h3>Never Mix Up Your Accounts Again</h3>
+              <p>DUIT knows which Chrome or Edge profile to use. Ask it to open your college portal, office dashboard, or personal tabs, and it opens the right account without messing up your logins.</p>
+              <div class="card-bottom-icon" title="Multi-Profile Browser">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+              </div>
+            </div>
+
+            <div class="feature-card" data-index="3">
+              <div class="card-badge green">100% SAFE</div>
+              <h3>Nothing Happens Without Your Permission</h3>
+              <p>DUIT never deletes a file or sends an important email without asking you first. You get an instant WhatsApp message with simple Approve and Reject buttons, plus a one-key emergency stop switch.</p>
+              <div class="card-bottom-icon" title="100% Safe">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+            </div>
+
+            <div class="feature-card" data-index="4">
+              <div class="card-badge">GOOGLE WORKSPACE</div>
+              <h3>Drive, Docs, Calendar, and Gmail in Your Pocket</h3>
+              <p>Search and share files from Google Drive, draft documents in Docs, review Sheets, check meeting availability on Calendar, and send emails via Gmail with official, secure Google integration.</p>
+              <div class="card-bottom-icon" title="Google Workspace">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+              </div>
+            </div>
+
+            <div class="feature-card" data-index="5">
+              <div class="card-badge green">LOCAL & SECURE</div>
+              <h3>Your Data Stays on Your Computer</h3>
+              <p>Your files, photos, passwords, and private conversations never leave your workstation. Nothing is uploaded to public AI databases or sold to third parties.</p>
+              <div class="card-bottom-icon" title="Local & Secure">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
-
-      <div class="cards-strip-viewport" id="cards-viewport">
-        <div class="cards-strip-track" id="cards-horizontal-track">
-          
-          <div class="feature-card" data-index="0">
-            <div class="card-badge">VOICE & CHAT</div>
-            <h3>Just Speak Like You Talk to a Friend</h3>
-            <p>Send a quick WhatsApp voice note or message in Hindi, English, or Hinglish. Say "Kal subah ki meeting schedule kar do" or "Rahul ko report bhej do" — DUIT understands your intent without robotic commands.</p>
-            <div class="card-bottom-icon" title="Voice & Speech">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-            </div>
-          </div>
-
-          <div class="feature-card" data-index="1">
-            <div class="card-badge green">INSTANT SPEED</div>
-            <h3>Happens in the Blink of an Eye</h3>
-            <p>Common tasks happen in less than a second directly on your machine. You do not have to wait around for slow cloud servers or clunky loading screens.</p>
-            <div class="card-bottom-icon" title="Instant Speed">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            </div>
-          </div>
-
-          <div class="feature-card is-center" data-index="2">
-            <div class="card-badge">SMART BROWSING</div>
-            <h3>Never Mix Up Your Accounts Again</h3>
-            <p>DUIT knows which Chrome or Edge profile to use. Ask it to open your college portal, office dashboard, or personal tabs, and it opens the right account without messing up your logins.</p>
-            <div class="card-bottom-icon" title="Multi-Profile Browser">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-            </div>
-          </div>
-
-          <div class="feature-card" data-index="3">
-            <div class="card-badge green">100% SAFE</div>
-            <h3>Nothing Happens Without Your Permission</h3>
-            <p>DUIT never deletes a file or sends an important email without asking you first. You get an instant WhatsApp message with simple Approve and Reject buttons, plus a one-key emergency stop switch.</p>
-            <div class="card-bottom-icon" title="100% Safe">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-            </div>
-          </div>
-
-          <div class="feature-card" data-index="4">
-            <div class="card-badge">GOOGLE WORKSPACE</div>
-            <h3>Drive, Docs, Calendar, and Gmail in Your Pocket</h3>
-            <p>Search and share files from Google Drive, draft documents in Docs, review Sheets, check meeting availability on Calendar, and send emails via Gmail with official, secure Google integration.</p>
-            <div class="card-bottom-icon" title="Google Workspace">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-            </div>
-          </div>
-
-          <div class="feature-card" data-index="5">
-            <div class="card-badge green">LOCAL & SECURE</div>
-            <h3>Your Data Stays on Your Computer</h3>
-            <p>Your files, photos, passwords, and private conversations never leave your workstation. Nothing is uploaded to public AI databases or sold to third parties.</p>
-            <div class="card-bottom-icon" title="Local & Secure">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </section>
+    </div>
 
     <!-- Bottom Action Banner (from Wireframe 3) -->
     <div class="cta-banner-wrapper" id="connect">
@@ -1030,37 +1071,38 @@
       event.target.classList.add('active');
     }
 
-    // Horizontal Cards Strip (Scroll-Driven & Interactive)
+    // Pinned Horizontal Cards Scroll (Locks in viewport while sliding horizontally)
     (function() {
-      const section = document.querySelector('.cards-section');
+      const pinContainer = document.querySelector('.cards-pin-container');
       const viewport = document.getElementById('cards-viewport');
       const track = document.getElementById('cards-horizontal-track');
       const prevBtn = document.getElementById('cards-prev-btn');
       const nextBtn = document.getElementById('cards-next-btn');
-      if (!section || !viewport || !track) return;
+      if (!pinContainer || !viewport || !track) return;
 
       const cards = Array.from(track.querySelectorAll('.feature-card'));
-      let scrollOffset = 0;
-      let isManualInteracting = false;
-      let manualTimer = null;
+      let currentActiveIndex = 2; // default center card
 
       function updateCenterCard() {
         const viewportRect = viewport.getBoundingClientRect();
         const viewportCenter = viewportRect.left + viewportRect.width / 2;
 
         let closestCard = null;
+        let closestIndex = 0;
         let minDistance = Infinity;
 
-        cards.forEach(card => {
+        cards.forEach((card, idx) => {
           const cardRect = card.getBoundingClientRect();
           const cardCenter = cardRect.left + cardRect.width / 2;
           const dist = Math.abs(viewportCenter - cardCenter);
           if (dist < minDistance) {
             minDistance = dist;
             closestCard = card;
+            closestIndex = idx;
           }
         });
 
+        currentActiveIndex = closestIndex;
         cards.forEach(card => {
           if (card === closestCard) {
             card.classList.add('is-center');
@@ -1068,105 +1110,75 @@
             card.classList.remove('is-center');
           }
         });
+
+        // Update button visual styles
+        if (prevBtn && nextBtn) {
+          if (currentActiveIndex === 0) {
+            prevBtn.classList.remove('btn-prev');
+            prevBtn.classList.add('btn-next');
+          } else {
+            prevBtn.classList.add('btn-prev');
+            prevBtn.classList.remove('btn-next');
+          }
+          if (currentActiveIndex === cards.length - 1) {
+            nextBtn.classList.remove('btn-prev');
+            nextBtn.classList.add('btn-next');
+          } else {
+            nextBtn.classList.add('btn-prev');
+            nextBtn.classList.remove('btn-next');
+          }
+        }
       }
 
-      // Smooth scroll-driven horizontal strip movement
-      window.addEventListener('scroll', () => {
-        if (isManualInteracting) return;
+      function onScroll() {
+        const rect = pinContainer.getBoundingClientRect();
+        const pinTopOffset = 72;
+        const totalPinScroll = pinContainer.offsetHeight - (window.innerHeight - pinTopOffset);
 
-        const sectionRect = section.getBoundingClientRect();
-        const windowHeight = window.innerHeight;
+        if (totalPinScroll <= 0) return;
 
-        // Active while section is visible on screen
-        if (sectionRect.top < windowHeight && sectionRect.bottom > 0) {
-          const scrollDistance = windowHeight + sectionRect.height;
-          const progress = Math.max(0, Math.min(1, (windowHeight - sectionRect.top) / scrollDistance));
+        // Progress from 0 (container hits top sticky offset) to 1 (container finishes scrolling)
+        const scrolled = pinTopOffset - rect.top;
+        const progress = Math.max(0, Math.min(1, scrolled / totalPinScroll));
 
-          const maxScroll = Math.max(0, track.scrollWidth - viewport.clientWidth + 80);
-          scrollOffset = progress * maxScroll;
-          track.style.transform = `translateX(-${scrollOffset}px)`;
-          updateCenterCard();
-        }
-      }, { passive: true });
+        const maxTranslate = Math.max(0, track.scrollWidth - viewport.clientWidth + 120);
+        const currentTranslate = progress * maxTranslate;
 
-      // Arrow Button Stepping
-      const CARD_STEP = 374; // card width (350) + gap (24)
-      function setManualOffset(newOffset) {
-        isManualInteracting = true;
-        clearTimeout(manualTimer);
-        const maxScroll = Math.max(0, track.scrollWidth - viewport.clientWidth + 80);
-        scrollOffset = Math.max(0, Math.min(maxScroll, newOffset));
-        track.style.transform = `translateX(-${scrollOffset}px)`;
+        track.style.transform = `translateX(-${currentTranslate}px)`;
         updateCenterCard();
-        manualTimer = setTimeout(() => { isManualInteracting = false; }, 2200);
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+
+      // Button Stepping: Smoothly scrolls the window to the exact card position
+      function scrollToCard(targetIdx) {
+        targetIdx = Math.max(0, Math.min(cards.length - 1, targetIdx));
+        const rect = pinContainer.getBoundingClientRect();
+        const absoluteContainerTop = window.scrollY + rect.top - 72;
+        const totalPinScroll = pinContainer.offsetHeight - (window.innerHeight - 72);
+        
+        const targetProgress = targetIdx / (cards.length - 1);
+        const targetScrollY = absoluteContainerTop + (targetProgress * totalPinScroll);
+
+        window.scrollTo({
+          top: targetScrollY,
+          behavior: 'smooth'
+        });
       }
 
       if (prevBtn) {
-        prevBtn.addEventListener('click', () => setManualOffset(scrollOffset - CARD_STEP));
+        prevBtn.addEventListener('click', () => scrollToCard(currentActiveIndex - 1));
       }
       if (nextBtn) {
-        nextBtn.addEventListener('click', () => setManualOffset(scrollOffset + CARD_STEP));
+        nextBtn.addEventListener('click', () => scrollToCard(currentActiveIndex + 1));
       }
 
-      // Drag to scroll
-      let isDragging = false;
-      let startX = 0;
-      let dragStartOffset = 0;
-
-      viewport.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        isManualInteracting = true;
-        startX = e.pageX;
-        dragStartOffset = scrollOffset;
-        track.style.transition = 'none';
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        e.preventDefault();
-        const delta = e.pageX - startX;
-        const maxScroll = Math.max(0, track.scrollWidth - viewport.clientWidth + 80);
-        scrollOffset = Math.max(0, Math.min(maxScroll, dragStartOffset - delta));
-        track.style.transform = `translateX(-${scrollOffset}px)`;
-        updateCenterCard();
-      });
-
-      window.addEventListener('mouseup', () => {
-        if (!isDragging) return;
-        isDragging = false;
-        track.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
-        clearTimeout(manualTimer);
-        manualTimer = setTimeout(() => { isManualInteracting = false; }, 2200);
-      });
-
-      // Touch drag for mobile
-      viewport.addEventListener('touchstart', (e) => {
-        isDragging = true;
-        isManualInteracting = true;
-        startX = e.touches[0].pageX;
-        dragStartOffset = scrollOffset;
-        track.style.transition = 'none';
-      }, { passive: true });
-
-      window.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
-        const delta = e.touches[0].pageX - startX;
-        const maxScroll = Math.max(0, track.scrollWidth - viewport.clientWidth + 80);
-        scrollOffset = Math.max(0, Math.min(maxScroll, dragStartOffset - delta));
-        track.style.transform = `translateX(-${scrollOffset}px)`;
-        updateCenterCard();
-      }, { passive: true });
-
-      window.addEventListener('touchend', () => {
-        if (!isDragging) return;
-        isDragging = false;
-        track.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
-        clearTimeout(manualTimer);
-        manualTimer = setTimeout(() => { isManualInteracting = false; }, 2200);
-      });
-
       // Initial alignment
-      setTimeout(updateCenterCard, 350);
+      setTimeout(() => {
+        onScroll();
+        updateCenterCard();
+      }, 250);
     })();
 
     // Corner-Docked Companion Engine (Moves Strictly on Scroll)
