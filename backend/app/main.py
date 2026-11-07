@@ -2,8 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from backend.app.config import settings
 from backend.app.db.database import engine, Base
@@ -29,11 +28,19 @@ async def lifespan(app: FastAPI):
     yield
 
 
+# In production, disable interactive docs and schemas to obscure API from scanners
+docs_url = None if settings.is_production else "/docs"
+redoc_url = None if settings.is_production else "/redoc"
+openapi_url = None if settings.is_production else "/openapi.json"
+
 app = FastAPI(
     title="DUIT API",
     description="Deterministic 4-stage cascade for fast, cheap, safe AI scheduling & email assistance.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url=docs_url,
+    redoc_url=redoc_url,
+    openapi_url=openapi_url
 )
 
 # CORS Middleware
@@ -44,11 +51,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Static files for landing page and branding assets
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # Include API routers
 app.include_router(webhooks_router)
@@ -61,18 +63,21 @@ app.include_router(whatsapp_router)
 app.include_router(skills_router)
 
 
-@app.get("/")
+@app.get("/", status_code=404)
 async def root():
-    """Serves the DUIT landing page for users and beta testers."""
-    landing_path = os.path.join(static_dir, "index.html")
-    if os.path.exists(landing_path):
-        return FileResponse(landing_path, media_type="text/html")
-    return {
-        "app": "DUIT",
-        "status": "online",
-        "version": "1.0.0",
-        "docs_url": "/docs"
-    }
+    """Hides backend root from bots, scanners, and unauthorized visitors with a generic 404 response."""
+    return HTMLResponse(
+        content="""<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>404 Not Found</title>
+</head><body style="background:#ffffff;color:#000000;font-family:sans-serif;padding:30px;">
+<h1>404 Not Found</h1>
+<p>The requested URL was not found on this server.</p>
+<hr>
+<address>Apache/2.4.52 Server</address>
+</body></html>""",
+        status_code=404
+    )
 
 
 @app.get("/download/DUITDesktop.exe")
