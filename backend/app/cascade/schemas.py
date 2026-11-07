@@ -29,6 +29,7 @@ INTENT_TOOL_MAPPING = {
     "shed_status": "ShedStatus",
     "dispatch_coding_task": "DispatchCodingTask",
     "automate_cart": "AutomateCart",
+    "whatsapp_search": "SearchWhatsAppArchive",
     "list_browser_profiles": "ListBrowserProfiles",
 }
 

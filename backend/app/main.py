@@ -16,6 +16,7 @@ from backend.app.api.desktop import router as desktop_router
 from backend.app.api.whatsapp import router as whatsapp_router
 from backend.app.api.skills import router as skills_router
 from backend.app.api.linking import router as linking_router
+from backend.app.api.archive import router as archive_router
 
 
 @asynccontextmanager
@@ -68,6 +69,7 @@ app.include_router(desktop_router)
 app.include_router(whatsapp_router)
 app.include_router(skills_router)
 app.include_router(linking_router)
+app.include_router(archive_router)
 
 
 @app.get("/", status_code=404)

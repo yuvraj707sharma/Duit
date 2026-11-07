@@ -31,6 +31,7 @@ INTENT_RISK_MAP = {
     "shed_status": ("low", False),
     "dispatch_coding_task": ("medium", True),
     "automate_cart": ("medium", True),
+    "whatsapp_search": ("low", False),
     "other": ("low", False)
 }
 

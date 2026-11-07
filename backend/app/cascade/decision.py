@@ -249,6 +249,23 @@ class MockDecisionModel(DecisionModel):
                 reasoning_tag="email_send_keyword"
             )
 
+        # WhatsApp Message Archive Search & Summary Intent
+        if any(w in msg for w in (
+            "read my whatsapp", "summarize my chats", "summarize recent chats",
+            "summarize my recent chats", "summarize chats", "search whatsapp", "chat summary",
+            "what did", "ne kya bola", "ne kya kaha", "recent chats", "recent messages", "whatsapp text", "whatsapp texts"
+        )) and any(w in msg for w in ("chat", "chats", "whatsapp", "message", "messages", "text", "texts", "bola", "kaha", "say")):
+            is_hindi = any(w in msg for w in ("kya", "bola", "kaha", "batao", "ne"))
+            return DecisionOutput(
+                intent="whatsapp_search",
+                risk="low",
+                needs_confirmation=False,
+                confidence=0.96,
+                detected_language="hi-Latn" if is_hindi else "en",
+                model_used="mock-laya-router",
+                reasoning_tag="whatsapp_archive_search"
+            )
+
         is_chat_summary = any(w in msg for w in ("whatsapp", "chat", "chats", "text", "texts", "conversation", "conversations"))
         if not is_chat_summary and ((has_email and any(w in msg for w in (
             "summarize", "summary", "summarise", "unread", "recent", "latest",

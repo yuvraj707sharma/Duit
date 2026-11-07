@@ -283,6 +283,67 @@
         }
       }
     },
+    "/api/archive/search": {
+      "post": {
+        "summary": "Search Archived WhatsApp Messages",
+        "description": "Performs structured, tenant-isolated message search with date ranges, contact matching, and source citations.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tenant_id", "whatsapp_account_id"],
+                "properties": {
+                  "tenant_id": { "type": "string" },
+                  "whatsapp_account_id": { "type": "string" },
+                  "query": { "type": "string" },
+                  "contact": { "type": "string" },
+                  "sender_phone": { "type": "string" },
+                  "direction": { "type": "string", "enum": ["inbound", "outbound"] },
+                  "start_date": { "type": "string", "format": "date-time" },
+                  "end_date": { "type": "string", "format": "date-time" },
+                  "limit": { "type": "integer", "default": 20 },
+                  "offset": { "type": "integer", "default": 0 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Search results with source citations and coverage metadata" },
+          "400": { "description": "Invalid search criteria or tenant boundary violation" }
+        }
+      }
+    },
+    "/api/archive/summary": {
+      "post": {
+        "summary": "Generate Structured Summary with Citations",
+        "description": "Summarizes archived messages for an account with exact timestamp citations and truthful absence reporting.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tenant_id", "whatsapp_account_id"],
+                "properties": {
+                  "tenant_id": { "type": "string" },
+                  "whatsapp_account_id": { "type": "string" },
+                  "query": { "type": "string" },
+                  "contact": { "type": "string" },
+                  "limit": { "type": "integer", "default": 10 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Structured executive summary with citations" },
+          "400": { "description": "Invalid criteria" }
+        }
+      }
+    },
     "/api/users/onboard": {
       "post": {
         "summary": "Register or Onboard User Phone Number",

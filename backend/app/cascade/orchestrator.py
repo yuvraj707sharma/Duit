@@ -532,6 +532,12 @@ class CascadeOrchestrator:
 
         if not tool_res.success:
             reply_msg = f"Failed to execute action: {tool_res.error}"
+        elif decision.intent == "whatsapp_search":
+            summary_data = tool_res.data or {}
+            reply_msg = summary_data.get(
+                "summary_text",
+                "I searched your archived WhatsApp history. No recorded messages were found matching your criteria in this window."
+            )
         elif decision.intent == "summarize_email":
             emails = (tool_res.data or {}).get("emails", [])
             snippets = (tool_res.data or {}).get("snippets", [])
@@ -702,6 +708,39 @@ class CascadeOrchestrator:
         elif intent in ("send_email", "reply_email", "summarize_email"):
             args["action"] = "send" if intent in ("send_email", "reply_email") else "summarize"
             return await self.gmail_tool.execute(user_id, args)
+        elif intent == "whatsapp_search":
+            user = await self.repo.get_user(user_id)
+            tenant_id = user.get("tenant_id", "tenant_default") if user else "tenant_default"
+            account = await self.repo.get_user_whatsapp_account(user_id, tenant_id=tenant_id)
+            if not account and user:
+                account = await self.repo.link_whatsapp_account(
+                    tenant_id=tenant_id,
+                    user_id=user["id"],
+                    phone_number=user.get("phone_number", user_id),
+                    display_name=user.get("display_name", user_id)
+                )
+            if not account:
+                return ToolResult(
+                    success=False,
+                    error="No linked WhatsApp account found for this user."
+                )
+
+            account_id = account["id"]
+            query = args.get("query") or args.get("query_text")
+            contact = args.get("contact") or args.get("sender_phone")
+            limit = int(args.get("limit", 10))
+
+            summary_res = await self.repo.generate_archive_summary(
+                tenant_id=tenant_id,
+                whatsapp_account_id=account_id,
+                query_text=query if query and query.strip().lower() != user_id.lower() else None,
+                contact=contact,
+                limit=limit
+            )
+            return ToolResult(
+                success=True,
+                data=summary_res
+            )
         elif intent == "book_something":
             return ToolResult(
                 success=False,

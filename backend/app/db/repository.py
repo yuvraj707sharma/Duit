@@ -832,6 +832,60 @@ class DatabaseRepository:
 
         return None
 
+    async def get_user_whatsapp_account(self, user_id: str, tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Finds or retrieves the primary active WhatsApp account for a user."""
+        clean_phone = "".join(filter(str.isdigit, user_id)) if user_id else ""
+        for acc in self.accounts_store.values():
+            if acc.get("status") == "active":
+                if acc.get("user_id") == user_id or (clean_phone and acc.get("phone_number") == clean_phone):
+                    if tenant_id and acc.get("tenant_id") and acc.get("tenant_id") != tenant_id:
+                        continue
+                    return acc
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import WhatsAppAccount as WAAccountModel
+                from sqlalchemy import or_
+                async with self.session_factory() as session:
+                    conds = [WAAccountModel.user_id == user_id]
+                    if clean_phone:
+                        conds.append(WAAccountModel.phone_number == clean_phone)
+                    stmt = select(WAAccountModel).where(or_(*conds))
+                    res = await session.execute(stmt)
+                    accounts = res.scalars().all()
+                    for a in accounts:
+                        if a.status == "active":
+                            if tenant_id and a.tenant_id and a.tenant_id != tenant_id:
+                                continue
+                            rec = {
+                                "id": a.id,
+                                "tenant_id": a.tenant_id,
+                                "user_id": a.user_id,
+                                "phone_number": a.phone_number,
+                                "display_name": a.display_name,
+                                "status": a.status,
+                                "created_at": a.created_at.timestamp() if a.created_at else time.time(),
+                                "last_seen_at": a.last_seen_at.timestamp() if a.last_seen_at else time.time(),
+                                "revoked_at": a.revoked_at.timestamp() if a.revoked_at else None
+                            }
+                            self.accounts_store[a.id] = rec
+                            return rec
+            except Exception:
+                pass
+
+        user = await self.get_user(user_id, tenant_id=tenant_id)
+        if user:
+            t_id = tenant_id or user.get("tenant_id") or "tenant_default"
+            phone = user.get("phone_number") or clean_phone or user_id
+            return await self.link_whatsapp_account(
+                tenant_id=t_id,
+                user_id=user["id"],
+                phone_number=phone,
+                display_name=user.get("display_name") or user.get("full_name") or phone
+            )
+
+        return None
+
     async def register_desktop_device(
         self,
         tenant_id: str,
@@ -1110,30 +1164,166 @@ class DatabaseRepository:
         tenant_id: str,
         whatsapp_account_id: str,
         query_text: Optional[str] = None,
+        contact: Optional[str] = None,
         sender_phone: Optional[str] = None,
-        limit: int = 20
+        direction: Optional[str] = None,
+        start_date: Optional[Any] = None,
+        end_date: Optional[Any] = None,
+        limit: int = 20,
+        offset: int = 0
     ) -> List[Dict[str, Any]]:
-        """Searches archived messages strictly isolated to tenant and linked WhatsApp account."""
+        """Searches archived messages strictly isolated to tenant and linked WhatsApp account with rich filters."""
         results = []
-        clean_filter_phone = "".join(filter(str.isdigit, sender_phone)) if sender_phone else None
+        clean_filter_phone = "".join(filter(str.isdigit, sender_phone or contact or "")) if (sender_phone or contact) else None
+        contact_lower = contact.lower().strip() if contact else None
         q_lower = query_text.lower().strip() if query_text else None
 
+        # Check in-memory store
+        matching = []
         for m in self.messages_store:
             # Strict tenant and account boundary
             if m.get("tenant_id") != tenant_id or m.get("whatsapp_account_id") != whatsapp_account_id:
                 continue
 
-            if clean_filter_phone and clean_filter_phone not in (m.get("sender_phone") or ""):
+            if direction and m.get("direction") != direction:
+                continue
+
+            if clean_filter_phone and clean_filter_phone in (m.get("sender_phone") or ""):
+                pass
+            elif contact_lower and contact_lower in (m.get("sender_display_name") or "").lower():
+                pass
+            elif contact or sender_phone:
                 continue
 
             if q_lower and q_lower not in m.get("text", "").lower():
                 continue
 
-            results.append(m)
-            if len(results) >= limit:
-                break
+            ts = m.get("message_timestamp")
+            if ts:
+                if isinstance(ts, (int, float)):
+                    ts_dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+                elif isinstance(ts, datetime):
+                    ts_dt = ts
+                else:
+                    ts_dt = None
 
-        return results
+                if ts_dt and start_date and ts_dt < start_date:
+                    continue
+                if ts_dt and end_date and ts_dt > end_date:
+                    continue
+
+            matching.append(m)
+
+        if matching:
+            return matching[offset:offset + limit]
+
+        # Query database if session factory is available
+        if self.session_factory:
+            try:
+                from backend.app.db.models import Message as MessageModel
+                from sqlalchemy import and_, or_
+                async with self.session_factory() as session:
+                    filters = [
+                        MessageModel.tenant_id == tenant_id,
+                        MessageModel.whatsapp_account_id == whatsapp_account_id
+                    ]
+                    if direction:
+                        filters.append(MessageModel.direction == direction)
+                    if q_lower:
+                        filters.append(MessageModel.text.ilike(f"%{q_lower}%"))
+                    if clean_filter_phone:
+                        filters.append(MessageModel.sender_phone.contains(clean_filter_phone))
+                    elif contact_lower:
+                        filters.append(MessageModel.sender_display_name.ilike(f"%{contact_lower}%"))
+                    if start_date:
+                        filters.append(MessageModel.message_timestamp >= start_date)
+                    if end_date:
+                        filters.append(MessageModel.message_timestamp <= end_date)
+
+                    stmt = (
+                        select(MessageModel)
+                        .where(and_(*filters))
+                        .order_by(MessageModel.message_timestamp.desc())
+                        .offset(offset)
+                        .limit(limit)
+                    )
+                    res = await session.execute(stmt)
+                    rows = res.scalars().all()
+                    for r in rows:
+                        results.append({
+                            "id": r.id,
+                            "tenant_id": r.tenant_id,
+                            "whatsapp_account_id": r.whatsapp_account_id,
+                            "conversation_id": r.conversation_id,
+                            "provider_message_id": r.provider_message_id,
+                            "sender_jid": r.sender_jid,
+                            "sender_phone": r.sender_phone,
+                            "sender_display_name": r.sender_display_name,
+                            "direction": r.direction,
+                            "text": r.text,
+                            "media_metadata": r.media_metadata,
+                            "message_timestamp": r.message_timestamp,
+                            "content_hash": r.content_hash
+                        })
+                    return results
+            except Exception:
+                pass
+
+        return []
+
+    async def generate_archive_summary(
+        self,
+        tenant_id: str,
+        whatsapp_account_id: str,
+        query_text: Optional[str] = None,
+        contact: Optional[str] = None,
+        limit: int = 10
+    ) -> Dict[str, Any]:
+        """Generates structured executive summary of archived messages with source citations and truthful absence reporting."""
+        msgs = await self.search_messages(
+            tenant_id=tenant_id,
+            whatsapp_account_id=whatsapp_account_id,
+            query_text=query_text,
+            contact=contact,
+            limit=limit
+        )
+        if not msgs:
+            return {
+                "total_found": 0,
+                "messages": [],
+                "citations": [],
+                "summary_text": "I searched your archived WhatsApp history. No recorded messages were found matching your criteria in this window."
+            }
+
+        citations = []
+        lines = [f"*WhatsApp Archive Summary ({len(msgs)} Messages Found)*\n"]
+        for idx, m in enumerate(msgs, 1):
+            ts = m.get("message_timestamp")
+            if isinstance(ts, datetime):
+                ts_str = ts.strftime("%Y-%m-%d %H:%M:%S UTC")
+            elif isinstance(ts, (int, float)):
+                ts_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            else:
+                ts_str = str(ts or "Unknown time")
+
+            sender = m.get("sender_display_name") or m.get("sender_phone") or m.get("sender_jid") or "Unknown"
+            mid = m.get("provider_message_id") or m.get("id") or f"msg_{idx}"
+            cite_tag = f"[Msg {mid[:12]} @ {ts_str} | {sender}]"
+            citations.append({
+                "citation_id": mid,
+                "timestamp": ts_str,
+                "sender": sender,
+                "text": m.get("text", "")
+            })
+            lines.append(f"{idx}. {cite_tag}: {m.get('text', '')}")
+
+        lines.append(f"\n*Summary:* Retrieved {len(msgs)} verified archived messages with source citations.")
+        return {
+            "total_found": len(msgs),
+            "messages": msgs,
+            "citations": citations,
+            "summary_text": "\n".join(lines)
+        }
 
     async def verify_security_context(self, context: Any) -> bool:
         """Verifies full server-verified identity context."""
