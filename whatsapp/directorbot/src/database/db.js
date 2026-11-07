@@ -108,6 +108,7 @@ async function createTables() {
     `CREATE TABLE IF NOT EXISTS \`whatsapp_chats\` (
       \`id\` INT AUTO_INCREMENT PRIMARY KEY,
       \`msg_id\` VARCHAR(150) UNIQUE,
+      \`owner_phone\` VARCHAR(50) NOT NULL,
       \`chat_jid\` VARCHAR(100) NOT NULL,
       \`sender_name\` VARCHAR(150),
       \`sender_phone\` VARCHAR(50),
@@ -118,6 +119,7 @@ async function createTables() {
       \`ai_urgency\` VARCHAR(20) DEFAULT 'Normal',
       \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX \`idx_chat_jid\` (\`chat_jid\`),
+      INDEX \`idx_chat_owner_timestamp\` (\`owner_phone\`, \`timestamp\`),
       INDEX \`idx_timestamp\` (\`timestamp\`)
     ) ENGINE=InnoDB;`,
 
@@ -259,6 +261,15 @@ async function createTables() {
       await pool.query(alterSql);
     } catch (err) {
       // Column already exists or table not ready, safely ignore
+    }
+
+    try {
+      await pool.query(`ALTER TABLE whatsapp_chats ADD COLUMN owner_phone VARCHAR(50) NULL`);
+      await pool.query(`UPDATE whatsapp_chats SET owner_phone = sender_phone WHERE owner_phone IS NULL`);
+      await pool.query(`ALTER TABLE whatsapp_chats MODIFY COLUMN owner_phone VARCHAR(50) NOT NULL`);
+      await pool.query(`CREATE INDEX idx_chat_owner_timestamp ON whatsapp_chats (owner_phone, timestamp)`);
+    } catch (err) {
+      if (!String(err.message).includes('Duplicate')) throw err;
     }
   }
 

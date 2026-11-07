@@ -61,7 +61,11 @@ io.use(async (socket, next) => {
   const token = socket.handshake.auth?.token || socket.handshake.headers['x-auth-token'] || parsedCookies['auth_token'];
   const user = token ? await validateSession(token) : null;
   if (user) {
+    if (user.role !== 'admin' && user.role !== 'director') {
+      return next(new Error('Administrator role required'));
+    }
     socket.user = user;
+    socket.join('whatsapp-admin');
     return next();
   }
   if (process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production') {

@@ -173,7 +173,7 @@ async def health_check():
     active_desktops = len(presence_manager._connections)
 
     llm_status = "live" if (settings.meta_api_key or settings.GEMINI_API_KEY) and not settings.USE_MOCK_LLM else "mock"
-    router_status = "live" if not settings.USE_MOCK_LLM else "degraded"
+    router_status = "mock"
 
     return {
         "status": "healthy" if db_status == "ok" else "degraded",

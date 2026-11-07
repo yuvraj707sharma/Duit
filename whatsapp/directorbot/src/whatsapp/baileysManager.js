@@ -49,7 +49,7 @@ function getBotNumber() {
 
 function emitStatus() {
   if (ioInstance) {
-    ioInstance.emit('status_update', {
+    ioInstance.to('whatsapp-admin').emit('status_update', {
       bot: { status: botStatus, qr: botQR, number: getBotNumber() }
     });
   }
@@ -505,17 +505,17 @@ async function handleFastAgentMessage(jid, phone, text, msgId = null) {
           chatRows = await query(
             `SELECT sender_name, sender_phone, message_text, timestamp 
              FROM whatsapp_chats 
-             WHERE (sender_phone = ? OR chat_jid LIKE ?) AND (sender_name LIKE ? OR sender_phone LIKE ?) AND is_from_me = 0
+             WHERE owner_phone = ? AND (sender_name LIKE ? OR sender_phone LIKE ?) AND is_from_me = 0
              ORDER BY timestamp DESC LIMIT ?`,
-            [cleanPhone, `%${cleanPhone}%`, `%${contactFilter}%`, `%${contactFilter}%`, queryLimit]
+            [cleanPhone, `%${contactFilter}%`, `%${contactFilter}%`, queryLimit]
           );
         } else {
           chatRows = await query(
             `SELECT sender_name, sender_phone, message_text, timestamp 
              FROM whatsapp_chats 
-             WHERE (sender_phone = ? OR chat_jid LIKE ?) AND is_from_me = 0
+             WHERE owner_phone = ? AND is_from_me = 0
              ORDER BY timestamp DESC LIMIT ?`,
-            [cleanPhone, `%${cleanPhone}%`, queryLimit]
+            [cleanPhone, queryLimit]
           );
         }
       } catch (dbErr) {
@@ -524,9 +524,9 @@ async function handleFastAgentMessage(jid, phone, text, msgId = null) {
 
       if (!chatRows || chatRows.length === 0) {
         if (contactFilter) {
-          chatRows = inMemoryChats.filter(c => (c.owner_phone === cleanPhone || c.sender_phone === cleanPhone) && !c.is_from_me && ((c.sender_name && c.sender_name.toLowerCase().includes(contactFilter.toLowerCase())) || c.sender_phone.includes(contactFilter))).slice(0, queryLimit);
+          chatRows = inMemoryChats.filter(c => c.owner_phone === cleanPhone && !c.is_from_me && ((c.sender_name && c.sender_name.toLowerCase().includes(contactFilter.toLowerCase())) || c.sender_phone.includes(contactFilter))).slice(0, queryLimit);
         } else {
-          chatRows = inMemoryChats.filter(c => (c.owner_phone === cleanPhone || c.sender_phone === cleanPhone) && !c.is_from_me).slice(0, queryLimit);
+          chatRows = inMemoryChats.filter(c => c.owner_phone === cleanPhone && !c.is_from_me).slice(0, queryLimit);
         }
       }
 
@@ -556,7 +556,7 @@ Here are the actual archived WhatsApp messages found${contactFilter ? ` for cont
 ${transcriptText}
 
 Please summarize these messages clearly and concisely for an executive. Highlight key action items, urgent inquiries, and quotes requested. Strictly zero emojis.`;
-        summaryReply = await callFastAgentBackend(cleanPhone, sumPrompt);
+        summaryReply = await callFastAgentBackend(cleanPhone, sumPrompt, msgId);
       } catch (sumErr) {
         console.error('[Summary AI Error]:', sumErr.message);
       }
@@ -577,8 +577,6 @@ Please summarize these messages clearly and concisely for an executive. Highligh
         await sendMessage(jid, replyMsg.trim());
       }
       return;
-    }
-
     }
 
     // Route directly to FastAgent backend with durable message ID for end-to-end idempotency
@@ -778,8 +776,14 @@ export async function startBotSession() {
       const ts = msg.messageTimestamp ? Number(msg.messageTimestamp) * 1000 : Date.now();
       const uniqueMsgId = msgId || `msg_${Date.now()}_${Math.random()}`;
 
+      const ownerPhone = getBotNumber();
+      if (!ownerPhone) {
+        console.error('[Archive] Cannot archive message before linked WhatsApp account is identified');
+        continue;
+      }
+
       inMemoryChats.unshift({
-        owner_phone: phone,
+        owner_phone: ownerPhone,
         msg_id: uniqueMsgId,
         sender_name: senderName,
         sender_phone: phone,
@@ -790,10 +794,10 @@ export async function startBotSession() {
       if (inMemoryChats.length > 200) inMemoryChats.pop();
 
       query(
-        `INSERT INTO whatsapp_chats (msg_id, chat_jid, sender_name, sender_phone, message_text, timestamp, is_from_me)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO whatsapp_chats (msg_id, owner_phone, chat_jid, sender_name, sender_phone, message_text, timestamp, is_from_me)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE message_text = VALUES(message_text), timestamp = VALUES(timestamp)`,
-        [uniqueMsgId, rawJid, senderName, phone, text.trim(), ts, isFromMe]
+        [uniqueMsgId, ownerPhone, rawJid, senderName, phone, text.trim(), ts, isFromMe]
       ).catch(err => console.error('[DB] Archive chat error:', err.message));
 
       query(

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PendingApproval, resolveApproval } from '../services/api';
-import { AlertTriangle, CheckCircle2, XCircle, Edit3, ShieldAlert, Clock } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, ShieldAlert, Clock } from 'lucide-react';
 
 interface Props {
   approvals: PendingApproval[];

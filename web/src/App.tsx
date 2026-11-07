@@ -19,8 +19,7 @@ import {
   TrendingUp,
   Smartphone,
   Zap,
-  RefreshCw,
-  Sparkles
+  RefreshCw
 } from 'lucide-react';
 
 export const App: React.FC = () => {

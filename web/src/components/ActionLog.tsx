@@ -1,6 +1,6 @@
 import React from 'react';
 import { AuditLog } from '../services/api';
-import { History, ShieldCheck, CheckCircle, Clock } from 'lucide-react';
+import { History } from 'lucide-react';
 
 interface Props {
   logs: AuditLog[];

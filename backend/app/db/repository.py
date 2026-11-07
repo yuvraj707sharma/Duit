@@ -557,5 +557,6 @@ class DatabaseRepository:
         return None
 
 
-repository = DatabaseRepository()
+from backend.app.db.database import AsyncSessionLocal
 
+repository = DatabaseRepository(session_factory=AsyncSessionLocal)

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, Award, Zap } from 'lucide-react';
+import { TrendingUp, Award } from 'lucide-react';
 
 export const LearningCurveChart: React.FC = () => {
   // Active learning calibration progression
