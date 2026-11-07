@@ -116,12 +116,20 @@ def get_oauth_flow(state: Optional[str] = None):
     return flow
 
 
-def generate_auth_url(user_id: str) -> Tuple[str, str]:
+def generate_auth_url(
+    user_id: str,
+    tenant_id: Optional[str] = None,
+    scopes: Optional[List[str]] = None
+) -> Tuple[str, str]:
     """
     Generates the authorization URL with a cryptographically random CSRF state token.
     Returns (auth_url, state).
     """
-    state_token = oauth_state_store.create_state(user_id=user_id)
+    state_token = oauth_state_store.create_state(
+        user_id=user_id,
+        tenant_id=tenant_id,
+        scopes=scopes
+    )
     flow = get_oauth_flow(state=state_token)
     auth_url, _ = flow.authorization_url(
         access_type="offline",

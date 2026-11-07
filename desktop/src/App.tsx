@@ -41,14 +41,9 @@ export const App: React.FC = () => {
 
   const triggerBackendKillSwitch = async () => {
     try {
-      await fetch('http://127.0.0.1:8000/api/desktop/kill-switch', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-desktop-secret': 'fastagent_desktop_secret_2026_dev'
-        },
-        body: JSON.stringify({ user_id: 'default_user' })
-      });
+      if (window.electronAPI?.triggerKillSwitch) {
+        await window.electronAPI.triggerKillSwitch();
+      }
     } catch (err) {
       console.error('Failed to notify backend kill switch:', err);
     }
@@ -88,7 +83,6 @@ export const App: React.FC = () => {
   const handlePushToTalkEnd = () => {
     if (!isPushToTalkHeld) return;
     setIsPushToTalkHeld(false);
-    // Explicitly labeled simulation demo command (real audio requires microphone device input)
     triggerSimulatedVoiceCommand("[Demo] open notepad on my laptop", "open_app (notepad)");
   };
 

@@ -3,11 +3,12 @@ import hmac
 import json
 import logging
 from typing import Dict, Any, Optional
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Header, HTTPException, status, Request
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Header, HTTPException, status, Request, Depends
 from pydantic import BaseModel
 
 from backend.app.config import settings
 from backend.app.desktop.presence import presence_manager
+from backend.app.security.auth_deps import get_current_user, AuthenticatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -230,10 +231,15 @@ class JournalEntryRequest(BaseModel):
 
 
 @router.post("/pair/initiate", status_code=201)
-async def initiate_desktop_pairing(req: InitiatePairingRequest):
+async def initiate_desktop_pairing(
+    req: InitiatePairingRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+):
     """Initiates a short-lived desktop device pairing transaction."""
     from backend.app.db.repository import repository
     from backend.app.security.context import SecurityContextError
+    if not current_user.is_admin and current_user.user_id != req.user_id:
+        raise HTTPException(status_code=403, detail="Cannot pair a device for another user")
     try:
         session = await repository.create_desktop_pairing_session(
             tenant_id=req.tenant_id,
@@ -252,10 +258,14 @@ async def initiate_desktop_pairing(req: InitiatePairingRequest):
 
 
 @router.post("/pair/claim")
-async def claim_desktop_pairing(req: ClaimPairingRequest):
+async def claim_desktop_pairing(
+    req: ClaimPairingRequest,
+    x_desktop_secret: Optional[str] = Header(None, alias="x-desktop-secret")
+):
     """Workstation claims pairing code, sends fingerprint, and receives device enrollment token."""
     from backend.app.db.repository import repository
     from backend.app.security.context import SecurityContextError
+    _require_desktop_auth(x_desktop_secret)
     try:
         res = await repository.claim_desktop_pairing(
             pairing_code=req.pairing_code,
@@ -270,10 +280,18 @@ async def claim_desktop_pairing(req: ClaimPairingRequest):
 
 
 @router.post("/kill")
-async def emergency_kill_desktop(req: KillDeviceRequest):
+async def emergency_kill_desktop(
+    req: KillDeviceRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+):
     """Emergency kill switch: terminates workstation agent connection and revokes credentials."""
     from backend.app.db.repository import repository
     from backend.app.security.context import SecurityContextError
+    device = await repository.get_desktop_device(req.device_id, tenant_id=req.tenant_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Desktop device not found")
+    if not current_user.is_admin and device.get("user_id") != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Cannot control another user's desktop")
     try:
         res = await repository.kill_desktop_device(
             device_id=req.device_id,
@@ -286,11 +304,19 @@ async def emergency_kill_desktop(req: KillDeviceRequest):
 
 
 @router.post("/journal")
-async def append_desktop_journal(req: JournalEntryRequest):
+async def append_desktop_journal(
+    req: JournalEntryRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+):
     """Appends an HMAC-signed audit entry to the desktop agent journal."""
     from backend.app.db.repository import repository
     from backend.app.desktop.policy import desktop_policy
-    t_id = req.tenant_id or "tenant_default_duit"
+    device = await repository.get_desktop_device(req.device_id, tenant_id=req.tenant_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Desktop device not found")
+    if not current_user.is_admin and device.get("user_id") != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Cannot write another user's desktop journal")
+    t_id = req.tenant_id or device.get("tenant_id") or "tenant_default_duit"
     args_hash = desktop_policy.hash_arguments(req.arguments or {})
     entry = await repository.append_journal_entry(
         tenant_id=t_id,
@@ -310,9 +336,18 @@ async def append_desktop_journal(req: JournalEntryRequest):
 
 
 @router.get("/journal/{device_id}")
-async def get_desktop_journal(device_id: str, limit: int = 50):
+async def get_desktop_journal(
+    device_id: str,
+    limit: int = 50,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+):
     """Retrieves tamper-evident journal entries for a workstation."""
     from backend.app.db.repository import repository
+    device = await repository.get_desktop_device(device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Desktop device not found")
+    if not current_user.is_admin and device.get("user_id") != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Cannot read another user's desktop journal")
     entries = await repository.get_journal_entries(device_id=device_id, limit=limit)
     return {
         "status": "success",

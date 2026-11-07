@@ -143,7 +143,10 @@ class RevokeOAuthRequest(BaseModel):
 
 
 @router.post("/google/initiate")
-async def initiate_google_oauth(req: InitiateOAuthRequest):
+async def initiate_google_oauth(
+    req: InitiateOAuthRequest,
+    current_user: AuthenticatedUser = Depends(get_optional_current_user)
+):
     """Generates signed state token and Google OAuth authorization URL bound to tenant and user identity."""
     user = await repository.get_user(req.user_id, tenant_id=req.tenant_id)
     if not user:
@@ -151,9 +154,17 @@ async def initiate_google_oauth(req: InitiateOAuthRequest):
             status_code=400,
             detail=f"User {req.user_id} not found in tenant {req.tenant_id}"
         )
+    if settings.is_production and not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user and not current_user.is_admin and current_user.user_id != req.user_id:
+        raise HTTPException(status_code=403, detail="Cannot initiate OAuth for another user")
 
     try:
-        url, state = generate_auth_url(user_id=req.user_id)
+        url, state = generate_auth_url(
+            user_id=req.user_id,
+            tenant_id=req.tenant_id,
+            scopes=req.scopes
+        )
     except Exception:
         state = oauth_state_store.create_state(
             user_id=req.user_id,
@@ -172,7 +183,10 @@ async def initiate_google_oauth(req: InitiateOAuthRequest):
 
 
 @router.post("/google/revoke")
-async def revoke_google_oauth(req: RevokeOAuthRequest):
+async def revoke_google_oauth(
+    req: RevokeOAuthRequest,
+    current_user: AuthenticatedUser = Depends(get_optional_current_user)
+):
     """Cryptographically revokes Google access and refresh tokens for user in tenant."""
     user = await repository.get_user(req.user_id, tenant_id=req.tenant_id)
     if not user:
@@ -180,6 +194,10 @@ async def revoke_google_oauth(req: RevokeOAuthRequest):
             status_code=400,
             detail=f"User {req.user_id} not found in tenant {req.tenant_id}"
         )
+    if settings.is_production and not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user and not current_user.is_admin and current_user.user_id != req.user_id:
+        raise HTTPException(status_code=403, detail="Cannot revoke another user's OAuth connection")
 
     await repository.revoke_user_oauth_tokens(
         user_id=req.user_id,
@@ -198,9 +216,14 @@ async def revoke_google_oauth(req: RevokeOAuthRequest):
 @router.get("/tokens/status")
 async def get_oauth_tokens_status(
     user_id: str = Query(...),
-    tenant_id: Optional[str] = Query(None)
+    tenant_id: Optional[str] = Query(None),
+    current_user: AuthenticatedUser = Depends(get_optional_current_user)
 ):
     """Returns active OAuth connection status and capability scopes for user."""
+    if settings.is_production and not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user and not current_user.is_admin and current_user.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Cannot inspect another user's OAuth connection")
     conn = await repository.get_user_oauth_connection(
         user_id=user_id,
         provider="google",

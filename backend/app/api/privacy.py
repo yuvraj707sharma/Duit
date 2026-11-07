@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from backend.app.config import settings
 from backend.app.db.repository import repository
-from backend.app.security.auth_deps import get_optional_current_user, AuthenticatedUser
+from backend.app.security.auth_deps import get_current_user, AuthenticatedUser
 from backend.app.security.ssrf import validate_safe_url
 
 
@@ -53,12 +53,12 @@ def _verify_admin_or_gateway(secret: Optional[str]) -> None:
 async def export_user_data(
     user_id: Optional[str] = Query(None),
     tenant_id: Optional[str] = Query("tenant_default_duit"),
-    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user)
+    current_user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Exports all personal data belonging to the user across accounts, messages, devices, and executions."""
-    resolved_user = current_user.user_id if current_user else user_id
-    if not resolved_user:
-        raise HTTPException(status_code=401, detail="Authentication required to export personal data")
+    if user_id and not current_user.is_admin and user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Cannot export another user's data")
+    resolved_user = current_user.user_id
     resolved_tenant = tenant_id or "tenant_default_duit"
 
     export_payload = await repository.export_user_data(
@@ -73,7 +73,7 @@ async def purge_user_data(
     payload: DataPurgePayload,
     user_id: Optional[str] = Query(None),
     tenant_id: Optional[str] = Query("tenant_default_duit"),
-    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user)
+    current_user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Permanently purges or redacts data belonging to the user with mandatory explicit confirmation."""
     if not payload.confirm:
@@ -82,9 +82,9 @@ async def purge_user_data(
             detail="Data purge request rejected: 'confirm' must be explicitly set to True."
         )
 
-    resolved_user = current_user.user_id if current_user else user_id
-    if not resolved_user:
-        raise HTTPException(status_code=401, detail="Authentication required to purge personal data")
+    if user_id and not current_user.is_admin and user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Cannot purge another user's data")
+    resolved_user = current_user.user_id
     resolved_tenant = tenant_id or "tenant_default_duit"
 
     result = await repository.purge_user_data(

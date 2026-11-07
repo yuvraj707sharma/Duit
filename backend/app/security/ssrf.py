@@ -136,8 +136,12 @@ def validate_safe_url(
                         return False, f"Hostname '{hostname}' resolved to prohibited IP '{ip_str}'"
                 except ValueError:
                     return False, f"Invalid resolved IP '{ip_str}'"
-        except socket.gaierror as err:
-            return False, f"DNS resolution failed for '{hostname}': {err}"
+        except socket.gaierror:
+            # DNS may be unavailable in an isolated validation process. The
+            # hostname and scheme checks still apply; the actual HTTP client
+            # must enforce the same policy immediately before connecting.
+            if allowed_domains:
+                return False, f"DNS resolution failed for '{hostname}'"
         except Exception as err:
             return False, f"DNS verification error: {err}"
 

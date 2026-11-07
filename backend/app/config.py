@@ -106,7 +106,7 @@ class Settings(BaseSettings):
     USE_MOCK_TOOLS: bool = False
 
     # Desktop Executor
-    DESKTOP_SHARED_SECRET: str = "fastagent_desktop_secret_2026_dev"
+    DESKTOP_SHARED_SECRET: str = ""
     DESKTOP_HEARTBEAT_TIMEOUT_SECONDS: float = 30.0
 
     # Internal gateway shared secret (server-to-server auth for /save-token, /whatsapp webhook, etc.)
