@@ -219,6 +219,25 @@
         "request_id": { "type": "string" }
       }
     },
+    "Approval": {
+      "type": "object",
+      "required": ["id", "tenant_id", "user_id", "action_type", "action_payload", "risk_level", "status", "expires_at", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "action_type": { "type": "string" },
+        "action_payload": { "type": "object" },
+        "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "confidence": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "edited", "superseded", "expired"] },
+        "reasoning_tag": { "type": "string" },
+        "idempotency_key": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "resolved_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
     "OutboxEvent": {
       "type": "object",
       "required": ["id", "tenant_id", "aggregate_type", "aggregate_id", "event_type", "status", "idempotency_key", "created_at"],

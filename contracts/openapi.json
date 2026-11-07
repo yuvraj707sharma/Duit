@@ -93,6 +93,44 @@
         "security": [{ "userAuth": [] }]
       }
     },
+    "/api/approvals/{approval_id}/amend": {
+      "post": {
+        "summary": "Amend Pending Approval Parameters",
+        "description": "Updates pending action arguments in place without creating dangling or duplicate approval requests.",
+        "parameters": [
+          { "name": "approval_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["amendments"],
+                "properties": {
+                  "amendments": { "type": "object" },
+                  "caller_user_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Pending approval parameters amended successfully" },
+          "400": { "description": "Cannot amend expired or already resolved approval" },
+          "404": { "description": "Approval not found" }
+        }
+      }
+    },
+    "/api/approvals/cleanup": {
+      "post": {
+        "summary": "Cleanup Expired Approvals",
+        "description": "Transitions expired pending approvals to expired state and writes audit logs.",
+        "responses": {
+          "200": { "description": "Count of expired approvals cleaned up" }
+        }
+      }
+    },
     "/api/audit-logs": {
       "get": {
         "summary": "Retrieve Audit and Action Logs",

@@ -3,7 +3,8 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from backend.app.cascade.orchestrator import cascade_orchestrator
-from backend.app.security.auth_deps import get_current_user, AuthenticatedUser, require_user_access
+from backend.app.security.auth_deps import get_current_user, get_optional_current_user, AuthenticatedUser, require_user_access
+from backend.app.config import settings
 
 router = APIRouter(prefix="/api/approvals", tags=["Approvals"])
 
@@ -76,3 +77,40 @@ async def resolve_approval(
             raise HTTPException(status_code=410, detail=err_msg)
         raise HTTPException(status_code=404, detail=err_msg)
     return res
+
+
+class AmendApprovalRequest(BaseModel):
+    amendments: Dict[str, Any]
+    caller_user_id: Optional[str] = None
+
+
+@router.post("/{approval_id}/amend")
+async def amend_approval(
+    approval_id: str,
+    req: AmendApprovalRequest,
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user)
+):
+    """Amends a pending approval's arguments in place."""
+    if settings.is_production and not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    caller_id = current_user.user_id if current_user else (req.caller_user_id or "default_user")
+    res = await cascade_orchestrator.repo.amend_approval(
+        approval_id=approval_id,
+        caller_user_id=caller_id,
+        amendments=req.amendments
+    )
+    if "error" in res:
+        err = res["error"]
+        if "Unauthorized" in err:
+            raise HTTPException(status_code=403, detail=err)
+        elif "expired" in err.lower():
+            raise HTTPException(status_code=410, detail=err)
+        raise HTTPException(status_code=400, detail=err)
+    return res
+
+
+@router.post("/cleanup")
+async def cleanup_expired_approvals():
+    """Transitions expired approvals to expired state."""
+    count = await cascade_orchestrator.repo.cleanup_expired_approvals()
+    return {"status": "success", "expired_cleaned": count}

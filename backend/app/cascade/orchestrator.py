@@ -124,18 +124,37 @@ class CascadeOrchestrator:
         if user_pending:
             latest_approval = user_pending[-1]
             aid = latest_approval["id"]
+            risk_tier = latest_approval.get("risk", "medium")
 
-            if clean_msg in ("yes", "y", "confirm", "haan", "sahi hai"):
+            from backend.app.policy.confirmations import is_step_up_confirmed
+            if is_step_up_confirmed(clean_msg, risk_tier):
                 res = await self.resolve_approval(aid, decision="approve", caller_user_id=user_id)
                 resp_obj = OrchestratorResponse(
                     request_id=request_id,
                     user_id=user_id,
                     intent=latest_approval["intent"],
-                    risk=latest_approval["risk"],
+                    risk=risk_tier,
                     confidence=latest_approval["confidence"],
                     status="executed",
                     response_text=res.get("message", res.get("error", "")),
                     tool_result=res.get("tool_result")
+                )
+                if inbound_message_id:
+                    await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())
+                return resp_obj
+            elif risk_tier in ("high", "critical") and clean_msg in ("y", "ok", "sure", "ha"):
+                # Step-up confirmation enforcement: weak affirmative rejected for high risk
+                step_up_reply = f"This action has {risk_tier.upper()} risk level. Please reply explicitly with *'confirm'* or *'proceed'* to execute, or *'cancel'* to discard."
+                await self.messaging_channel.send_text(user_id, step_up_reply)
+                resp_obj = OrchestratorResponse(
+                    request_id=request_id,
+                    user_id=user_id,
+                    intent=latest_approval["intent"],
+                    risk=risk_tier,
+                    confidence=latest_approval["confidence"],
+                    status="pending_confirmation",
+                    response_text=step_up_reply,
+                    pending_approval_id=aid
                 )
                 if inbound_message_id:
                     await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())

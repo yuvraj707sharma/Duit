@@ -35,6 +35,26 @@ INTENT_RISK_MAP = {
     "other": ("low", False)
 }
 
+# Risk-tiered expiration TTLs in seconds
+RISK_TTL_MAP = {
+    "low": 600,       # 10 minutes
+    "medium": 300,    # 5 minutes
+    "high": 120,      # 2 minutes
+    "critical": 60    # 1 minute
+}
+
+
+def is_step_up_confirmed(user_message: str, risk_level: str) -> bool:
+    """Evaluates whether user response satisfies the confirmation threshold for the given risk level."""
+    clean = user_message.strip().lower()
+    if risk_level in ("high", "critical"):
+        # Explicit confirmation required for high/critical actions
+        return clean in (
+            "yes", "confirm", "proceed", "approve", "haan bhejo", "haan cancel karo",
+            "yes proceed", "confirm send", "yes do it", "sahi hai karo"
+        )
+    return clean in ("yes", "y", "confirm", "haan", "sahi hai", "ok", "sure", "proceed")
+
 
 def build_confirmation_prompt(intent: str, args: Dict[str, Any]) -> str:
     """Formats human-readable confirmation prompt with full draft body and parameters."""

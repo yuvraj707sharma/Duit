@@ -113,11 +113,14 @@ class DatabaseRepository:
         risk: str,
         confidence: float,
         arguments: Dict[str, Any],
-        expires_in_seconds: int = 300
+        expires_in_seconds: Optional[int] = None,
+        tenant_id: Optional[str] = None
     ) -> Dict[str, Any]:
+        from backend.app.policy.confirmations import RISK_TTL_MAP
+        ttl = expires_in_seconds if expires_in_seconds is not None else RISK_TTL_MAP.get(risk.lower(), 300)
         now = time.time()
-        expires_at = now + expires_in_seconds
-        
+        expires_at = now + ttl
+
         # Enforce Fix 2: Single pending approval per user (supersede prior pending)
         for aid, rec in self.approvals_store.items():
             if rec["user_id"] == user_id and rec["status"] == "pending":
@@ -127,6 +130,7 @@ class DatabaseRepository:
         approval_id = str(uuid.uuid4())
         record = {
             "id": approval_id,
+            "tenant_id": tenant_id or "tenant_default_duit",
             "user_id": user_id,
             "request_id": request_id,
             "query_text": query_text,
@@ -147,7 +151,7 @@ class DatabaseRepository:
         results = []
         for rec in self.approvals_store.values():
             if rec["user_id"] == user_id:
-                # Check 5-minute expiry
+                # Check expiry
                 if rec["status"] == "pending" and now > rec["expires_at"]:
                     rec["status"] = "expired"
                 results.append(rec)
@@ -188,6 +192,46 @@ class DatabaseRepository:
             rec["arguments"].update(edited_payload)
 
         return {"status": decision, "record": rec}
+
+    async def amend_approval(
+        self,
+        approval_id: str,
+        caller_user_id: str,
+        amendments: Dict[str, Any],
+        tenant_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Amends a pending approval's arguments in place without creating a duplicate request."""
+        rec = await self.get_approval_by_id(approval_id)
+        if not rec:
+            return {"error": "Approval request not found"}
+
+        if rec["user_id"] != caller_user_id:
+            return {"error": "Unauthorized: caller does not own this approval"}
+
+        if tenant_id and rec.get("tenant_id") and rec.get("tenant_id") != tenant_id:
+            return {"error": f"Approval {approval_id} does not belong to tenant {tenant_id}"}
+
+        if rec["status"] == "expired":
+            return {"error": "Approval request has expired"}
+
+        if rec["status"] != "pending":
+            return {"error": f"Cannot amend approval in '{rec['status']}' state"}
+
+        now = time.time()
+        rec["arguments"].update(amendments)
+        rec["updated_at"] = now
+        return {"status": "amended", "record": rec}
+
+    async def cleanup_expired_approvals(self) -> int:
+        """Transitions expired pending approvals to 'expired' status and returns count."""
+        now = time.time()
+        count = 0
+        for rec in self.approvals_store.values():
+            if rec.get("status") == "pending" and now > rec.get("expires_at", 0):
+                rec["status"] = "expired"
+                rec["resolved_at"] = now
+                count += 1
+        return count
 
     async def cancel_user_pending_approvals(self, user_id: str) -> int:
         """Emergency halt: cancels all pending approvals for a user and returns count."""
