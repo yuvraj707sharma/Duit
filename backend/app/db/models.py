@@ -366,3 +366,31 @@ class OutboxEvent(Base):
         UniqueConstraint("tenant_id", "idempotency_key", name="uq_outbox_tenant_idempotency"),
         Index("ix_outbox_status_scheduled", "status", "scheduled_at"),
     )
+
+
+class DesktopPairingSession(Base):
+    __tablename__ = "desktop_pairing_sessions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(36), ForeignKey("tenants.id", ondelete="CASCADE"), index=True, nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    pairing_code = Column(String(32), index=True, nullable=False)
+    nonce = Column(String(64), unique=True, index=True, nullable=False)
+    device_id = Column(String(36), ForeignKey("desktop_devices.id", ondelete="SET NULL"), nullable=True)
+    status = Column(String(24), index=True, nullable=False, default="pending")  # pending, claimed, expired, revoked
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class LocalJournalEntry(Base):
+    __tablename__ = "local_journal_entries"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(36), ForeignKey("tenants.id", ondelete="CASCADE"), index=True, nullable=False)
+    device_id = Column(String(36), ForeignKey("desktop_devices.id", ondelete="CASCADE"), index=True, nullable=False)
+    action = Column(String(64), nullable=False)
+    arguments_hash = Column(String(64), nullable=True)
+    status = Column(String(24), nullable=False, default="executed")  # executed, blocked, failed
+    signature = Column(String(128), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now)

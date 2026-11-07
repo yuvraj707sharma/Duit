@@ -196,3 +196,127 @@ async def dispatch_shed_task(
         harness=payload.harness or "auto",
         session_id=payload.session_id
     )
+
+
+# ── Desktop Agent Pairing, Policy, Journal & Kill Switch ─────────────────────
+
+class InitiatePairingRequest(BaseModel):
+    tenant_id: str
+    user_id: str
+    ttl_seconds: int = 600
+
+
+class ClaimPairingRequest(BaseModel):
+    pairing_code: str
+    nonce: str
+    device_name: str
+    platform: str = "windows"
+    public_key: Optional[str] = None
+
+
+class KillDeviceRequest(BaseModel):
+    device_id: str
+    reason: Optional[str] = None
+    tenant_id: Optional[str] = None
+
+
+class JournalEntryRequest(BaseModel):
+    device_id: str
+    tenant_id: Optional[str] = None
+    action: str
+    arguments: Optional[Dict[str, Any]] = None
+    status: str = "executed"
+    signature: str
+
+
+@router.post("/pair/initiate", status_code=201)
+async def initiate_desktop_pairing(req: InitiatePairingRequest):
+    """Initiates a short-lived desktop device pairing transaction."""
+    from backend.app.db.repository import repository
+    from backend.app.security.context import SecurityContextError
+    try:
+        session = await repository.create_desktop_pairing_session(
+            tenant_id=req.tenant_id,
+            user_id=req.user_id,
+            ttl_seconds=req.ttl_seconds
+        )
+        return {
+            "status": "pending",
+            "session_id": session["id"],
+            "pairing_code": session["pairing_code"],
+            "nonce": session["nonce"],
+            "expires_at": session["expires_at"]
+        }
+    except SecurityContextError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/pair/claim")
+async def claim_desktop_pairing(req: ClaimPairingRequest):
+    """Workstation claims pairing code, sends fingerprint, and receives device enrollment token."""
+    from backend.app.db.repository import repository
+    from backend.app.security.context import SecurityContextError
+    try:
+        res = await repository.claim_desktop_pairing(
+            pairing_code=req.pairing_code,
+            nonce=req.nonce,
+            device_name=req.device_name,
+            platform=req.platform,
+            public_key=req.public_key
+        )
+        return res
+    except SecurityContextError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/kill")
+async def emergency_kill_desktop(req: KillDeviceRequest):
+    """Emergency kill switch: terminates workstation agent connection and revokes credentials."""
+    from backend.app.db.repository import repository
+    from backend.app.security.context import SecurityContextError
+    try:
+        res = await repository.kill_desktop_device(
+            device_id=req.device_id,
+            reason=req.reason,
+            tenant_id=req.tenant_id
+        )
+        return res
+    except SecurityContextError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/journal")
+async def append_desktop_journal(req: JournalEntryRequest):
+    """Appends an HMAC-signed audit entry to the desktop agent journal."""
+    from backend.app.db.repository import repository
+    from backend.app.desktop.policy import desktop_policy
+    t_id = req.tenant_id or "tenant_default_duit"
+    args_hash = desktop_policy.hash_arguments(req.arguments or {})
+    entry = await repository.append_journal_entry(
+        tenant_id=t_id,
+        device_id=req.device_id,
+        action=req.action,
+        arguments_hash=args_hash,
+        status=req.status,
+        signature=req.signature
+    )
+    return {
+        "status": "success",
+        "entry_id": entry["id"],
+        "device_id": entry["device_id"],
+        "action": entry["action"],
+        "recorded_at": entry["created_at"]
+    }
+
+
+@router.get("/journal/{device_id}")
+async def get_desktop_journal(device_id: str, limit: int = 50):
+    """Retrieves tamper-evident journal entries for a workstation."""
+    from backend.app.db.repository import repository
+    entries = await repository.get_journal_entries(device_id=device_id, limit=limit)
+    return {
+        "status": "success",
+        "device_id": device_id,
+        "count": len(entries),
+        "entries": entries
+    }

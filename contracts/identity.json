@@ -94,6 +94,36 @@
         "revoked_at": { "type": ["string", "null"], "format": "date-time" }
       }
     },
+    "DesktopPairingSession": {
+      "type": "object",
+      "required": ["id", "tenant_id", "user_id", "pairing_code", "nonce", "status", "expires_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "pairing_code": { "type": "string" },
+        "nonce": { "type": "string" },
+        "device_id": { "type": ["string", "null"], "format": "uuid" },
+        "status": { "type": "string", "enum": ["pending", "claimed", "expired", "revoked"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "claimed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "LocalJournalEntry": {
+      "type": "object",
+      "required": ["entry_id", "tenant_id", "device_id", "action", "timestamp", "signature"],
+      "properties": {
+        "entry_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "device_id": { "type": "string", "format": "uuid" },
+        "action": { "type": "string" },
+        "arguments_hash": { "type": "string" },
+        "status": { "type": "string", "enum": ["executed", "blocked", "failed"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "signature": { "type": "string" }
+      }
+    },
     "OAuthConnection": {
       "type": "object",
       "required": ["id", "tenant_id", "user_id", "provider"],

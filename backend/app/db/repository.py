@@ -1,6 +1,8 @@
 """Repository layer managing database persistence for FastAgent."""
 import time
 import uuid
+import secrets
+import hmac
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy import select, update, and_
@@ -23,6 +25,8 @@ class DatabaseRepository:
         }
         self.accounts_store: Dict[str, Dict[str, Any]] = {}
         self.devices_store: Dict[str, Dict[str, Any]] = {}
+        self.desktop_pairing_sessions_store: Dict[str, Dict[str, Any]] = {}
+        self.journal_entries_store: List[Dict[str, Any]] = []
         self.executions_store: Dict[str, Dict[str, Any]] = {}
         self.messages_store: List[Dict[str, Any]] = []
         self.outbox_store: List[Dict[str, Any]] = []
@@ -977,6 +981,328 @@ class DatabaseRepository:
                 pass
 
         return None
+
+    async def create_desktop_pairing_session(
+        self,
+        tenant_id: str,
+        user_id: str,
+        ttl_seconds: int = 600
+    ) -> Dict[str, Any]:
+        """Creates a short-lived desktop device pairing transaction with one-time pairing code and nonce."""
+        from backend.app.security.context import SecurityContextError
+        user = await self.get_user(user_id, tenant_id=tenant_id)
+        if not user:
+            raise SecurityContextError(f"User {user_id} does not belong to tenant {tenant_id}")
+
+        sid = str(uuid.uuid4())
+        pairing_code = f"DK-{secrets.token_hex(2).upper()}-{secrets.randbelow(9000)+1000}"
+        nonce = secrets.token_hex(16)
+        now = time.time()
+        expires_at = now + ttl_seconds
+
+        session_rec = {
+            "id": sid,
+            "tenant_id": tenant_id,
+            "user_id": user_id,
+            "pairing_code": pairing_code,
+            "nonce": nonce,
+            "device_id": None,
+            "status": "pending",
+            "created_at": now,
+            "expires_at": expires_at,
+            "claimed_at": None
+        }
+        self.desktop_pairing_sessions_store[sid] = session_rec
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import DesktopPairingSession as PairingModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(PairingModel(
+                            id=sid,
+                            tenant_id=tenant_id,
+                            user_id=user_id,
+                            pairing_code=pairing_code,
+                            nonce=nonce,
+                            status="pending",
+                            expires_at=datetime.fromtimestamp(expires_at, timezone.utc)
+                        ))
+            except Exception:
+                pass
+
+        return session_rec
+
+    async def get_desktop_pairing_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves desktop pairing session and verifies expiration."""
+        sess = self.desktop_pairing_sessions_store.get(session_id)
+        if sess:
+            if time.time() > sess["expires_at"] and sess["status"] == "pending":
+                sess["status"] = "expired"
+            return sess
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import DesktopPairingSession as PairingModel
+                async with self.session_factory() as session:
+                    stmt = select(PairingModel).where(PairingModel.id == session_id)
+                    res = await session.execute(stmt)
+                    m = res.scalar_one_or_none()
+                    if m:
+                        exp = m.expires_at.timestamp() if m.expires_at else time.time()
+                        status = m.status
+                        if time.time() > exp and status == "pending":
+                            status = "expired"
+                        rec = {
+                            "id": m.id,
+                            "tenant_id": m.tenant_id,
+                            "user_id": m.user_id,
+                            "pairing_code": m.pairing_code,
+                            "nonce": m.nonce,
+                            "device_id": m.device_id,
+                            "status": status,
+                            "created_at": m.created_at.timestamp() if m.created_at else time.time(),
+                            "expires_at": exp,
+                            "claimed_at": m.claimed_at.timestamp() if m.claimed_at else None
+                        }
+                        self.desktop_pairing_sessions_store[m.id] = rec
+                        return rec
+            except Exception:
+                pass
+
+        return None
+
+    async def claim_desktop_pairing(
+        self,
+        pairing_code: str,
+        nonce: str,
+        device_name: str,
+        platform: str = "windows",
+        public_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Validates pairing code and nonce, registers device, and issues device token."""
+        from backend.app.security.context import SecurityContextError
+        matched_sess = None
+        now = time.time()
+
+        for s in self.desktop_pairing_sessions_store.values():
+            if hmac.compare_digest(s.get("pairing_code", ""), pairing_code) and hmac.compare_digest(s.get("nonce", ""), nonce):
+                matched_sess = s
+                break
+
+        if not matched_sess and self.session_factory:
+            try:
+                from backend.app.db.models import DesktopPairingSession as PairingModel
+                async with self.session_factory() as session:
+                    stmt = select(PairingModel).where(
+                        PairingModel.pairing_code == pairing_code,
+                        PairingModel.nonce == nonce
+                    )
+                    res = await session.execute(stmt)
+                    m = res.scalar_one_or_none()
+                    if m:
+                        matched_sess = {
+                            "id": m.id,
+                            "tenant_id": m.tenant_id,
+                            "user_id": m.user_id,
+                            "pairing_code": m.pairing_code,
+                            "nonce": m.nonce,
+                            "device_id": m.device_id,
+                            "status": m.status,
+                            "created_at": m.created_at.timestamp() if m.created_at else time.time(),
+                            "expires_at": m.expires_at.timestamp() if m.expires_at else time.time(),
+                            "claimed_at": m.claimed_at.timestamp() if m.claimed_at else None
+                        }
+                        self.desktop_pairing_sessions_store[m.id] = matched_sess
+            except Exception:
+                pass
+
+        if not matched_sess:
+            raise SecurityContextError("Invalid pairing code or nonce")
+
+        if matched_sess["status"] != "pending":
+            raise SecurityContextError(f"Pairing transaction is already {matched_sess['status']}")
+
+        if now > matched_sess["expires_at"]:
+            matched_sess["status"] = "expired"
+            raise SecurityContextError("Pairing session has expired")
+
+        # Register the device
+        device = await self.register_desktop_device(
+            tenant_id=matched_sess["tenant_id"],
+            user_id=matched_sess["user_id"],
+            device_name=device_name,
+            platform=platform,
+            public_key=public_key
+        )
+
+        matched_sess["status"] = "claimed"
+        matched_sess["claimed_at"] = now
+        matched_sess["device_id"] = device["id"]
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import DesktopPairingSession as PairingModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = select(PairingModel).where(PairingModel.id == matched_sess["id"])
+                        res = await session.execute(stmt)
+                        m = res.scalar_one_or_none()
+                        if m:
+                            m.status = "claimed"
+                            m.claimed_at = datetime.fromtimestamp(now, timezone.utc)
+                            m.device_id = device["id"]
+            except Exception:
+                pass
+
+        device_token = f"dtoken_{secrets.token_urlsafe(32)}"
+        return {
+            "status": "claimed",
+            "device": device,
+            "device_token": device_token,
+            "tenant_id": matched_sess["tenant_id"],
+            "user_id": matched_sess["user_id"],
+            "claimed_at": now
+        }
+
+    async def kill_desktop_device(
+        self,
+        device_id: str,
+        reason: Optional[str] = None,
+        tenant_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Emergency kill switch: terminates workstation connection and revokes device credentials."""
+        now = time.time()
+        device = self.devices_store.get(device_id)
+        if device:
+            if tenant_id and device.get("tenant_id") != tenant_id:
+                from backend.app.security.context import SecurityContextError
+                raise SecurityContextError(f"Device {device_id} not found in tenant {tenant_id}")
+            device["is_online"] = False
+            device["revoked_at"] = now
+            device["kill_reason"] = reason or "Emergency kill switch invoked"
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import DesktopDevice as DeviceModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = select(DeviceModel).where(DeviceModel.id == device_id)
+                        res = await session.execute(stmt)
+                        d = res.scalar_one_or_none()
+                        if d:
+                            if tenant_id and d.tenant_id != tenant_id:
+                                from backend.app.security.context import SecurityContextError
+                                raise SecurityContextError(f"Device {device_id} not found in tenant {tenant_id}")
+                            d.is_online = False
+                            d.revoked_at = datetime.fromtimestamp(now, timezone.utc)
+            except Exception:
+                pass
+
+        # Disconnect live socket in presence manager
+        try:
+            from backend.app.desktop.presence import presence_manager
+            if device and device.get("user_id"):
+                presence_manager.unregister_desktop(device["user_id"])
+        except Exception:
+            pass
+
+        return {
+            "status": "killed",
+            "device_id": device_id,
+            "revoked_at": now,
+            "reason": reason or "Emergency kill switch invoked"
+        }
+
+    async def append_journal_entry(
+        self,
+        tenant_id: str,
+        device_id: str,
+        action: str,
+        signature: str,
+        arguments_hash: Optional[str] = None,
+        status: str = "executed"
+    ) -> Dict[str, Any]:
+        """Appends an HMAC-signed audit entry to the desktop agent journal."""
+        eid = str(uuid.uuid4())
+        now_dt = datetime.now(timezone.utc)
+        entry = {
+            "id": eid,
+            "tenant_id": tenant_id,
+            "device_id": device_id,
+            "action": action,
+            "arguments_hash": arguments_hash,
+            "status": status,
+            "signature": signature,
+            "created_at": now_dt
+        }
+        self.journal_entries_store.append(entry)
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import LocalJournalEntry as JournalModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(JournalModel(
+                            id=eid,
+                            tenant_id=tenant_id,
+                            device_id=device_id,
+                            action=action,
+                            arguments_hash=arguments_hash,
+                            status=status,
+                            signature=signature,
+                            created_at=now_dt
+                        ))
+            except Exception:
+                pass
+
+        return entry
+
+    async def get_journal_entries(
+        self,
+        device_id: str,
+        tenant_id: Optional[str] = None,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Retrieves tamper-evident journal entries for a device."""
+        entries = []
+        for e in reversed(self.journal_entries_store):
+            if e.get("device_id") == device_id:
+                if tenant_id and e.get("tenant_id") != tenant_id:
+                    continue
+                entries.append(e)
+                if len(entries) >= limit:
+                    break
+
+        if entries:
+            return entries
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import LocalJournalEntry as JournalModel
+                from sqlalchemy import and_
+                async with self.session_factory() as session:
+                    conds = [JournalModel.device_id == device_id]
+                    if tenant_id:
+                        conds.append(JournalModel.tenant_id == tenant_id)
+                    stmt = select(JournalModel).where(and_(*conds)).order_by(JournalModel.created_at.desc()).limit(limit)
+                    res = await session.execute(stmt)
+                    rows = res.scalars().all()
+                    for r in rows:
+                        entries.append({
+                            "id": r.id,
+                            "tenant_id": r.tenant_id,
+                            "device_id": r.device_id,
+                            "action": r.action,
+                            "arguments_hash": r.arguments_hash,
+                            "status": r.status,
+                            "signature": r.signature,
+                            "created_at": r.created_at
+                        })
+            except Exception:
+                pass
+
+        return entries
 
     async def record_execution(
         self,

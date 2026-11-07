@@ -283,6 +283,110 @@
         }
       }
     },
+    "/api/desktop/pair/initiate": {
+      "post": {
+        "summary": "Initiate Desktop Device Pairing",
+        "description": "Generates a short-lived pairing code and nonce for workstation desktop agent enrollment.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tenant_id", "user_id"],
+                "properties": {
+                  "tenant_id": { "type": "string" },
+                  "user_id": { "type": "string" },
+                  "ttl_seconds": { "type": "integer", "default": 600 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Desktop pairing transaction created with code and nonce" }
+        }
+      }
+    },
+    "/api/desktop/pair/claim": {
+      "post": {
+        "summary": "Claim Desktop Device Pairing Code",
+        "description": "Workstation claims pairing code, sends device hardware fingerprint and public key, and receives device UUID.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["pairing_code", "nonce", "device_name", "platform"],
+                "properties": {
+                  "pairing_code": { "type": "string" },
+                  "nonce": { "type": "string" },
+                  "device_name": { "type": "string" },
+                  "platform": { "type": "string", "enum": ["windows", "macos", "linux"] },
+                  "public_key": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Device enrolled successfully" },
+          "400": { "description": "Invalid code or expired session" }
+        }
+      }
+    },
+    "/api/desktop/kill": {
+      "post": {
+        "summary": "Emergency Desktop Agent Kill Switch",
+        "description": "Immediately disconnects workstation, revokes device credentials, and halts all local operations.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["device_id"],
+                "properties": {
+                  "device_id": { "type": "string" },
+                  "reason": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Device killed and credentials revoked" }
+        }
+      }
+    },
+    "/api/desktop/journal": {
+      "post": {
+        "summary": "Append to Encrypted Local Journal",
+        "description": "Appends HMAC-signed entry to audit journal verifying local execution integrity.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["device_id", "action", "signature"],
+                "properties": {
+                  "device_id": { "type": "string" },
+                  "action": { "type": "string" },
+                  "arguments_hash": { "type": "string" },
+                  "status": { "type": "string" },
+                  "signature": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Journal entry recorded and verified" }
+        }
+      }
+    },
     "/api/archive/search": {
       "post": {
         "summary": "Search Archived WhatsApp Messages",
