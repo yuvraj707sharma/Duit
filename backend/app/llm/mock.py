@@ -317,7 +317,11 @@ class MockLLMProvider(LLMProvider):
                 "• *Status*: Logged & Categorized"
             )
         elif "chief of staff" in prompt_lower or "assistant" in prompt_lower:
-            return f"I hear you. Regarding '{user_message}': I am ready to handle your tasks or look up anything you need. What should we tackle next?"
+            if "read" in msg_lower and "whatsapp" in msg_lower:
+                return "Yes, I can securely read, search, and summarize your WhatsApp messages and conversations. You can ask me to summarize recent chats, find what a specific contact said, or extract action items."
+            elif "whatsapp" in msg_lower and ("connect" in msg_lower or "link" in msg_lower):
+                return "You are already connected to DUIT on WhatsApp! You can send me any request directly here, ask me to summarize your messages, or manage your Google Calendar and Gmail."
+            return f"I can help with that. You can ask me to summarize WhatsApp chats, schedule calendar events, draft emails, or search your desktop files. What would you like to do?"
         elif "action" in prompt_lower or "meeting" in prompt_lower:
             return (
                 "*Action Items Extracted*\n"

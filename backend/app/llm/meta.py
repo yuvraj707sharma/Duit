@@ -189,6 +189,13 @@ class MetaModelProvider(LLMProvider):
 
         except Exception as e:
             logger.error("Meta Model API generation error: %s", e)
+            if settings.GEMINI_API_KEY:
+                try:
+                    from backend.app.llm.gemini import GeminiProvider
+                    gemini_fallback = GeminiProvider()
+                    return await gemini_fallback.generate_response(system_prompt, user_message, context)
+                except Exception as gErr:
+                    logger.error("Gemini fallback generation error: %s", gErr)
             from backend.app.llm.mock import MockLLMProvider
             mock_fallback = MockLLMProvider()
             return await mock_fallback.generate_response(system_prompt, user_message, context)
