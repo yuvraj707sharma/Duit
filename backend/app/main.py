@@ -103,33 +103,38 @@ async def join_beta_waitlist(payload: WaitlistPayload):
     if not clean_phone or len(clean_phone) < 8:
         return JSONResponse(status_code=400, content={"error": "Please provide a valid WhatsApp number."})
 
-    try:
-        async with AsyncSessionLocal() as session:
-            # Check for existing request
-            stmt = select(BetaRegistration).where(BetaRegistration.email == clean_email)
-            res = await session.execute(stmt)
-            existing = res.scalars().first()
+    for attempt in range(2):
+        try:
+            async with AsyncSessionLocal() as session:
+                stmt = select(BetaRegistration).where(BetaRegistration.email == clean_email)
+                res = await session.execute(stmt)
+                existing = res.scalars().first()
 
-            if existing:
-                return {
-                    "status": "already_registered",
-                    "message": "You are already on the beta waitlist! We are reviewing accounts and will notify you soon."
-                }
+                if existing:
+                    return {
+                        "status": "already_registered",
+                        "message": "You are already on the beta waitlist! We are reviewing accounts and will notify you soon."
+                    }
 
-            entry = BetaRegistration(
-                email=clean_email,
-                phone_number=clean_phone,
-                status="pending"
-            )
-            session.add(entry)
-            await session.commit()
+                entry = BetaRegistration(
+                    email=clean_email,
+                    phone_number=clean_phone,
+                    status="pending"
+                )
+                session.add(entry)
+                await session.commit()
 
-        return {
-            "status": "success",
-            "message": "Registration received! We will whitelist your Gmail in Google Workspace and reach out on WhatsApp."
-        }
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": "Could not save registration. Please try again."})
+            return {
+                "status": "success",
+                "message": "Registration received! We will whitelist your Gmail in Google Workspace and reach out on WhatsApp."
+            }
+        except Exception as e:
+            if attempt == 0:
+                # Table might not exist yet; auto-initialize tables and retry
+                async with engine.begin() as conn:
+                    await conn.run_sync(Base.metadata.create_all)
+            else:
+                return JSONResponse(status_code=500, content={"error": "Could not save registration. Please try again."})
 
 
 @app.get("/download/DUITDesktop.exe")
