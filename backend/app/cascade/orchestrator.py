@@ -114,30 +114,78 @@ class CascadeOrchestrator:
         stage_latencies: Dict[str, float] = {}
 
         # -------------------------------------------------------------
-        # Direct Confirmation Reply Handling ("yes" / "no")
+        # Direct Confirmation & Amendment Handling ("yes", "no", corrections)
         # -------------------------------------------------------------
         clean_msg = message_text.strip().lower()
-        if clean_msg in ("yes", "y", "confirm", "haan", "sahi hai", "no", "n", "cancel", "mat karo"):
-            user_pending = [
-                rec for rec in (await self.repo.get_user_pending_approvals(user_id))
-                if rec["status"] == "pending"
-            ]
-            if user_pending:
-                # Bind to the single active pending approval
-                latest_approval = user_pending[-1]
-                aid = latest_approval["id"]
-                decision = "approve" if clean_msg in ("yes", "y", "confirm", "haan", "sahi hai") else "reject"
-                res = await self.resolve_approval(aid, decision=decision, caller_user_id=user_id)
-                
+        user_pending = [
+            rec for rec in (await self.repo.get_user_pending_approvals(user_id))
+            if rec["status"] == "pending"
+        ]
+        if user_pending:
+            latest_approval = user_pending[-1]
+            aid = latest_approval["id"]
+
+            if clean_msg in ("yes", "y", "confirm", "haan", "sahi hai"):
+                res = await self.resolve_approval(aid, decision="approve", caller_user_id=user_id)
                 resp_obj = OrchestratorResponse(
                     request_id=request_id,
                     user_id=user_id,
                     intent=latest_approval["intent"],
                     risk=latest_approval["risk"],
                     confidence=latest_approval["confidence"],
-                    status="executed" if decision == "approve" else "rejected",
+                    status="executed",
                     response_text=res.get("message", res.get("error", "")),
                     tool_result=res.get("tool_result")
+                )
+                if inbound_message_id:
+                    await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())
+                return resp_obj
+            elif clean_msg in ("no", "n", "cancel", "mat karo", "rehne do", "chhod do"):
+                res = await self.resolve_approval(aid, decision="reject", caller_user_id=user_id)
+                resp_obj = OrchestratorResponse(
+                    request_id=request_id,
+                    user_id=user_id,
+                    intent=latest_approval["intent"],
+                    risk=latest_approval["risk"],
+                    confidence=latest_approval["confidence"],
+                    status="rejected",
+                    response_text=res.get("message", "Action cancelled as requested."),
+                    tool_result=res.get("tool_result")
+                )
+                if inbound_message_id:
+                    await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())
+                return resp_obj
+            elif (
+                clean_msg.startswith(("change ", "make it ", "instead ", "edit ", "set to ", "rather ", "badal do ", "modify ")) or
+                clean_msg in ("change", "edit", "modify")
+            ):
+                from backend.app.cascade.schemas import get_schema_for_intent
+                intent_schema = get_schema_for_intent(latest_approval["intent"])
+                extract_res = await self.llm_provider.extract_arguments(
+                    user_message=f"Original: {latest_approval.get('query_text', '')}. Amendment: {message_text}",
+                    intent=latest_approval["intent"],
+                    schema=intent_schema
+                )
+                updated_args = {**(latest_approval.get("arguments") or {})}
+                if extract_res.arguments:
+                    for k, v in extract_res.arguments.items():
+                        if v is not None and v != "":
+                            updated_args[k] = v
+                res = await self.resolve_approval(aid, decision="edit", caller_user_id=user_id, edited_payload=updated_args)
+                preview_lines = []
+                for k, v in updated_args.items():
+                    if k != "idempotency_key":
+                        preview_lines.append(f"- {k.replace('_', ' ').title()}: {v}")
+                preview_text = "*Action Updated Preview*\n" + "\n".join(preview_lines) + "\n\nReply *CONFIRM* to execute or *CANCEL* to discard."
+                await self.messaging_channel.send_text(user_id, preview_text)
+                resp_obj = OrchestratorResponse(
+                    request_id=request_id,
+                    user_id=user_id,
+                    intent=latest_approval["intent"],
+                    risk=latest_approval["risk"],
+                    confidence=latest_approval["confidence"],
+                    status="pending_confirmation",
+                    response_text=preview_text
                 )
                 if inbound_message_id:
                     await self.repo.save_webhook_dedupe(inbound_message_id, resp_obj.model_dump())

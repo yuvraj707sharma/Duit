@@ -471,11 +471,32 @@ async function handleFastAgentMessage(jid, phone, text) {
       return;
     }
 
-    // WhatsApp Chats Reader & Search Handler
-    const isChatQuery = /whatsapp (chats?|messages?)|text(ed)? me|recent (whatsapp )?chats?|read (my )?(whatsapp )?chats?|summarize (my )?(whatsapp )?chats?|check (my )?(whatsapp )?messages?|last \d+ (chats?|messages?)|summary of my (last )?\d* ?(chats?|messages?)|(chats?|messages?) summary/i.test(trimmedText);
+    // WhatsApp Chats Reader & Structured Search Handler (supports English, Hinglish, and Hindi queries)
+    const isChatQuery =
+      /whatsapp (chats?|messages?)|text(ed)? me|recent (whatsapp )?chats?|read (my )?(whatsapp )?chats?|summarize (my )?(whatsapp )?chats?|check (my )?(whatsapp )?messages?|last \d+ (chats?|messages?)|summary of (my )?(last )?\d* ?(chats?|messages?)|(chats?|messages?) summary/i.test(trimmedText) ||
+      /\b(ne kya (bola|bheja|kaha)|ka message|ke (message|messages|chat|chats)|se (baat|message)|(summary|summarize).*(message|messages|chat|chats)|(message|messages|chat|chats).*summary)\b/i.test(trimmedText) ||
+      /\b(show|find|search|get|read)\s+(me\s+)?(all\s+)?(messages?|chats?|texts?)\s+(from|of|by)\s+/i.test(trimmedText) ||
+      /\bwhat did\s+([a-zA-Z0-9_\-]+)\s+(say|send|text|write)\b/i.test(trimmedText) ||
+      /\bsummary of\s+([a-zA-Z0-9_\-]+)\s+messages?\b/i.test(trimmedText);
+
     if (isChatQuery) {
-      let contactMatch = trimmedText.match(/(?:from|by|of)\s+([a-zA-Z0-9_\-\.]+)/i);
-      let contactFilter = contactMatch ? contactMatch[1].trim() : '';
+      let contactFilter = '';
+      const cMatch =
+        trimmedText.match(/(?:from|by|of)\s+([a-zA-Z0-9_\-\.]+)/i) ||
+        trimmedText.match(/([a-zA-Z0-9_\-\.]+)\s+(?:ne kya|ka message|ke chats?|ke messages?|ko kya)/i) ||
+        trimmedText.match(/what did\s+([a-zA-Z0-9_\-]+)/i) ||
+        trimmedText.match(/summary of\s+([a-zA-Z0-9_\-]+)\s+messages?/i);
+
+      if (cMatch) {
+        const candidate = cMatch[1].trim();
+        const stopWords = ['my', 'the', 'recent', 'last', 'these', 'all', 'yesterday', 'today', 'whatsapp', 'chat', 'chats', 'message', 'messages'];
+        if (!stopWords.includes(candidate.toLowerCase())) {
+          contactFilter = candidate;
+        }
+      }
+
+      let limitMatch = trimmedText.match(/\blast\s+(\d+)\b/i) || trimmedText.match(/(\d+)\s+(?:messages?|chats?)/i);
+      let queryLimit = limitMatch ? Math.min(Math.max(parseInt(limitMatch[1], 10), 1), 30) : 15;
 
       let chatRows = [];
       try {
@@ -484,16 +505,16 @@ async function handleFastAgentMessage(jid, phone, text) {
             `SELECT sender_name, sender_phone, message_text, timestamp 
              FROM whatsapp_chats 
              WHERE (sender_phone = ? OR chat_jid LIKE ?) AND (sender_name LIKE ? OR sender_phone LIKE ?) AND is_from_me = 0
-             ORDER BY timestamp DESC LIMIT 15`,
-            [cleanPhone, `%${cleanPhone}%`, `%${contactFilter}%`, `%${contactFilter}%`]
+             ORDER BY timestamp DESC LIMIT ?`,
+            [cleanPhone, `%${cleanPhone}%`, `%${contactFilter}%`, `%${contactFilter}%`, queryLimit]
           );
         } else {
           chatRows = await query(
             `SELECT sender_name, sender_phone, message_text, timestamp 
              FROM whatsapp_chats 
              WHERE (sender_phone = ? OR chat_jid LIKE ?) AND is_from_me = 0
-             ORDER BY timestamp DESC LIMIT 15`,
-            [cleanPhone, `%${cleanPhone}%`]
+             ORDER BY timestamp DESC LIMIT ?`,
+            [cleanPhone, `%${cleanPhone}%`, queryLimit]
           );
         }
       } catch (dbErr) {
@@ -502,17 +523,17 @@ async function handleFastAgentMessage(jid, phone, text) {
 
       if (!chatRows || chatRows.length === 0) {
         if (contactFilter) {
-          chatRows = inMemoryChats.filter(c => (c.owner_phone === cleanPhone || c.sender_phone === cleanPhone) && !c.is_from_me && ((c.sender_name && c.sender_name.toLowerCase().includes(contactFilter.toLowerCase())) || c.sender_phone.includes(contactFilter))).slice(0, 15);
+          chatRows = inMemoryChats.filter(c => (c.owner_phone === cleanPhone || c.sender_phone === cleanPhone) && !c.is_from_me && ((c.sender_name && c.sender_name.toLowerCase().includes(contactFilter.toLowerCase())) || c.sender_phone.includes(contactFilter))).slice(0, queryLimit);
         } else {
-          chatRows = inMemoryChats.filter(c => (c.owner_phone === cleanPhone || c.sender_phone === cleanPhone) && !c.is_from_me).slice(0, 15);
+          chatRows = inMemoryChats.filter(c => (c.owner_phone === cleanPhone || c.sender_phone === cleanPhone) && !c.is_from_me).slice(0, queryLimit);
         }
       }
 
       if (!chatRows || chatRows.length === 0) {
         await sendMessage(jid,
           contactFilter
-            ? `No archived WhatsApp messages found from *${contactFilter}* yet. As messages arrive from contacts, they are archived automatically for instant lookup.`
-            : `No archived WhatsApp chats from other contacts recorded yet. All incoming messages from your contacts to this WhatsApp number are archived automatically for instant lookup.`
+            ? `I searched your archived WhatsApp history for "*${contactFilter}*". No matching messages were found.\n\n_Note: DUIT securely records incoming messages received while your WhatsApp bot is active._`
+            : `I searched your archived WhatsApp history. No recorded messages were found from other contacts yet.\n\n_Note: DUIT securely records incoming messages received while your WhatsApp bot is active._`
         );
         return;
       }
@@ -528,16 +549,25 @@ async function handleFastAgentMessage(jid, phone, text) {
       // Query FastAgent backend to summarize the chat transcript via Meta AI
       let summaryReply = '';
       try {
-        const sumPrompt = `Please summarize these recent WhatsApp messages concisely for an executive:\n\n${transcriptText}\n\nHighlight key action items, urgent inquiries, and quotes requested. Strictly zero emojis.`;
+        const sumPrompt = `The user asked: "${trimmedText}".
+Here are the actual archived WhatsApp messages found${contactFilter ? ` for contact "${contactFilter}"` : ''} (${chatRows.length} message(s)):
+
+${transcriptText}
+
+Please summarize these messages clearly and concisely for an executive. Highlight key action items, urgent inquiries, and quotes requested. Strictly zero emojis.`;
         summaryReply = await callFastAgentBackend(cleanPhone, sumPrompt);
       } catch (sumErr) {
         console.error('[Summary AI Error]:', sumErr.message);
       }
 
       if (summaryReply && !summaryReply.toLowerCase().includes('google account not connected') && !summaryReply.toLowerCase().includes('connect google')) {
-        await sendMessage(jid, `*WhatsApp Summary (${chatRows.length} recent messages):*\n\n${summaryReply}`);
+        let sourceList = chatRows.slice(0, 4).map(r => {
+          const d = new Date(Number(r.timestamp));
+          return `- ${r.sender_name || r.sender_phone} (${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+        }).join('\n');
+        await sendMessage(jid, `*WhatsApp Summary (${chatRows.length} message(s)${contactFilter ? ` for "${contactFilter}"` : ''}):*\n\n${summaryReply}\n\n*Verified Sources:*\n${sourceList}`);
       } else {
-        let replyMsg = `*Recent WhatsApp Communications (${chatRows.length} message(s)):*\n\n`;
+        let replyMsg = `*Recent WhatsApp Communications (${chatRows.length} message(s)${contactFilter ? ` for "${contactFilter}"` : ''}):*\n\n`;
         chatRows.forEach((row, idx) => {
           const timeStr = new Date(Number(row.timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const dateStr = new Date(Number(row.timestamp)).toLocaleDateString();
@@ -546,6 +576,7 @@ async function handleFastAgentMessage(jid, phone, text) {
         await sendMessage(jid, replyMsg.trim());
       }
       return;
+    }
 
     }
 
