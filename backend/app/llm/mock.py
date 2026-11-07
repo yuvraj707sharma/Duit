@@ -307,7 +307,7 @@ class MockLLMProvider(LLMProvider):
         if "capital of france" in msg_lower:
             return "The capital of France is Paris. How else can I assist you today?"
         elif any(g in msg_lower for g in ("hello", "hey", "hi", "good morning", "good evening", "how are you", "who are you")):
-            return "Hello! I am your FastAgent Chief of Staff. I can manage your calendar, summarize your emails, open applications on your workstation, explore websites, or run coding tasks. What would you like to do?"
+            return "Hello! I am your DUIT Chief of Staff. I can manage your calendar, summarize your emails, open applications on your workstation, explore websites, or run coding tasks. What would you like to do?"
         elif "expense" in prompt_lower or "receipt" in prompt_lower:
             return (
                 "*Expense Analysis*\n"
