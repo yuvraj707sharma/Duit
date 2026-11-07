@@ -176,10 +176,30 @@ class DatabaseRepository:
         return count
 
     async def insert_audit_log(self, record: Dict[str, Any]):
-        """Insert-only audit log."""
+        """Insert-only audit log persisted in memory and PostgreSQL."""
         record["created_at"] = record.get("created_at") or time.time()
         record["id"] = record.get("id") or str(uuid.uuid4())
         self.audit_log_store.append(record)
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import AuditLog as AuditLogModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        audit_entry = AuditLogModel(
+                            user_id=record.get("user_id"),
+                            request_id=record.get("request_id"),
+                            raw_intent=record.get("raw_intent", "other"),
+                            risk_level=record.get("risk_level", "low"),
+                            confidence=float(record.get("confidence", 0.0)),
+                            tools_called=record.get("tools_called", []),
+                            was_confirmed=bool(record.get("was_confirmed", False)),
+                            status=record.get("status", "executed"),
+                            stage_latencies_ms=record.get("stage_latencies_ms", {})
+                        )
+                        session.add(audit_entry)
+            except Exception:
+                pass
 
     async def get_audit_logs(self, user_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         logs = self.audit_log_store
@@ -189,17 +209,88 @@ class DatabaseRepository:
 
     async def get_idempotent_response(self, user_id: str, idempotency_key: str) -> Optional[Dict[str, Any]]:
         key = f"{user_id}:{idempotency_key}"
-        return self.idempotency_store.get(key)
+        res = self.idempotency_store.get(key)
+        if res:
+            return res
+        if self.session_factory:
+            try:
+                from backend.app.db.models import IdempotencyRecord
+                async with self.session_factory() as session:
+                    stmt = select(IdempotencyRecord).where(IdempotencyRecord.idempotency_key == idempotency_key)
+                    db_res = await session.execute(stmt)
+                    rec = db_res.scalar_one_or_none()
+                    if rec:
+                        self.idempotency_store[key] = rec.response_payload
+                        return rec.response_payload
+            except Exception:
+                pass
+        return None
 
     async def save_idempotent_response(self, user_id: str, idempotency_key: str, response: Dict[str, Any]):
         key = f"{user_id}:{idempotency_key}"
         self.idempotency_store[key] = response
 
+        if self.session_factory:
+            try:
+                from backend.app.db.models import IdempotencyRecord
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = select(IdempotencyRecord).where(IdempotencyRecord.idempotency_key == idempotency_key)
+                        db_res = await session.execute(stmt)
+                        existing = db_res.scalar_one_or_none()
+                        if existing:
+                            existing.response_payload = response
+                        else:
+                            session.add(IdempotencyRecord(
+                                user_id=user_id,
+                                idempotency_key=idempotency_key,
+                                action=response.get("intent", "other"),
+                                response_payload=response
+                            ))
+            except Exception:
+                pass
+
     async def get_webhook_dedupe(self, message_id: str) -> Optional[Dict[str, Any]]:
-        return self.webhook_dedupe_store.get(message_id)
+        res = self.webhook_dedupe_store.get(message_id)
+        if res:
+            return res
+        if self.session_factory:
+            try:
+                from backend.app.db.models import IdempotencyRecord
+                async with self.session_factory() as session:
+                    stmt = select(IdempotencyRecord).where(IdempotencyRecord.message_id == message_id)
+                    db_res = await session.execute(stmt)
+                    rec = db_res.scalar_one_or_none()
+                    if rec:
+                        self.webhook_dedupe_store[message_id] = rec.response_payload
+                        return rec.response_payload
+            except Exception:
+                pass
+        return None
 
     async def save_webhook_dedupe(self, message_id: str, response: Dict[str, Any]):
         self.webhook_dedupe_store[message_id] = response
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import IdempotencyRecord
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = select(IdempotencyRecord).where(IdempotencyRecord.message_id == message_id)
+                        db_res = await session.execute(stmt)
+                        existing = db_res.scalar_one_or_none()
+                        if existing:
+                            existing.response_payload = response
+                        else:
+                            session.add(IdempotencyRecord(
+                                user_id=response.get("user_id", "system"),
+                                idempotency_key=f"dedupe_{message_id}",
+                                message_id=message_id,
+                                action=response.get("intent", "webhook_inbound"),
+                                response_payload=response
+                            ))
+            except Exception:
+                pass
 
     async def get_user_by_phone(self, phone: str) -> Optional[Dict[str, Any]]:
         cleaned = phone.strip().lstrip("+")

@@ -6,7 +6,7 @@ export interface OverlayState {
   doingAction: string;
   countdownSeconds: number; // 2.0
   active: boolean;
-  status: 'pending_cancel' | 'executing' | 'completed' | 'cancelled';
+  status: 'pending_cancel' | 'executing' | 'completed' | 'simulation_completed' | 'cancelled';
 }
 
 interface StatusOverlayProps {
@@ -106,6 +106,13 @@ export const StatusOverlay: React.FC<StatusOverlayProps> = ({ overlay, onCancel 
             <span>Cancel Action (2s window)</span>
           </button>
         </>
+      )}
+
+      {overlay.status === 'simulation_completed' && (
+        <div style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600 }}>
+          <CheckCircle2 size={16} />
+          <span>Simulation preview completed (Demo Mode)</span>
+        </div>
       )}
 
       {overlay.status === 'completed' && (

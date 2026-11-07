@@ -1,8 +1,11 @@
 """Evolution Go WhatsApp Messaging Channel Adapter."""
+import logging
 from typing import Dict, Any, Optional
 import httpx
 from backend.app.channels.base import MessagingChannel, InboundMessage, get_user_uuid_from_channel_id
 from backend.app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class EvolutionChannel(MessagingChannel):
@@ -24,8 +27,15 @@ class EvolutionChannel(MessagingChannel):
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 res = await client.post(url, json=payload, headers=headers)
-                return res.status_code in (200, 201)
-        except Exception:
+                if res.status_code in (200, 201):
+                    return True
+                logger.warning(
+                    "Outbound WhatsApp delivery failed to %s. Status: %s. Response: %s",
+                    recipient, res.status_code, res.text[:200]
+                )
+                return False
+        except Exception as e:
+            logger.error("Outbound WhatsApp delivery exception to %s: %s", recipient, e)
             return False
 
     async def send_confirmation_prompt(self, recipient: str, text: str, action_id: str) -> bool:

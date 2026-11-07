@@ -107,12 +107,12 @@ export const App: React.FC = () => {
 
     // 2-second cancel window before execution dispatch
     cancelTimerRef.current = setTimeout(() => {
-      setOverlay((prev) => ({ ...prev, status: 'completed' }));
+      setOverlay((prev) => ({ ...prev, status: 'simulation_completed' }));
       setOperations((prev) => [
         ...prev.slice(-19),
         { intent: action, target: heard, status: 'simulated_demo', timestamp: Date.now() }
       ]);
-      setContextSummary(`Simulated preview for ${action}. No system files modified.`);
+      setContextSummary(`Simulated preview for ${action}. (Demo Mode - microphone hardware stream not bound)`);
 
       setTimeout(() => {
         setOverlay((prev) => ({ ...prev, active: false }));
@@ -168,11 +168,11 @@ export const App: React.FC = () => {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <img src={duitLogo} alt="DUIT" style={{ height: '22px', objectFit: 'contain' }} />
-                <span style={{ fontSize: '0.68rem', background: '#10b981', color: '#000', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>DESKTOP</span>
+                <span style={{ fontSize: '0.68rem', background: '#f59e0b', color: '#000', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>DEMO MODE</span>
               </div>
               <div style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                 {isBackendOnline ? <Wifi size={10} color="#10b981" /> : <WifiOff size={10} color="#ef4444" />}
-                <span>{isBackendOnline ? 'Presence Online' : 'Presence Offline'}</span>
+                <span>{isBackendOnline ? 'Backend API: Connected' : 'Backend API: Offline'}</span>
               </div>
             </div>
           </div>
