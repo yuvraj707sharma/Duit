@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 import { initDatabase, query, getSetting, setSetting, logActivity, getDbStatus, listSkills, createSkill, deleteSkill } from './src/database/db.js';
 import { loginUser, validateSession, logoutSession, changeUserPassword } from './src/services/authService.js';
