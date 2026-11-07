@@ -255,6 +255,7 @@ class PendingApproval(Base):
     confidence = Column(Float, nullable=False, default=0.0)
     status = Column(String(24), nullable=False, default="pending")  # pending, approved, rejected, edited, superseded, expired
     reasoning_tag = Column(String(255), nullable=True)
+    version = Column(Integer, default=1, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     resolved_at = Column(DateTime(timezone=True), nullable=True)

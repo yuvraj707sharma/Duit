@@ -204,6 +204,8 @@ async def download_desktop_app():
 
 @app.get("/health")
 async def health_check():
+    import time
+    start_db = time.perf_counter()
     db_status = "ok"
     try:
         from backend.app.db.database import engine
@@ -212,6 +214,7 @@ async def health_check():
             await conn.execute(text("SELECT 1"))
     except Exception:
         db_status = "unreachable"
+    db_latency_ms = round((time.perf_counter() - start_db) * 1000, 2)
 
     from backend.app.desktop.presence import presence_manager
     active_desktops = len(presence_manager._connections)
@@ -224,7 +227,10 @@ async def health_check():
         "env": settings.APP_ENV,
         "decision_layer": "laya-multilingual",
         "services": {
-            "database": db_status,
+            "database": {
+                "status": db_status,
+                "latency_ms": db_latency_ms
+            },
             "llm_provider": {
                 "active": settings.DEFAULT_LLM_PROVIDER,
                 "status": llm_status
@@ -235,3 +241,44 @@ async def health_check():
             "active_desktop_connections": active_desktops
         }
     }
+
+
+@app.get("/api/health/ready")
+async def readiness_probe():
+    """Readiness probe checking database connectivity, roundtrip latency, and connection pool state."""
+    import time
+    from sqlalchemy import text
+    from backend.app.db.database import engine
+
+    start_time = time.perf_counter()
+    db_status = "ok"
+    error_msg = None
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except Exception as exc:
+        db_status = "unreachable"
+        error_msg = str(exc)
+
+    latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    pool = getattr(engine, "sync_engine", engine).pool
+    pool_stats = {
+        "size": getattr(pool, "size", lambda: 0)(),
+        "checked_in": getattr(pool, "checkedin", lambda: 0)(),
+        "checked_out": getattr(pool, "checkedout", lambda: 0)(),
+        "overflow": getattr(pool, "overflow", lambda: 0)()
+    }
+
+    is_ready = db_status == "ok"
+    return JSONResponse(
+        status_code=200 if is_ready else 503,
+        content={
+            "status": "ready" if is_ready else "not_ready",
+            "database": {
+                "status": db_status,
+                "latency_ms": latency_ms,
+                "error": error_msg,
+                "pool": pool_stats
+            }
+        }
+    )

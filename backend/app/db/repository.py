@@ -169,7 +169,8 @@ class DatabaseRepository:
         approval_id: str,
         decision: str,  # approve, edit, reject
         caller_user_id: str,
-        edited_payload: Optional[Dict[str, Any]] = None
+        edited_payload: Optional[Dict[str, Any]] = None,
+        expected_version: Optional[int] = None
     ) -> Dict[str, Any]:
         rec = await self.get_approval_by_id(approval_id)
         if not rec:
@@ -185,11 +186,46 @@ class DatabaseRepository:
         if rec["status"] != "pending":
             return {"error": f"Approval is not pending (current status: {rec['status']})"}
 
+        # Optimistic concurrency check
+        current_version = rec.get("version", 1)
+        if expected_version is not None and current_version != expected_version:
+            return {
+                "error": f"Conflict: approval version mismatch (expected {expected_version}, current {current_version})",
+                "conflict": True
+            }
+
         now = time.time()
         rec["status"] = decision
         rec["resolved_at"] = now
+        rec["version"] = current_version + 1
         if decision == "edit" and edited_payload:
             rec["arguments"].update(edited_payload)
+
+        # Authoritative database update with optimistic locking
+        if self.session_factory:
+            try:
+                from backend.app.db.models import PendingApproval as ApprModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = update(ApprModel).where(
+                            and_(
+                                ApprModel.id == approval_id,
+                                ApprModel.status == "pending"
+                            )
+                        ).values(
+                            status=decision,
+                            resolved_at=datetime.fromtimestamp(now, timezone.utc),
+                            version=ApprModel.version + 1,
+                            action_payload=rec["arguments"]
+                        )
+                        res = await session.execute(stmt)
+                        if res.rowcount == 0:
+                            return {
+                                "error": "Conflict: approval was concurrently modified or already resolved in database",
+                                "conflict": True
+                            }
+            except Exception:
+                pass
 
         return {"status": decision, "record": rec}
 
@@ -198,7 +234,8 @@ class DatabaseRepository:
         approval_id: str,
         caller_user_id: str,
         amendments: Dict[str, Any],
-        tenant_id: Optional[str] = None
+        tenant_id: Optional[str] = None,
+        expected_version: Optional[int] = None
     ) -> Dict[str, Any]:
         """Amends a pending approval's arguments in place without creating a duplicate request."""
         rec = await self.get_approval_by_id(approval_id)
@@ -217,9 +254,43 @@ class DatabaseRepository:
         if rec["status"] != "pending":
             return {"error": f"Cannot amend approval in '{rec['status']}' state"}
 
+        # Optimistic concurrency check
+        current_version = rec.get("version", 1)
+        if expected_version is not None and current_version != expected_version:
+            return {
+                "error": f"Conflict: approval version mismatch (expected {expected_version}, current {current_version})",
+                "conflict": True
+            }
+
         now = time.time()
         rec["arguments"].update(amendments)
+        rec["version"] = current_version + 1
         rec["updated_at"] = now
+
+        # Authoritative database update with optimistic locking
+        if self.session_factory:
+            try:
+                from backend.app.db.models import PendingApproval as ApprModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = update(ApprModel).where(
+                            and_(
+                                ApprModel.id == approval_id,
+                                ApprModel.status == "pending"
+                            )
+                        ).values(
+                            action_payload=rec["arguments"],
+                            version=ApprModel.version + 1
+                        )
+                        res = await session.execute(stmt)
+                        if res.rowcount == 0:
+                            return {
+                                "error": "Conflict: approval was concurrently modified or already resolved in database",
+                                "conflict": True
+                            }
+            except Exception:
+                pass
+
         return {"status": "amended", "record": rec}
 
     async def cleanup_expired_approvals(self) -> int:
