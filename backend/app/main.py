@@ -44,9 +44,14 @@ app = FastAPI(
 )
 
 # CORS Middleware
+cors_origins = list(settings.CORS_ORIGINS) if isinstance(settings.CORS_ORIGINS, list) else [settings.CORS_ORIGINS]
+if "https://yuvraj707sharma.github.io" not in cors_origins:
+    cors_origins.append("https://yuvraj707sharma.github.io")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=cors_origins,
+    allow_origin_regex=r"https://.*\.github\.io",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
