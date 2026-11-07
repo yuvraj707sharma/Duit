@@ -66,6 +66,15 @@ class CascadeOrchestrator:
         self.gmail_tool = gmail_tool or GmailTool()
         self.repo = db_repo or repository
         self.policy_engine = policy_eng or policy_engine
+        self.conversation_history: Dict[str, List[Dict[str, str]]] = {}
+
+    def _append_history(self, user_id: str, user_msg: str, assistant_msg: str) -> None:
+        if not user_id or not user_msg or not assistant_msg:
+            return
+        history = self.conversation_history.setdefault(user_id, [])
+        history.append({"role": "user", "content": user_msg})
+        history.append({"role": "assistant", "content": assistant_msg})
+        self.conversation_history[user_id] = history[-10:]
 
     @property
     def pending_approvals(self):
@@ -244,11 +253,13 @@ class CascadeOrchestrator:
                         skill_reply = "Error communicating with skill webhook service."
 
                 if not skill_reply:
+                    history = self.conversation_history.get(user_id, [])
                     skill_reply = await self.llm_provider.generate_response(
                         system_prompt=system_prompt,
                         user_message=message_text,
-                        context={"user_id": user_id, "skill": matching_skill}
+                        context={"user_id": user_id, "skill": matching_skill, "history": history[-8:]}
                     )
+                self._append_history(user_id, message_text, skill_reply)
 
                 stage_latencies["skill_execution"] = (time.perf_counter() - t_skill) * 1000
                 await self.messaging_channel.send_text(user_id, skill_reply)
@@ -294,10 +305,13 @@ class CascadeOrchestrator:
                     "and organize tasks. When asked about reading WhatsApp messages, confirm that you securely archive and can search/summarize "
                     "their messages and commitments whenever asked."
                 )
+                history = self.conversation_history.get(user_id, [])
                 conversational_reply = await self.llm_provider.generate_response(
                     system_prompt=system_prompt,
-                    user_message=message_text
+                    user_message=message_text,
+                    context={"history": history[-8:]}
                 )
+                self._append_history(user_id, message_text, conversational_reply)
             stage_latencies["stage_3_llm_extraction"] = (time.perf_counter() - t0) * 1000
             await self.messaging_channel.send_text(user_id, conversational_reply)
 
@@ -581,6 +595,7 @@ class CascadeOrchestrator:
             reply_msg = f"Done! Executed {decision.intent}."
 
         await self.messaging_channel.send_text(user_id, reply_msg)
+        self._append_history(user_id, message_text, reply_msg)
 
         await self.repo.insert_audit_log({
             "request_id": request_id,

@@ -350,8 +350,9 @@ async function handleFastAgentMessage(jid, phone, text) {
   if (user.state === 'ACTIVE') {
     const lower = trimmedText.toLowerCase();
 
-    // Re-connect Google
-    const isGoogleConnect =
+    // Re-connect Google (strictly guarded against negation/clarifications)
+    const hasNegation = /\b(not|no|don't|dont|never|nahi|mat|instead of|bina)\b/i.test(lower);
+    const isGoogleConnect = !hasNegation && (
       lower === 'google' ||
       lower === 'connect google' ||
       lower === 'connect to google' ||
@@ -363,7 +364,8 @@ async function handleFastAgentMessage(jid, phone, text) {
       lower === 'google link' ||
       lower === 'google login' ||
       lower === 'login google' ||
-      (lower.includes('google') && (lower.includes('connect') || lower.includes('link') || lower.includes('auth') || lower.includes('login') || lower.includes('account')));
+      (lower.includes('google') && (lower.includes('connect') || lower.includes('link') || lower.includes('auth') || lower.includes('login') || lower.includes('account')))
+    );
 
     if (isGoogleConnect) {
       const authLink = generateAuthLink(cleanPhone);
@@ -540,7 +542,7 @@ async function handleFastAgentMessage(jid, phone, text) {
         console.error('[Summary AI Error]:', sumErr.message);
       }
 
-      if (summaryReply) {
+      if (summaryReply && !summaryReply.toLowerCase().includes('google account not connected') && !summaryReply.toLowerCase().includes('connect google')) {
         await sendMessage(jid, `*WhatsApp Summary (${chatRows.length} recent messages):*\n\n${summaryReply}`);
       } else {
         let replyMsg = `*Recent WhatsApp Communications (${chatRows.length} message(s)):*\n\n`;

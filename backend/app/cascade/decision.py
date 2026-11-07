@@ -249,10 +249,11 @@ class MockDecisionModel(DecisionModel):
                 reasoning_tag="email_send_keyword"
             )
 
-        if (has_email and any(w in msg for w in (
+        is_chat_summary = any(w in msg for w in ("whatsapp", "chat", "chats", "text", "texts", "conversation", "conversations"))
+        if not is_chat_summary and ((has_email and any(w in msg for w in (
             "summarize", "summary", "summarise", "unread", "recent", "latest",
             "check", "read", "fetch", "get", "give me", "show", "batao", "kya aaya", "kya aya", "list"
-        ))) or any(w in msg for w in ("summarize email", "unread emails", "inbox summary", "emails batao", "summarize my", "recent mails", "recent emails")):
+        ))) or any(w in msg for w in ("summarize email", "unread emails", "inbox summary", "emails batao", "summarize my emails", "summarize my mails", "recent mails", "recent emails"))):
             return DecisionOutput(
                 intent="summarize_email",
                 risk="low",

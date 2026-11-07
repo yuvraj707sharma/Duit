@@ -174,10 +174,25 @@ async function getDashboardRedirectUrl() {
 }
 
 function getGoogleRedirectUri(req) {
-  if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI;
+  if (process.env.GOOGLE_REDIRECT_URI && !process.env.GOOGLE_REDIRECT_URI.includes('localhost') && !process.env.GOOGLE_REDIRECT_URI.includes('trycloudflare')) {
+    return process.env.GOOGLE_REDIRECT_URI;
+  }
   const baseUrl = getAppPublicUrl();
   return `${baseUrl}/auth/google/callback`;
 }
+
+// Google OAuth configuration inspection endpoint
+app.get('/auth/google/config', (req, res) => {
+  const redirectUri = getGoogleRedirectUri(req);
+  res.json({
+    status: 'ok',
+    public_url: getAppPublicUrl(),
+    redirect_uri: redirectUri,
+    google_client_id_configured: !!(process.env.GOOGLE_CLIENT_ID),
+    google_client_secret_configured: !!(process.env.GOOGLE_CLIENT_SECRET),
+    instruction: 'Add this redirect_uri to Authorized redirect URIs in Google Cloud Console'
+  });
+});
 
 // --- Google OAuth2 Routes (Per-User, phone-keyed) ---
 // Server-side one-time OAuth state cache (CSRF and account linking mitigation)

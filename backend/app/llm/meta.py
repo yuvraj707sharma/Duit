@@ -182,14 +182,23 @@ class MetaModelProvider(LLMProvider):
         if self.enable_cache and cache_k in self._cache:
             return self._cache[cache_k][0]
 
+        history_msgs = []
+        if context and "history" in context:
+            for item in context["history"]:
+                if isinstance(item, dict) and "role" in item and "content" in item:
+                    history_msgs.append({"role": item["role"], "content": item["content"]})
+
+        call_messages = [
+            {"role": "system", "content": f"{system_prompt}\nKeep responses warm, concise, and helpful like a trusted personal assistant. Strictly zero emojis."},
+            *history_msgs,
+            {"role": "user", "content": user_message}
+        ]
+
         try:
             reply = ""
             try:
                 reply = await self._call_api_direct(
-                    messages=[
-                        {"role": "system", "content": f"{system_prompt}\nKeep responses warm, concise, and helpful like a trusted personal assistant. Strictly zero emojis."},
-                        {"role": "user", "content": user_message}
-                    ],
+                    messages=call_messages,
                     temperature=0.3,
                     max_tokens=max(800, self.max_tokens)
                 )
@@ -197,10 +206,7 @@ class MetaModelProvider(LLMProvider):
                 if self.client:
                     response = await self.client.chat.completions.create(
                         model=self.default_model,
-                        messages=[
-                            {"role": "system", "content": f"{system_prompt}\nKeep responses warm, concise, and helpful like a trusted personal assistant. Strictly zero emojis."},
-                            {"role": "user", "content": user_message}
-                        ],
+                        messages=call_messages,
                         temperature=0.3,
                         max_tokens=max(800, self.max_tokens),
                         extra_body={"reasoning_effort": "low"}
