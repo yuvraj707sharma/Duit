@@ -17,8 +17,8 @@ COPY backend/ /app/backend/
 COPY contracts/ /app/contracts/
 
 ENV PYTHONPATH=/app
-ENV PORT=8000
 
-EXPOSE 8000
+EXPOSE ${PORT:-8000}
 
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use shell form so $PORT from Render is expanded at runtime
+CMD uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}
