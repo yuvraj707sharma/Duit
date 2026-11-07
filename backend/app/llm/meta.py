@@ -33,11 +33,36 @@ class MetaModelProvider(LLMProvider):
                 self.client = openai.AsyncOpenAI(
                     base_url=self.base_url,
                     api_key=self.api_key,
-                    timeout=20.0
+                    timeout=25.0
                 )
             except Exception as e:
-                logger.warning("Failed to initialize AsyncOpenAI for Meta Model API: %s", e)
+                logger.warning("Optional AsyncOpenAI initialization: %s", e)
                 self.client = None
+
+    async def _call_api_direct(self, messages: list, temperature: float = 0.0, max_tokens: int = 800, json_mode: bool = False) -> str:
+        """Direct HTTP caller for Meta Model API using httpx."""
+        if not self.api_key:
+            raise ValueError("No Meta Model API key configured")
+        import httpx
+        url = f"{self.base_url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": self.default_model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "reasoning_effort": "low"
+        }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+        async with httpx.AsyncClient(timeout=25.0) as client:
+            res = await client.post(url, headers=headers, json=payload)
+            res.raise_for_status()
+            data = res.json()
+            return data["choices"][0]["message"]["content"] or ""
 
     def _cache_key(self, prefix: str, text: str, schema: Optional[Dict[str, Any]] = None) -> str:
         content = f"{prefix}:{text}:{json.dumps(schema or {}, sort_keys=True)}"
@@ -56,12 +81,6 @@ class MetaModelProvider(LLMProvider):
             cached_data, tokens = self._cache[cache_k]
             return ExtractionResult(success=True, arguments=cached_data, tokens_used=0, raw_response="[cached]")
 
-        if not self.client:
-            # Fallback to local heuristic extractor if API client is uninitialized
-            from backend.app.llm.mock import MockLLMProvider
-            mock_fallback = MockLLMProvider()
-            return await mock_fallback.extract_arguments(user_message, intent, schema, context)
-
         if not schema:
             from backend.app.cascade.schemas import get_schema_for_intent
             schema = get_schema_for_intent(intent)
@@ -77,20 +96,35 @@ class MetaModelProvider(LLMProvider):
         )
 
         try:
-            response = await self.client.chat.completions.create(
-                model=self.default_model,
-                messages=[
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": user_message}
-                ],
-                temperature=0.0,
-                max_tokens=max(800, self.max_tokens),
-                extra_body={"reasoning_effort": "low"},
-                response_format={"type": "json_object"} if hasattr(self.client.chat.completions, "create") else None
-            )
-
-            raw_text = response.choices[0].message.content or "{}"
-            tokens_used = getattr(response.usage, "total_tokens", 0) if response.usage else 0
+            raw_text = ""
+            tokens_used = 0
+            try:
+                raw_text = await self._call_api_direct(
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": user_message}
+                    ],
+                    temperature=0.0,
+                    max_tokens=max(800, self.max_tokens),
+                    json_mode=True
+                )
+            except Exception as directErr:
+                if self.client:
+                    response = await self.client.chat.completions.create(
+                        model=self.default_model,
+                        messages=[
+                            {"role": "system", "content": system_instruction},
+                            {"role": "user", "content": user_message}
+                        ],
+                        temperature=0.0,
+                        max_tokens=max(800, self.max_tokens),
+                        extra_body={"reasoning_effort": "low"},
+                        response_format={"type": "json_object"} if hasattr(self.client.chat.completions, "create") else None
+                    )
+                    raw_text = response.choices[0].message.content or "{}"
+                    tokens_used = getattr(response.usage, "total_tokens", 0) if response.usage else 0
+                if not raw_text:
+                    raise directErr
 
             # Strip any residual code fences
             clean_text = raw_text.strip()
@@ -148,23 +182,35 @@ class MetaModelProvider(LLMProvider):
         if self.enable_cache and cache_k in self._cache:
             return self._cache[cache_k][0]
 
-        if not self.client:
-            from backend.app.llm.mock import MockLLMProvider
-            mock_fallback = MockLLMProvider()
-            return await mock_fallback.generate_response(system_prompt, user_message, context)
-
         try:
-            response = await self.client.chat.completions.create(
-                model=self.default_model,
-                messages=[
-                    {"role": "system", "content": f"{system_prompt}\nKeep responses warm, concise, and helpful like a trusted personal assistant. Strictly zero emojis."},
-                    {"role": "user", "content": user_message}
-                ],
-                temperature=0.3,
-                max_tokens=max(800, self.max_tokens),
-                extra_body={"reasoning_effort": "low"}
-            )
-            reply = response.choices[0].message.content or "I am here and ready to help. What would you like to do?"
+            reply = ""
+            try:
+                reply = await self._call_api_direct(
+                    messages=[
+                        {"role": "system", "content": f"{system_prompt}\nKeep responses warm, concise, and helpful like a trusted personal assistant. Strictly zero emojis."},
+                        {"role": "user", "content": user_message}
+                    ],
+                    temperature=0.3,
+                    max_tokens=max(800, self.max_tokens)
+                )
+            except Exception as directErr:
+                if self.client:
+                    response = await self.client.chat.completions.create(
+                        model=self.default_model,
+                        messages=[
+                            {"role": "system", "content": f"{system_prompt}\nKeep responses warm, concise, and helpful like a trusted personal assistant. Strictly zero emojis."},
+                            {"role": "user", "content": user_message}
+                        ],
+                        temperature=0.3,
+                        max_tokens=max(800, self.max_tokens),
+                        extra_body={"reasoning_effort": "low"}
+                    )
+                    reply = response.choices[0].message.content or ""
+                if not reply:
+                    raise directErr
+
+            if not reply:
+                reply = "I am here and ready to help. What would you like to do?"
             
             # Strictly remove emojis to comply with formatting policy
             import re
