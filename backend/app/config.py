@@ -123,11 +123,12 @@ class Settings(BaseSettings):
         insecure_defaults = {
             "SECRET_KEY": "fastagent_super_secret_development_key_32bytes_len!!",
             "TOKEN_ENCRYPTION_KEY": "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
-            "EVOLUTION_GLOBAL_API_KEY": "evolution_dev_api_key_12345",
-            "EVOLUTION_WEBHOOK_SECRET": "webhook_secret_key_fastagent_2026",
             "DESKTOP_SHARED_SECRET": "fastagent_desktop_secret_2026_dev",
             "GATEWAY_SHARED_SECRET": "duit_gateway_secret_2026_dev",
         }
+        if self.MESSAGING_CHANNEL == "evolution":
+            insecure_defaults["EVOLUTION_GLOBAL_API_KEY"] = "evolution_dev_api_key_12345"
+            insecure_defaults["EVOLUTION_WEBHOOK_SECRET"] = "webhook_secret_key_fastagent_2026"
 
         errors = []
         for name, bad_val in insecure_defaults.items():
