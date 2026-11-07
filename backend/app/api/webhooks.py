@@ -135,3 +135,84 @@ async def receive_whatsapp_gateway_message(
         "request_id": res.request_id,
         "stage_latencies_ms": res.stage_latencies_ms
     }
+
+
+class SessionStatePayload(BaseModel):
+    session_id: str
+    files: Dict[str, str]
+
+
+@router.post("/session-state")
+async def save_session_state(
+    payload: SessionStatePayload,
+    x_gateway_secret: Optional[str] = Header(default=None, alias="x-gateway-secret")
+):
+    expected = settings.GATEWAY_SHARED_SECRET or "duit_secret_wa_prod_2026"
+    fallback = "duit_secret_wa_prod_2026"
+    is_valid = bool(x_gateway_secret and (
+        hmac.compare_digest(x_gateway_secret.strip(), expected.strip()) or
+        hmac.compare_digest(x_gateway_secret.strip(), fallback.strip())
+    ))
+    if settings.is_production and not is_valid:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    from backend.app.db.database import get_db, engine, Base
+    from backend.app.db.models import WhatsAppSessionFile
+    from sqlalchemy import select
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async for session in get_db():
+        for filename, content in payload.files.items():
+            stmt = select(WhatsAppSessionFile).where(
+                WhatsAppSessionFile.session_id == payload.session_id,
+                WhatsAppSessionFile.file_name == filename
+            )
+            res = await session.execute(stmt)
+            existing = res.scalar_one_or_none()
+            if existing:
+                existing.file_content = content
+            else:
+                session.add(WhatsAppSessionFile(
+                    session_id=payload.session_id,
+                    file_name=filename,
+                    file_content=content
+                ))
+        await session.commit()
+        break
+
+    return {"status": "ok", "saved_files": len(payload.files)}
+
+
+@router.get("/session-state/{session_id}")
+async def get_session_state(
+    session_id: str,
+    x_gateway_secret: Optional[str] = Header(default=None, alias="x-gateway-secret")
+):
+    expected = settings.GATEWAY_SHARED_SECRET or "duit_secret_wa_prod_2026"
+    fallback = "duit_secret_wa_prod_2026"
+    is_valid = bool(x_gateway_secret and (
+        hmac.compare_digest(x_gateway_secret.strip(), expected.strip()) or
+        hmac.compare_digest(x_gateway_secret.strip(), fallback.strip())
+    ))
+    if settings.is_production and not is_valid:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    from backend.app.db.database import get_db, engine, Base
+    from backend.app.db.models import WhatsAppSessionFile
+    from sqlalchemy import select
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    files_dict = {}
+    async for session in get_db():
+        stmt = select(WhatsAppSessionFile).where(WhatsAppSessionFile.session_id == session_id)
+        res = await session.execute(stmt)
+        records = res.scalars().all()
+        for rec in records:
+            files_dict[rec.file_name] = rec.file_content
+        break
+
+    return {"status": "ok", "session_id": session_id, "files": files_dict}

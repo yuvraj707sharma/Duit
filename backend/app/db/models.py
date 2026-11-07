@@ -125,3 +125,14 @@ class BetaRegistration(Base):
     phone_number = Column(String(32), index=True, nullable=False)
     status = Column(String(32), default="pending")  # pending, approved, rejected
     created_at = Column(DateTime(timezone=True), default=utc_now)
+
+
+class WhatsAppSessionFile(Base):
+    __tablename__ = "whatsapp_session_files"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String(64), index=True, nullable=False)
+    file_name = Column(String(255), index=True, nullable=False)
+    file_content = Column(Text, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+

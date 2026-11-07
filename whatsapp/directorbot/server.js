@@ -16,7 +16,8 @@ import {
   setSocketIO,
   sendTestPing,
   disconnectBotSession,
-  requestBotPairingCode
+  requestBotPairingCode,
+  getAppPublicUrl
 } from './src/whatsapp/baileysManager.js';
 
 dotenv.config();
@@ -173,12 +174,8 @@ async function getDashboardRedirectUrl() {
 }
 
 function getGoogleRedirectUri(req) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host || '';
-  if (host.includes('localhost') || host.includes('127.0.0.1')) {
-    return `http://localhost:${process.env.PORT || 5122}/auth/google/callback`;
-  }
   if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI;
-  const baseUrl = process.env.APP_PUBLIC_URL || `http://localhost:${process.env.PORT || 5122}`;
+  const baseUrl = getAppPublicUrl();
   return `${baseUrl}/auth/google/callback`;
 }
 

@@ -139,9 +139,79 @@ async function updateUser(phone, fields) {
   } catch (err) {}
 }
 
+export function getAppPublicUrl() {
+  if (process.env.APP_PUBLIC_URL && !process.env.APP_PUBLIC_URL.includes('localhost')) {
+    return process.env.APP_PUBLIC_URL.replace(/\/+$/, '');
+  }
+  if (process.env.RENDER_EXTERNAL_URL) {
+    return process.env.RENDER_EXTERNAL_URL.replace(/\/+$/, '');
+  }
+  return 'https://duit-whatsapp.onrender.com';
+}
+
+// ── Cloud Session Persistence (Survives container rebuilds on Render) ─────────
+async function restoreSessionFromCloud(authDir) {
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (GATEWAY_SHARED_SECRET) {
+      headers['x-gateway-secret'] = GATEWAY_SHARED_SECRET;
+    }
+    const resp = await fetch(`${BACKEND_URL}/api/webhooks/session-state/auth_bot`, { headers });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.files && Object.keys(data.files).length > 0) {
+      console.log(`[Baileys Cloud Sync] Restoring ${Object.keys(data.files).length} session files from cloud storage...`);
+      for (const [fname, content] of Object.entries(data.files)) {
+        const filePath = path.join(authDir, fname);
+        fs.writeFileSync(filePath, content, 'utf8');
+      }
+      console.log('[Baileys Cloud Sync] Session files restored successfully.');
+    }
+  } catch (err) {
+    console.warn('[Baileys Cloud Sync] Could not restore session from cloud:', err.message);
+  }
+}
+
+let syncTimeout = null;
+export function triggerSessionSyncToCloud(authDir) {
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(async () => {
+    try {
+      if (!fs.existsSync(authDir)) return;
+      const files = fs.readdirSync(authDir);
+      const filesMap = {};
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          const filePath = path.join(authDir, file);
+          try {
+            filesMap[file] = fs.readFileSync(filePath, 'utf8');
+          } catch {}
+        }
+      }
+      if (Object.keys(filesMap).length === 0) return;
+
+      const headers = { 'Content-Type': 'application/json' };
+      if (GATEWAY_SHARED_SECRET) {
+        headers['x-gateway-secret'] = GATEWAY_SHARED_SECRET;
+      }
+      await fetch(`${BACKEND_URL}/api/webhooks/session-state`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          session_id: 'auth_bot',
+          files: filesMap
+        })
+      });
+      console.log(`[Baileys Cloud Sync] Synced ${Object.keys(filesMap).length} session files to cloud database.`);
+    } catch (err) {
+      console.warn('[Baileys Cloud Sync] Session sync error:', err.message);
+    }
+  }, 2000);
+}
+
 // ── Generate Google OAuth Onboarding Link ────────────────────────────────────
 function generateAuthLink(phone) {
-  const baseUrl = process.env.APP_PUBLIC_URL || `http://localhost:${process.env.PORT || 5122}`;
+  const baseUrl = getAppPublicUrl();
   const encoded = Buffer.from(phone).toString('base64url');
   return `${baseUrl}/auth/google?user=${encoded}`;
 }
@@ -535,6 +605,9 @@ export async function startBotSession() {
   const authDir = path.join(__dirname, '../../storage/auth_bot');
   if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
 
+  // Restore existing session credentials from cloud PostgreSQL before starting Baileys
+  await restoreSessionFromCloud(authDir);
+
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
   const { version } = await fetchLatestBaileysVersion();
 
@@ -556,7 +629,10 @@ export async function startBotSession() {
     }
   });
 
-  botSock.ev.on('creds.update', saveCreds);
+  botSock.ev.on('creds.update', async () => {
+    await saveCreds();
+    triggerSessionSyncToCloud(authDir);
+  });
 
   botSock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
@@ -573,6 +649,7 @@ export async function startBotSession() {
       botStatus = 'CONNECTED';
       botPhoneNumber = botSock?.user?.id ? botSock.user.id.split('@')[0].split(':')[0] : null;
       emitStatus();
+      triggerSessionSyncToCloud(authDir);
       await logActivity('FASTAGENT_WA', `FastAgent WhatsApp bot connected successfully on +${botPhoneNumber || 'unknown'}`, 'INFO');
       console.log(`[FastAgent Bot] WhatsApp connected on +${botPhoneNumber}. Ready to serve users.`);
     }
