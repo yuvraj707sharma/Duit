@@ -205,6 +205,84 @@
         "security": [{ "userAuth": [] }]
       }
     },
+    "/api/linking/sessions": {
+      "post": {
+        "summary": "Create Short-Lived WhatsApp Linking Transaction",
+        "description": "Initializes a secure pairing session bound to tenant_id, user_id, nonce, and expiry time.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tenant_id", "user_id"],
+                "properties": {
+                  "tenant_id": { "type": "string" },
+                  "user_id": { "type": "string" },
+                  "phone_number": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Linking session created with pairing code and nonce" },
+          "400": { "description": "Invalid tenant or user parameters" }
+        }
+      }
+    },
+    "/api/linking/sessions/{session_id}/status": {
+      "get": {
+        "summary": "Get WhatsApp Linking Session Status",
+        "parameters": [
+          { "name": "session_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Current status of linking transaction" },
+          "404": { "description": "Linking session not found" }
+        }
+      }
+    },
+    "/api/linking/sessions/{session_id}/pair": {
+      "post": {
+        "summary": "Confirm WhatsApp Account Pairing",
+        "parameters": [
+          { "name": "session_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nonce", "pairing_code"],
+                "properties": {
+                  "nonce": { "type": "string" },
+                  "pairing_code": { "type": "string" },
+                  "phone_number": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Account paired, encrypted credentials saved, activation confirmed" },
+          "400": { "description": "Invalid nonce, pairing code mismatch, or session expired" }
+        }
+      }
+    },
+    "/api/linking/sessions/{session_id}/revoke": {
+      "post": {
+        "summary": "Revoke WhatsApp Account and Session Credentials",
+        "parameters": [
+          { "name": "session_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Account and session credentials revoked" },
+          "404": { "description": "Session not found" }
+        }
+      }
+    },
     "/api/users/onboard": {
       "post": {
         "summary": "Register or Onboard User Phone Number",

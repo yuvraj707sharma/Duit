@@ -25,6 +25,8 @@ class DatabaseRepository:
         self.devices_store: Dict[str, Dict[str, Any]] = {}
         self.executions_store: Dict[str, Dict[str, Any]] = {}
         self.messages_store: List[Dict[str, Any]] = []
+        self.linking_sessions_store: Dict[str, Dict[str, Any]] = {}
+        self.whatsapp_sessions_store: Dict[str, Dict[str, Any]] = {}
         self.approvals_store: Dict[str, Dict[str, Any]] = {}
         self.audit_log_store: List[Dict[str, Any]] = []
         self.idempotency_store: Dict[str, Dict[str, Any]] = {}
@@ -1159,6 +1161,348 @@ class DatabaseRepository:
                 )
 
         return True
+
+    # -------------------------------------------------------------------------
+    # Phase 2: Dedicated WhatsApp Linking Transactions and Encrypted Sessions
+    # -------------------------------------------------------------------------
+
+    async def create_linking_session(
+        self,
+        tenant_id: str,
+        user_id: str,
+        phone_number: Optional[str] = None,
+        gateway_instance: str = "directorbot-primary",
+        ttl_seconds: int = 600
+    ) -> Dict[str, Any]:
+        """Creates a short-lived transaction for securely linking a WhatsApp account."""
+        import secrets
+        from backend.app.security.context import SecurityContextError
+
+        user = await self.get_user(user_id, tenant_id=tenant_id)
+        if not user:
+            raise SecurityContextError(f"User {user_id} does not belong to tenant {tenant_id}")
+
+        session_id = str(uuid.uuid4())
+        prefix = "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ") for _ in range(4))
+        suffix = "".join(secrets.choice("23456789") for _ in range(4))
+        pairing_code = f"{prefix}-{suffix}"
+        nonce = secrets.token_hex(16)
+        clean_phone = "".join(filter(str.isdigit, phone_number)) if phone_number else None
+        now = time.time()
+        expires_at = now + ttl_seconds
+
+        linking_rec = {
+            "id": session_id,
+            "tenant_id": tenant_id,
+            "user_id": user_id,
+            "whatsapp_account_id": None,
+            "gateway_instance": gateway_instance,
+            "pairing_code": pairing_code,
+            "nonce": nonce,
+            "status": "pending",
+            "phone_number": clean_phone,
+            "created_at": now,
+            "expires_at": expires_at,
+            "paired_at": None,
+            "revoked_at": None
+        }
+        self.linking_sessions_store[session_id] = linking_rec
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import WhatsAppLinkingSession as LinkingModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(LinkingModel(
+                            id=session_id,
+                            tenant_id=tenant_id,
+                            user_id=user_id,
+                            gateway_instance=gateway_instance,
+                            pairing_code=pairing_code,
+                            nonce=nonce,
+                            status="pending",
+                            phone_number=clean_phone,
+                            expires_at=datetime.fromtimestamp(expires_at, timezone.utc)
+                        ))
+            except Exception:
+                pass
+
+        return linking_rec
+
+    async def get_linking_session(
+        self,
+        session_id: str,
+        tenant_id: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Retrieves linking transaction status with expiration check."""
+        rec = self.linking_sessions_store.get(session_id)
+        now = time.time()
+
+        if rec:
+            if tenant_id and rec.get("tenant_id") != tenant_id:
+                return None
+            if rec.get("status") == "pending" and now > rec.get("expires_at", 0):
+                rec["status"] = "expired"
+            return rec
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import WhatsAppLinkingSession as LinkingModel
+                async with self.session_factory() as session:
+                    stmt = select(LinkingModel).where(LinkingModel.id == session_id)
+                    res = await session.execute(stmt)
+                    s = res.scalar_one_or_none()
+                    if s:
+                        if tenant_id and s.tenant_id != tenant_id:
+                            return None
+                        exp_ts = s.expires_at.timestamp() if s.expires_at else 0
+                        status = s.status
+                        if status == "pending" and now > exp_ts:
+                            status = "expired"
+                        rec = {
+                            "id": s.id,
+                            "tenant_id": s.tenant_id,
+                            "user_id": s.user_id,
+                            "whatsapp_account_id": s.whatsapp_account_id,
+                            "gateway_instance": s.gateway_instance,
+                            "pairing_code": s.pairing_code,
+                            "nonce": s.nonce,
+                            "status": status,
+                            "phone_number": s.phone_number,
+                            "created_at": s.created_at.timestamp() if s.created_at else now,
+                            "expires_at": exp_ts,
+                            "paired_at": s.paired_at.timestamp() if s.paired_at else None,
+                            "revoked_at": s.revoked_at.timestamp() if s.revoked_at else None
+                        }
+                        self.linking_sessions_store[s.id] = rec
+                        return rec
+            except Exception:
+                pass
+
+        return None
+
+    async def confirm_pairing(
+        self,
+        session_id: str,
+        nonce: str,
+        pairing_code: str,
+        encrypted_credentials: Optional[str] = None,
+        phone_number: Optional[str] = None,
+        key_version: int = 1
+    ) -> Dict[str, Any]:
+        """Confirms pairing transaction with one-time nonce and pairing code validation."""
+        import hmac
+        from backend.app.security.context import SecurityContextError
+
+        linking_rec = await self.get_linking_session(session_id)
+        if not linking_rec:
+            raise SecurityContextError(f"Linking session {session_id} not found")
+
+        if linking_rec["status"] == "expired":
+            raise SecurityContextError("Linking session has expired. Please initiate a fresh pairing request.")
+
+        if linking_rec["status"] == "paired":
+            raise SecurityContextError("Linking session has already been used (replay rejected).")
+
+        if linking_rec["status"] != "pending":
+            raise SecurityContextError(f"Linking session is not pending (status: {linking_rec['status']})")
+
+        nonce_valid = hmac.compare_digest(linking_rec["nonce"], nonce.strip())
+        code_valid = hmac.compare_digest(
+            linking_rec["pairing_code"].replace("-", "").upper(),
+            pairing_code.replace("-", "").upper()
+        )
+
+        if not nonce_valid or not code_valid:
+            raise SecurityContextError("Invalid pairing code or nonce verification failed.")
+
+        final_phone = phone_number or linking_rec.get("phone_number")
+        if not final_phone:
+            raise SecurityContextError("Linked phone number is required to finalize WhatsApp account.")
+
+        clean_phone = "".join(filter(str.isdigit, final_phone))
+
+        account = await self.link_whatsapp_account(
+            tenant_id=linking_rec["tenant_id"],
+            user_id=linking_rec["user_id"],
+            phone_number=clean_phone,
+            display_name=f"WhatsApp (+{clean_phone})"
+        )
+
+        now = time.time()
+
+        if encrypted_credentials:
+            await self.save_whatsapp_session_credentials(
+                account_id=account["id"],
+                encrypted_credentials=encrypted_credentials,
+                key_version=key_version
+            )
+
+        linking_rec["status"] = "paired"
+        linking_rec["paired_at"] = now
+        linking_rec["whatsapp_account_id"] = account["id"]
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import WhatsAppLinkingSession as LinkingModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = select(LinkingModel).where(LinkingModel.id == session_id)
+                        res = await session.execute(stmt)
+                        s = res.scalar_one_or_none()
+                        if s:
+                            s.status = "paired"
+                            s.paired_at = datetime.fromtimestamp(now, timezone.utc)
+                            s.whatsapp_account_id = account["id"]
+            except Exception:
+                pass
+
+        return {
+            "status": "paired",
+            "session_id": session_id,
+            "account_id": account["id"],
+            "linked_number": clean_phone,
+            "archive_start_time": now,
+            "permissions_granted": [
+                "whatsapp.search",
+                "whatsapp.summary",
+                "whatsapp.chat",
+                "whatsapp.send_message"
+            ],
+            "revoke_instructions": f"To disconnect this account, send 'disconnect WhatsApp' or call POST /api/linking/sessions/{session_id}/revoke"
+        }
+
+    async def save_whatsapp_session_credentials(
+        self,
+        account_id: str,
+        encrypted_credentials: str,
+        key_version: int = 1
+    ) -> Dict[str, Any]:
+        """Saves encrypted Baileys session credentials isolated per WhatsApp account."""
+        now = time.time()
+        sess_id = f"wa_sess_{uuid.uuid4().hex[:12]}"
+        rec = {
+            "id": sess_id,
+            "whatsapp_account_id": account_id,
+            "encrypted_credentials": encrypted_credentials,
+            "key_version": key_version,
+            "created_at": now,
+            "last_seen_at": now,
+            "revoked_at": None
+        }
+        self.whatsapp_sessions_store[account_id] = rec
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import WhatsAppSession as SessionModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(SessionModel(
+                            id=sess_id,
+                            whatsapp_account_id=account_id,
+                            encrypted_credentials=encrypted_credentials,
+                            key_version=key_version
+                        ))
+            except Exception:
+                pass
+
+        return rec
+
+    async def get_whatsapp_session_credentials(self, account_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves encrypted session credentials for an account."""
+        rec = self.whatsapp_sessions_store.get(account_id)
+        if rec and not rec.get("revoked_at"):
+            return rec
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import WhatsAppSession as SessionModel
+                async with self.session_factory() as session:
+                    stmt = select(SessionModel).where(
+                        and_(SessionModel.whatsapp_account_id == account_id, SessionModel.revoked_at.is_(None))
+                    ).order_by(SessionModel.created_at.desc())
+                    res = await session.execute(stmt)
+                    s = res.scalar_one_or_none()
+                    if s:
+                        return {
+                            "id": s.id,
+                            "whatsapp_account_id": s.whatsapp_account_id,
+                            "encrypted_credentials": s.encrypted_credentials,
+                            "key_version": s.key_version,
+                            "created_at": s.created_at.timestamp() if s.created_at else time.time(),
+                            "last_seen_at": s.last_seen_at.timestamp() if s.last_seen_at else time.time(),
+                            "revoked_at": s.revoked_at.timestamp() if s.revoked_at else None
+                        }
+            except Exception:
+                pass
+
+        return None
+
+    async def revoke_linking_session(
+        self,
+        session_id: str,
+        caller_user_id: str,
+        tenant_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Revokes linking session and marks associated WhatsApp account credentials revoked."""
+        from backend.app.security.context import SecurityContextError
+
+        linking_rec = await self.get_linking_session(session_id)
+        if not linking_rec:
+            raise SecurityContextError(f"Linking session {session_id} not found")
+
+        if tenant_id and linking_rec.get("tenant_id") != tenant_id:
+            raise SecurityContextError("Unauthorized: session belongs to another tenant")
+
+        if linking_rec.get("user_id") != caller_user_id:
+            raise SecurityContextError("Unauthorized: caller does not own this linking session")
+
+        now = time.time()
+        linking_rec["status"] = "revoked"
+        linking_rec["revoked_at"] = now
+
+        account_id = linking_rec.get("whatsapp_account_id")
+        if account_id:
+            if account_id in self.accounts_store:
+                self.accounts_store[account_id]["status"] = "revoked"
+                self.accounts_store[account_id]["revoked_at"] = now
+            if account_id in self.whatsapp_sessions_store:
+                self.whatsapp_sessions_store[account_id]["revoked_at"] = now
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import WhatsAppLinkingSession as LinkingModel, WhatsAppAccount as AccountModel, WhatsAppSession as SessionModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt_l = select(LinkingModel).where(LinkingModel.id == session_id)
+                        res_l = await session.execute(stmt_l)
+                        s = res_l.scalar_one_or_none()
+                        if s:
+                            s.status = "revoked"
+                            s.revoked_at = datetime.fromtimestamp(now, timezone.utc)
+
+                        if account_id:
+                            stmt_a = select(AccountModel).where(AccountModel.id == account_id)
+                            res_a = await session.execute(stmt_a)
+                            a = res_a.scalar_one_or_none()
+                            if a:
+                                a.status = "revoked"
+                                a.revoked_at = datetime.fromtimestamp(now, timezone.utc)
+
+                            stmt_sess = select(SessionModel).where(SessionModel.whatsapp_account_id == account_id)
+                            res_sess = await session.execute(stmt_sess)
+                            sess_objs = res_sess.scalars().all()
+                            for sess_obj in sess_objs:
+                                sess_obj.revoked_at = datetime.fromtimestamp(now, timezone.utc)
+            except Exception:
+                pass
+
+        return {
+            "status": "revoked",
+            "session_id": session_id,
+            "account_id": account_id,
+            "revoked_at": now
+        }
 
 
 from backend.app.db.database import AsyncSessionLocal

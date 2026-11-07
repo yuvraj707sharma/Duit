@@ -92,6 +92,28 @@ class WhatsAppSession(Base):
     whatsapp_account = relationship("WhatsAppAccount", back_populates="sessions")
 
 
+class WhatsAppLinkingSession(Base):
+    __tablename__ = "whatsapp_linking_sessions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(36), ForeignKey("tenants.id", ondelete="CASCADE"), index=True, nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    whatsapp_account_id = Column(String(36), ForeignKey("whatsapp_accounts.id", ondelete="CASCADE"), index=True, nullable=True)
+    gateway_instance = Column(String(64), nullable=False, default="directorbot-primary")
+    pairing_code = Column(String(32), index=True, nullable=True)
+    nonce = Column(String(64), unique=True, index=True, nullable=False)
+    status = Column(String(24), nullable=False, default="pending")  # pending, paired, expired, revoked
+    phone_number = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    paired_at = Column(DateTime(timezone=True), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("idx_linking_tenant_user_status", "tenant_id", "user_id", "status"),
+    )
+
+
 class DesktopDevice(Base):
     __tablename__ = "desktop_devices"
 

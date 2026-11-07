@@ -58,6 +58,25 @@
         "revoked_at": { "type": ["string", "null"], "format": "date-time" }
       }
     },
+    "WhatsAppLinkingSession": {
+      "type": "object",
+      "required": ["id", "tenant_id", "user_id", "gateway_instance", "nonce", "status", "expires_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "whatsapp_account_id": { "type": ["string", "null"], "format": "uuid" },
+        "gateway_instance": { "type": "string" },
+        "pairing_code": { "type": ["string", "null"] },
+        "nonce": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "paired", "expired", "revoked"] },
+        "phone_number": { "type": ["string", "null"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "paired_at": { "type": ["string", "null"], "format": "date-time" },
+        "revoked_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
     "DesktopDevice": {
       "type": "object",
       "required": ["id", "tenant_id", "user_id", "device_name", "platform"],
