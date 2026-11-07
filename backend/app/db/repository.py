@@ -12,6 +12,19 @@ class DatabaseRepository:
     def __init__(self, session_factory=None):
         self.session_factory = session_factory
         # In-memory fast layer backed by database schema
+        self.tenants_store: Dict[str, Dict[str, Any]] = {
+            "tenant_default_duit": {
+                "id": "tenant_default_duit",
+                "name": "Default DUIT Organization",
+                "slug": "default",
+                "created_at": time.time(),
+                "updated_at": time.time()
+            }
+        }
+        self.accounts_store: Dict[str, Dict[str, Any]] = {}
+        self.devices_store: Dict[str, Dict[str, Any]] = {}
+        self.executions_store: Dict[str, Dict[str, Any]] = {}
+        self.messages_store: List[Dict[str, Any]] = []
         self.approvals_store: Dict[str, Dict[str, Any]] = {}
         self.audit_log_store: List[Dict[str, Any]] = []
         self.idempotency_store: Dict[str, Dict[str, Any]] = {}
@@ -20,9 +33,13 @@ class DatabaseRepository:
         self.users_store: Dict[str, Dict[str, Any]] = {
             "919876543210": {
                 "id": "f902526d-66d8-49c3-b2b5-5fe95c870be6",
+                "tenant_id": "tenant_default_duit",
                 "phone_number": "919876543210",
                 "email": "primary@fastagent.dev",
+                "full_name": "Primary Dev User",
                 "display_name": "Primary Dev User",
+                "role": "admin",
+                "is_active": True,
                 "created_at": time.time(),
                 "services_connected": {"google": True, "desktop": True}
             }
@@ -555,6 +572,593 @@ class DatabaseRepository:
                     return skill
 
         return None
+
+    # -------------------------------------------------------------------------
+    # Multi-tenant Identity, Linked Accounts, Devices, Executions & Archive
+    # -------------------------------------------------------------------------
+
+    async def create_tenant(
+        self,
+        name: str,
+        slug: Optional[str] = None,
+        tenant_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Creates a new organizational tenant."""
+        tid = tenant_id or str(uuid.uuid4())
+        computed_slug = slug or name.lower().replace(" ", "-")[:64]
+        now = time.time()
+        tenant = {
+            "id": tid,
+            "name": name,
+            "slug": computed_slug,
+            "created_at": now,
+            "updated_at": now
+        }
+        self.tenants_store[tid] = tenant
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import Tenant as TenantModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(TenantModel(
+                            id=tid,
+                            name=name,
+                            slug=computed_slug
+                        ))
+            except Exception:
+                pass
+
+        return tenant
+
+    async def get_tenant(self, tenant_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves a tenant by ID."""
+        if tenant_id in self.tenants_store:
+            return self.tenants_store[tenant_id]
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import Tenant as TenantModel
+                async with self.session_factory() as session:
+                    stmt = select(TenantModel).where(TenantModel.id == tenant_id)
+                    res = await session.execute(stmt)
+                    t = res.scalar_one_or_none()
+                    if t:
+                        rec = {
+                            "id": t.id,
+                            "name": t.name,
+                            "slug": t.slug,
+                            "created_at": t.created_at.timestamp() if t.created_at else time.time(),
+                            "updated_at": t.updated_at.timestamp() if t.updated_at else time.time()
+                        }
+                        self.tenants_store[t.id] = rec
+                        return rec
+            except Exception:
+                pass
+
+        return None
+
+    async def register_user(
+        self,
+        tenant_id: Optional[str] = None,
+        email: Optional[str] = None,
+        phone_number: Optional[str] = None,
+        phone: Optional[str] = None,
+        display_name: Optional[str] = None,
+        full_name: Optional[str] = None,
+        role: str = "member",
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Registers a user bound to an explicit tenant, preserving legacy phone onboarding compatibility."""
+        tid = tenant_id or "tenant_default_duit"
+        tenant = await self.get_tenant(tid)
+        if not tenant:
+            from backend.app.security.context import SecurityContextError
+            raise SecurityContextError(f"Tenant {tid} does not exist")
+
+        uid = user_id or str(uuid.uuid4())
+        raw_phone = phone_number or phone
+        clean_phone = "".join(filter(str.isdigit, raw_phone)) if raw_phone else None
+        computed_name = full_name or display_name or (email.split("@")[0] if email else (clean_phone or "DUIT User"))
+        computed_email = email or (f"{clean_phone}@fastagent.local" if clean_phone else f"user_{uid[:8]}@fastagent.local")
+        now = time.time()
+
+        user_data = {
+            "id": uid,
+            "tenant_id": tid,
+            "email": computed_email,
+            "phone_number": clean_phone,
+            "full_name": computed_name,
+            "display_name": computed_name,
+            "role": role,
+            "is_active": True,
+            "created_at": now,
+            "services_connected": {}
+        }
+        self.users_store[uid] = user_data
+        if clean_phone:
+            self.users_store[clean_phone] = user_data
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import User as UserModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(UserModel(
+                            id=uid,
+                            tenant_id=tid,
+                            email=computed_email,
+                            phone_number=clean_phone,
+                            full_name=computed_name,
+                            role=role,
+                            is_active=True
+                        ))
+            except Exception:
+                pass
+
+        return user_data
+
+    async def get_user(self, user_id: str, tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Retrieves a user with strict tenant boundary enforcement."""
+        user = self.users_store.get(user_id)
+        if not user:
+            clean_id = "".join(filter(str.isdigit, user_id)) if user_id else None
+            if clean_id and clean_id in self.users_store:
+                user = self.users_store[clean_id]
+
+        if user:
+            if tenant_id and user.get("tenant_id") and user.get("tenant_id") != tenant_id:
+                return None
+            return user
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import User as UserModel
+                from sqlalchemy import or_
+                async with self.session_factory() as session:
+                    stmt = select(UserModel).where(
+                        or_(UserModel.id == user_id, UserModel.phone_number == user_id)
+                    )
+                    res = await session.execute(stmt)
+                    u = res.scalar_one_or_none()
+                    if u:
+                        if tenant_id and u.tenant_id and u.tenant_id != tenant_id:
+                            return None
+                        rec = {
+                            "id": u.id,
+                            "tenant_id": u.tenant_id,
+                            "email": u.email,
+                            "phone_number": u.phone_number,
+                            "full_name": u.full_name,
+                            "display_name": u.full_name,
+                            "role": u.role,
+                            "is_active": u.is_active,
+                            "created_at": u.created_at.timestamp() if u.created_at else time.time(),
+                            "services_connected": {}
+                        }
+                        self.users_store[u.id] = rec
+                        if u.phone_number:
+                            self.users_store[u.phone_number] = rec
+                        return rec
+            except Exception:
+                pass
+
+        return None
+
+    async def link_whatsapp_account(
+        self,
+        tenant_id: str,
+        user_id: str,
+        phone_number: str,
+        display_name: Optional[str] = None,
+        account_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Links a WhatsApp account to an authenticated user and tenant."""
+        from backend.app.security.context import SecurityContextError
+        user = await self.get_user(user_id, tenant_id=tenant_id)
+        if not user:
+            raise SecurityContextError(f"User {user_id} does not belong to tenant {tenant_id}")
+
+        aid = account_id or str(uuid.uuid4())
+        clean_phone = "".join(filter(str.isdigit, phone_number))
+        now = time.time()
+
+        account = {
+            "id": aid,
+            "tenant_id": tenant_id,
+            "user_id": user_id,
+            "phone_number": clean_phone,
+            "display_name": display_name or clean_phone,
+            "status": "active",
+            "created_at": now,
+            "last_seen_at": now,
+            "revoked_at": None
+        }
+        self.accounts_store[aid] = account
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import WhatsAppAccount as WAAccountModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(WAAccountModel(
+                            id=aid,
+                            tenant_id=tenant_id,
+                            user_id=user_id,
+                            phone_number=clean_phone,
+                            display_name=account["display_name"],
+                            status="active"
+                        ))
+            except Exception:
+                pass
+
+        return account
+
+    async def get_whatsapp_account(self, account_id: str, tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Retrieves a WhatsApp account with tenant scoping."""
+        account = self.accounts_store.get(account_id)
+        if account:
+            if tenant_id and account.get("tenant_id") != tenant_id:
+                return None
+            return account
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import WhatsAppAccount as WAAccountModel
+                async with self.session_factory() as session:
+                    stmt = select(WAAccountModel).where(WAAccountModel.id == account_id)
+                    res = await session.execute(stmt)
+                    a = res.scalar_one_or_none()
+                    if a:
+                        if tenant_id and a.tenant_id != tenant_id:
+                            return None
+                        rec = {
+                            "id": a.id,
+                            "tenant_id": a.tenant_id,
+                            "user_id": a.user_id,
+                            "phone_number": a.phone_number,
+                            "display_name": a.display_name,
+                            "status": a.status,
+                            "created_at": a.created_at.timestamp() if a.created_at else time.time(),
+                            "last_seen_at": a.last_seen_at.timestamp() if a.last_seen_at else time.time(),
+                            "revoked_at": a.revoked_at.timestamp() if a.revoked_at else None
+                        }
+                        self.accounts_store[a.id] = rec
+                        return rec
+            except Exception:
+                pass
+
+        return None
+
+    async def register_desktop_device(
+        self,
+        tenant_id: str,
+        user_id: str,
+        device_name: str,
+        platform: str = "windows",
+        permissions: Optional[List[str]] = None,
+        device_id: Optional[str] = None,
+        public_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Registers a desktop device bound to user and tenant."""
+        from backend.app.security.context import SecurityContextError
+        user = await self.get_user(user_id, tenant_id=tenant_id)
+        if not user:
+            raise SecurityContextError(f"User {user_id} does not belong to tenant {tenant_id}")
+
+        did = device_id or str(uuid.uuid4())
+        now = time.time()
+        device = {
+            "id": did,
+            "tenant_id": tenant_id,
+            "user_id": user_id,
+            "device_name": device_name,
+            "platform": platform,
+            "public_key": public_key,
+            "is_online": True,
+            "permissions": permissions or ["desktop.app.launch", "desktop.ui.snapshot"],
+            "last_seen_at": now,
+            "created_at": now,
+            "revoked_at": None
+        }
+        self.devices_store[did] = device
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import DesktopDevice as DeviceModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(DeviceModel(
+                            id=did,
+                            tenant_id=tenant_id,
+                            user_id=user_id,
+                            device_name=device_name,
+                            platform=platform,
+                            public_key=public_key,
+                            is_online=True,
+                            permissions=device["permissions"]
+                        ))
+            except Exception:
+                pass
+
+        return device
+
+    async def get_desktop_device(self, device_id: str, tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Retrieves a desktop device scoped to tenant."""
+        device = self.devices_store.get(device_id)
+        if device:
+            if tenant_id and device.get("tenant_id") != tenant_id:
+                return None
+            return device
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import DesktopDevice as DeviceModel
+                async with self.session_factory() as session:
+                    stmt = select(DeviceModel).where(DeviceModel.id == device_id)
+                    res = await session.execute(stmt)
+                    d = res.scalar_one_or_none()
+                    if d:
+                        if tenant_id and d.tenant_id != tenant_id:
+                            return None
+                        rec = {
+                            "id": d.id,
+                            "tenant_id": d.tenant_id,
+                            "user_id": d.user_id,
+                            "device_name": d.device_name,
+                            "platform": d.platform,
+                            "public_key": d.public_key,
+                            "is_online": d.is_online,
+                            "permissions": d.permissions,
+                            "last_seen_at": d.last_seen_at.timestamp() if d.last_seen_at else time.time(),
+                            "created_at": d.created_at.timestamp() if d.created_at else time.time(),
+                            "revoked_at": d.revoked_at.timestamp() if d.revoked_at else None
+                        }
+                        self.devices_store[d.id] = rec
+                        return rec
+            except Exception:
+                pass
+
+        return None
+
+    async def record_execution(
+        self,
+        tenant_id: str,
+        user_id: str,
+        capability: str,
+        arguments: Dict[str, Any],
+        risk_level: str = "medium",
+        idempotency_key: Optional[str] = None,
+        device_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Records an execution attempt with strict tenant/device authorization."""
+        from backend.app.security.context import SecurityContextError
+        user = await self.get_user(user_id, tenant_id=tenant_id)
+        if not user:
+            raise SecurityContextError(f"User {user_id} does not belong to tenant {tenant_id}")
+
+        if device_id:
+            device = await self.get_desktop_device(device_id, tenant_id=tenant_id)
+            if not device or device.get("user_id") != user_id:
+                raise SecurityContextError(f"Device {device_id} does not belong to user {user_id}")
+
+        eid = str(uuid.uuid4())
+        ikey = idempotency_key or f"exec_{uuid.uuid4().hex[:12]}"
+        now = time.time()
+
+        exec_rec = {
+            "id": eid,
+            "tenant_id": tenant_id,
+            "user_id": user_id,
+            "device_id": device_id,
+            "capability": capability,
+            "arguments": arguments,
+            "risk_level": risk_level,
+            "status": "pending",
+            "verified": False,
+            "output": None,
+            "error": None,
+            "idempotency_key": ikey,
+            "created_at": now,
+            "completed_at": None
+        }
+        self.executions_store[eid] = exec_rec
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import Execution as ExecutionModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(ExecutionModel(
+                            id=eid,
+                            tenant_id=tenant_id,
+                            user_id=user_id,
+                            device_id=device_id,
+                            capability=capability,
+                            arguments=arguments,
+                            risk_level=risk_level,
+                            status="pending",
+                            verified=False,
+                            idempotency_key=ikey
+                        ))
+            except Exception:
+                pass
+
+        return exec_rec
+
+    async def complete_execution(
+        self,
+        execution_id: str,
+        status: str,
+        verified: bool = True,
+        output: Optional[Dict[str, Any]] = None,
+        error: Optional[str] = None,
+        tenant_id: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Marks an execution complete with verified output."""
+        from backend.app.security.context import SecurityContextError
+        exec_rec = self.executions_store.get(execution_id)
+        if not exec_rec:
+            return None
+
+        if tenant_id and exec_rec.get("tenant_id") != tenant_id:
+            raise SecurityContextError("Execution belongs to different tenant")
+
+        now = time.time()
+        exec_rec["status"] = status
+        exec_rec["verified"] = verified
+        exec_rec["output"] = output
+        exec_rec["error"] = error
+        exec_rec["completed_at"] = now
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import Execution as ExecutionModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = select(ExecutionModel).where(ExecutionModel.id == execution_id)
+                        res = await session.execute(stmt)
+                        e = res.scalar_one_or_none()
+                        if e:
+                            e.status = status
+                            e.verified = verified
+                            e.output = output
+                            e.error = error
+            except Exception:
+                pass
+
+        return exec_rec
+
+    async def archive_message(
+        self,
+        tenant_id: str,
+        whatsapp_account_id: str,
+        provider_message_id: str,
+        sender_jid: str,
+        text: str,
+        message_timestamp: Optional[datetime] = None,
+        sender_phone: Optional[str] = None,
+        sender_display_name: Optional[str] = None,
+        direction: str = "inbound",
+        conversation_id: Optional[str] = None,
+        media_metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Archives an inbound/outbound message strictly scoped to linked account & tenant."""
+        import hashlib
+        from backend.app.security.context import SecurityContextError
+        account = await self.get_whatsapp_account(whatsapp_account_id, tenant_id=tenant_id)
+        if not account:
+            raise SecurityContextError(f"WhatsApp account {whatsapp_account_id} not found in tenant {tenant_id}")
+
+        # Idempotent deduplication check
+        for m in self.messages_store:
+            if m.get("whatsapp_account_id") == whatsapp_account_id and m.get("provider_message_id") == provider_message_id:
+                return m
+
+        mid = str(uuid.uuid4())
+        ts = message_timestamp or datetime.now(timezone.utc)
+        clean_sender_phone = sender_phone or "".join(filter(str.isdigit, sender_jid.split("@")[0]))
+        content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+        msg_rec = {
+            "id": mid,
+            "tenant_id": tenant_id,
+            "whatsapp_account_id": whatsapp_account_id,
+            "conversation_id": conversation_id,
+            "provider_message_id": provider_message_id,
+            "sender_jid": sender_jid,
+            "sender_phone": clean_sender_phone,
+            "sender_display_name": sender_display_name or sender_jid.split("@")[0],
+            "direction": direction,
+            "text": text,
+            "media_metadata": media_metadata,
+            "message_timestamp": ts,
+            "received_at": datetime.now(timezone.utc),
+            "content_hash": content_hash
+        }
+        self.messages_store.insert(0, msg_rec)
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import Message as MessageModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(MessageModel(
+                            id=mid,
+                            tenant_id=tenant_id,
+                            whatsapp_account_id=whatsapp_account_id,
+                            conversation_id=conversation_id,
+                            provider_message_id=provider_message_id,
+                            sender_jid=sender_jid,
+                            sender_phone=clean_sender_phone,
+                            sender_display_name=msg_rec["sender_display_name"],
+                            direction=direction,
+                            text=text,
+                            media_metadata=media_metadata,
+                            message_timestamp=ts,
+                            content_hash=content_hash
+                        ))
+            except Exception:
+                pass
+
+        return msg_rec
+
+    async def search_messages(
+        self,
+        tenant_id: str,
+        whatsapp_account_id: str,
+        query_text: Optional[str] = None,
+        sender_phone: Optional[str] = None,
+        limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """Searches archived messages strictly isolated to tenant and linked WhatsApp account."""
+        results = []
+        clean_filter_phone = "".join(filter(str.isdigit, sender_phone)) if sender_phone else None
+        q_lower = query_text.lower().strip() if query_text else None
+
+        for m in self.messages_store:
+            # Strict tenant and account boundary
+            if m.get("tenant_id") != tenant_id or m.get("whatsapp_account_id") != whatsapp_account_id:
+                continue
+
+            if clean_filter_phone and clean_filter_phone not in (m.get("sender_phone") or ""):
+                continue
+
+            if q_lower and q_lower not in m.get("text", "").lower():
+                continue
+
+            results.append(m)
+            if len(results) >= limit:
+                break
+
+        return results
+
+    async def verify_security_context(self, context: Any) -> bool:
+        """Verifies full server-verified identity context."""
+        from backend.app.security.context import SecurityContextError
+        tenant = await self.get_tenant(context.tenant_id)
+        if not tenant:
+            raise SecurityContextError(f"Tenant {context.tenant_id} not found")
+
+        user = await self.get_user(context.user_id, tenant_id=context.tenant_id)
+        if not user:
+            raise SecurityContextError(f"User {context.user_id} does not belong to tenant {context.tenant_id}")
+
+        if context.account_id:
+            account = await self.get_whatsapp_account(context.account_id, tenant_id=context.tenant_id)
+            if not account or account.get("user_id") != context.user_id:
+                raise SecurityContextError(
+                    f"WhatsApp account {context.account_id} does not belong to user {context.user_id}"
+                )
+
+        if context.device_id:
+            device = await self.get_desktop_device(context.device_id, tenant_id=context.tenant_id)
+            if not device or device.get("user_id") != context.user_id:
+                raise SecurityContextError(
+                    f"Desktop device {context.device_id} does not belong to user {context.user_id}"
+                )
+
+        return True
 
 
 from backend.app.db.database import AsyncSessionLocal

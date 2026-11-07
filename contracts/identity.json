@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fastagent.dev/schemas/identity.json",
+  "title": "IdentityAndAccountModel",
+  "description": "Multi-tenant identity, linked-account, device, execution, and message contracts for the DUIT platform.",
+  "definitions": {
+    "Tenant": {
+      "type": "object",
+      "required": ["id", "name", "slug", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "User": {
+      "type": "object",
+      "required": ["id", "tenant_id", "email", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "email": { "type": "string", "format": "email" },
+        "full_name": { "type": "string" },
+        "phone_number": { "type": "string" },
+        "role": { "type": "string", "enum": ["owner", "admin", "member", "director"] },
+        "is_active": { "type": "boolean", "default": true },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "WhatsAppAccount": {
+      "type": "object",
+      "required": ["id", "tenant_id", "user_id", "phone_number", "status"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "phone_number": { "type": "string" },
+        "display_name": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "disconnected", "pending_pairing", "revoked"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "last_seen_at": { "type": "string", "format": "date-time" },
+        "revoked_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "WhatsAppSession": {
+      "type": "object",
+      "required": ["id", "whatsapp_account_id", "encrypted_credentials", "key_version"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "whatsapp_account_id": { "type": "string", "format": "uuid" },
+        "encrypted_credentials": { "type": "string" },
+        "key_version": { "type": "integer" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "last_seen_at": { "type": "string", "format": "date-time" },
+        "revoked_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "DesktopDevice": {
+      "type": "object",
+      "required": ["id", "tenant_id", "user_id", "device_name", "platform"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "device_name": { "type": "string" },
+        "platform": { "type": "string", "enum": ["windows", "macos", "linux"] },
+        "public_key": { "type": "string" },
+        "is_online": { "type": "boolean", "default": false },
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "last_seen_at": { "type": "string", "format": "date-time" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "revoked_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "OAuthConnection": {
+      "type": "object",
+      "required": ["id", "tenant_id", "user_id", "provider"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "provider": { "type": "string", "enum": ["google", "microsoft"] },
+        "scopes": { "type": "array", "items": { "type": "string" } },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "revoked_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "Conversation": {
+      "type": "object",
+      "required": ["id", "tenant_id", "user_id", "channel"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "channel": { "type": "string", "enum": ["whatsapp", "web", "desktop"] },
+        "external_chat_jid": { "type": "string" },
+        "title": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Message": {
+      "type": "object",
+      "required": ["id", "tenant_id", "provider_message_id", "sender_jid", "direction", "text", "message_timestamp"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "whatsapp_account_id": { "type": ["string", "null"], "format": "uuid" },
+        "conversation_id": { "type": ["string", "null"], "format": "uuid" },
+        "provider_message_id": { "type": "string" },
+        "sender_jid": { "type": "string" },
+        "sender_phone": { "type": "string" },
+        "sender_display_name": { "type": "string" },
+        "direction": { "type": "string", "enum": ["inbound", "outbound"] },
+        "text": { "type": "string" },
+        "media_metadata": { "type": "object" },
+        "message_timestamp": { "type": "string", "format": "date-time" },
+        "received_at": { "type": "string", "format": "date-time" },
+        "content_hash": { "type": "string" }
+      }
+    },
+    "Execution": {
+      "type": "object",
+      "required": ["id", "tenant_id", "user_id", "capability", "risk_level", "status", "idempotency_key"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "device_id": { "type": ["string", "null"], "format": "uuid" },
+        "capability": { "type": "string" },
+        "arguments": { "type": "object" },
+        "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "status": { "type": "string", "enum": ["pending", "running", "completed", "failed", "cancelled"] },
+        "verified": { "type": "boolean", "default": false },
+        "output": { "type": "object" },
+        "error": { "type": ["string", "null"] },
+        "idempotency_key": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "completed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "SecurityContext": {
+      "type": "object",
+      "required": ["tenant_id", "user_id", "request_id"],
+      "properties": {
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "account_id": { "type": ["string", "null"], "format": "uuid" },
+        "device_id": { "type": ["string", "null"], "format": "uuid" },
+        "request_id": { "type": "string" }
+      }
+    }
+  }
+}
