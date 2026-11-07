@@ -43,3 +43,24 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+
+  - type: web
+    name: duit-whatsapp
+    runtime: docker
+    region: singapore
+    plan: free
+    dockerfilePath: whatsapp/directorbot/Dockerfile
+    dockerContext: whatsapp/directorbot
+    envVars:
+      - key: BACKEND_URL
+        value: https://duit-backend.onrender.com
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GATEWAY_SHARED_SECRET
+        sync: false

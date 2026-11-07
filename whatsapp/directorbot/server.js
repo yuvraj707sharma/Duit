@@ -731,11 +731,10 @@ async function bootstrap() {
   console.log('   ⚔️  ZORO WhatsApp Bot  —  Starting up   ');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-  // 1. Init Database (auto-creates all tables)
+  // 1. Init Database (auto-creates all tables if MySQL is available)
   const dbOk = await initDatabase();
   if (!dbOk) {
-    console.error('[ERROR] Database connection failed. Check MySQL config in .env');
-    process.exit(1);
+    console.warn('[Database] MySQL not available — running in cloud gateway mode.');
   }
 
   // 2. Start WhatsApp Bot Session

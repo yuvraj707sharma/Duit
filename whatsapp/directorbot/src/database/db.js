@@ -412,13 +412,14 @@ export async function findMatchingSkill(userPhone, text) {
 
 export async function query(sql, params = []) {
   if (!pool) {
-    const initialized = await initDatabase();
-    if (!initialized) {
-      throw new Error('Database not connected. Please verify MySQL is running.');
-    }
+    return [];
   }
-  const [rows] = await pool.query(sql, params);
-  return rows;
+  try {
+    const [rows] = await pool.query(sql, params);
+    return rows;
+  } catch (err) {
+    return [];
+  }
 }
 
 export async function getSetting(key, defaultValue = null) {
