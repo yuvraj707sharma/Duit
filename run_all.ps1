@@ -1,5 +1,5 @@
 Write-Host "=======================================================" -ForegroundColor Cyan
-Write-Host "    FastAgent Chief of Staff - Full Stack Launcher     " -ForegroundColor Cyan
+Write-Host "              DUIT - Full Stack Launcher               " -ForegroundColor Cyan
 Write-Host "=======================================================" -ForegroundColor Cyan
 
 # 1. Start Shed Remote Task Plane (Port 4378)
