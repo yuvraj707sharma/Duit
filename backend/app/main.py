@@ -1,10 +1,13 @@
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
 from backend.app.config import settings
+from backend.app.db.database import engine, Base
+import backend.app.db.models  # Ensure all SQLAlchemy models are registered
 from backend.app.api.webhooks import router as webhooks_router
 from backend.app.api.approvals import router as approvals_router
 from backend.app.api.auth import router as auth_router
@@ -14,10 +17,23 @@ from backend.app.api.desktop import router as desktop_router
 from backend.app.api.whatsapp import router as whatsapp_router
 from backend.app.api.skills import router as skills_router
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: automatically initialize database tables on startup."""
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        print(f"[Warning] Database auto-creation failed (check connection): {e}")
+    yield
+
+
 app = FastAPI(
     title="DUIT API",
     description="Deterministic 4-stage cascade for fast, cheap, safe AI scheduling & email assistance.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS Middleware
