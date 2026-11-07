@@ -124,6 +124,11 @@ function extractToken(req) {
   return null;
 }
 
+// Health check endpoint for external pingers / uptime monitors
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'duit-whatsapp', timestamp: new Date().toISOString() });
+});
+
 // Login Page Route: If already authenticated, redirect to root dashboard (unless logging out)
 app.get('/login.html', async (req, res) => {
   const subpath = req.subpath || detectSubpath(req);

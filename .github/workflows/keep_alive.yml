@@ -1,0 +1,19 @@
+name: Keep DUIT Render Services Alive
+
+on:
+  schedule:
+    # Trigger every 10 minutes to prevent Render free tier from sleeping (15 min timeout)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping DUIT Services
+        run: |
+          echo "Pinging Backend: https://duit-backend.onrender.com/health"
+          curl -s -m 45 https://duit-backend.onrender.com/health || true
+          echo ""
+          echo "Pinging WhatsApp: https://duit-whatsapp.onrender.com/health"
+          curl -s -m 45 https://duit-whatsapp.onrender.com/health || true
