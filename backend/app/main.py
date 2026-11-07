@@ -80,6 +80,58 @@ async def root():
     )
 
 
+from pydantic import BaseModel
+from sqlalchemy import select
+from backend.app.db.database import engine, Base, AsyncSessionLocal
+from backend.app.db.models import BetaRegistration
+
+
+class WaitlistPayload(BaseModel):
+    email: str
+    phone: str
+
+
+@app.post("/api/waitlist")
+async def join_beta_waitlist(payload: WaitlistPayload):
+    """Collects early access requests for whitelist approval."""
+    clean_email = payload.email.strip().lower()
+    clean_phone = payload.phone.strip()
+
+    if not clean_email or "@" not in clean_email or "." not in clean_email:
+        return JSONResponse(status_code=400, content={"error": "Please provide a valid Gmail address."})
+
+    if not clean_phone or len(clean_phone) < 8:
+        return JSONResponse(status_code=400, content={"error": "Please provide a valid WhatsApp number."})
+
+    try:
+        async with AsyncSessionLocal() as session:
+            # Check for existing request
+            stmt = select(BetaRegistration).where(BetaRegistration.email == clean_email)
+            res = await session.execute(stmt)
+            existing = res.scalars().first()
+
+            if existing:
+                return {
+                    "status": "already_registered",
+                    "message": "You are already on the beta waitlist! We are reviewing accounts and will notify you soon."
+                }
+
+            entry = BetaRegistration(
+                email=clean_email,
+                phone_number=clean_phone,
+                status="pending"
+            )
+            session.add(entry)
+            await session.commit()
+
+        return {
+            "status": "success",
+            "message": "Registration received! We will whitelist your Gmail in Google Workspace and reach out on WhatsApp."
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": "Could not save registration. Please try again."})
+
+
 @app.get("/download/DUITDesktop.exe")
 async def download_desktop_app():
     """Download route for the standalone Windows desktop application binary."""

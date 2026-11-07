@@ -23,7 +23,8 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://localhost:3000",
         "http://localhost",
-        "capacitor://localhost"
+        "capacitor://localhost",
+        "https://yuvraj707sharma.github.io"
     ]
 
     @field_validator("CORS_ORIGINS")

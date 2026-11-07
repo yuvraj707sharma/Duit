@@ -115,3 +115,13 @@ class UserPolicy(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now)
 
     user = relationship("User", back_populates="policy")
+
+
+class BetaRegistration(Base):
+    __tablename__ = "beta_registrations"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String(255), index=True, nullable=False)
+    phone_number = Column(String(32), index=True, nullable=False)
+    status = Column(String(32), default="pending")  # pending, approved, rejected
+    created_at = Column(DateTime(timezone=True), default=utc_now)
