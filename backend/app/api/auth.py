@@ -271,3 +271,23 @@ async def save_oauth_token(
         repository.tokens_store[user_id]["email"] = req.email
 
     return {"status": "success", "user_id": user_id, "email": req.email}
+
+
+class RevokeAllSessionsRequest(BaseModel):
+    user_id: Optional[str] = None
+    tenant_id: Optional[str] = "tenant_default_duit"
+
+
+@router.post("/revoke-all")
+async def revoke_all_sessions(
+    req: Optional[RevokeAllSessionsRequest] = None,
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user)
+):
+    """Globally revokes all active credentials, tokens, devices, and sessions for the user."""
+    resolved_user = current_user.user_id if current_user else (req.user_id if req and req.user_id else None)
+    if not resolved_user:
+        raise HTTPException(status_code=401, detail="Authentication required to revoke sessions")
+    resolved_tenant = (req.tenant_id if req and req.tenant_id else "tenant_default_duit")
+
+    result = await repository.revoke_all_user_sessions(tenant_id=resolved_tenant, user_id=resolved_user)
+    return result

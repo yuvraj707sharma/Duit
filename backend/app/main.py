@@ -1,6 +1,6 @@
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 
@@ -18,6 +18,9 @@ from backend.app.api.skills import router as skills_router
 from backend.app.api.linking import router as linking_router
 from backend.app.api.archive import router as archive_router
 from backend.app.api.outbox import router as outbox_router
+from backend.app.api.privacy import router as privacy_router
+from backend.app.security.payload_limit import RequestSizeLimitMiddleware
+from backend.app.security.rate_limiter import rate_limiter, extract_client_ip
 
 
 @asynccontextmanager
@@ -59,6 +62,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestSizeLimitMiddleware, max_bytes=5 * 1024 * 1024)
+
+
+@app.middleware("http")
+async def rate_limiting_middleware(request: Request, call_next):
+    """Enforces sliding-window rate limits across IP, User, Account, and Device dimensions."""
+    path = request.url.path
+    # Exclude internal / health / doc endpoints from rate limiting
+    if path.startswith(("/health", "/docs", "/redoc", "/openapi.json")):
+        return await call_next(request)
+
+    client_ip = extract_client_ip(request)
+    tenant_id = request.headers.get("x-tenant-id")
+    user_id = request.headers.get("x-user-id")
+    account_id = request.headers.get("x-account-id")
+    device_id = request.headers.get("x-device-id")
+
+    try:
+        rate_limiter.enforce(
+            client_ip=client_ip,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            account_id=account_id,
+            device_id=device_id
+        )
+    except HTTPException as exc:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"error": exc.detail},
+            headers=exc.headers
+        )
+
+    return await call_next(request)
+
 
 # Include API routers
 app.include_router(webhooks_router)
@@ -72,6 +109,7 @@ app.include_router(skills_router)
 app.include_router(linking_router)
 app.include_router(archive_router)
 app.include_router(outbox_router)
+app.include_router(privacy_router)
 
 
 @app.get("/", status_code=404)

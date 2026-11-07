@@ -8,6 +8,8 @@ from pydantic import BaseModel
 from backend.app.db.repository import repository
 from backend.app.config import settings
 from backend.app.security.auth_deps import get_current_user, AuthenticatedUser, require_user_access
+from backend.app.security.skill_validator import validate_skill_definition
+from backend.app.security.ssrf import validate_safe_url
 
 router = APIRouter(prefix="/api/skills", tags=["Skills"])
 
@@ -97,8 +99,19 @@ async def create_skill(
     if not req.system_prompt.strip():
         raise HTTPException(status_code=400, detail="System prompt cannot be empty")
 
-    # Validate webhook URL against SSRF in all environments
-    _validate_webhook_url(req.webhook_url)
+    is_admin = bool(
+        x_gateway_secret and settings.GATEWAY_SHARED_SECRET and
+        hmac.compare_digest(x_gateway_secret.strip(), settings.GATEWAY_SHARED_SECRET.strip())
+    )
+    is_valid, error_msg = validate_skill_definition(
+        name=req.name,
+        system_prompt=req.system_prompt,
+        user_id=req.user_id or "GLOBAL",
+        webhook_url=req.webhook_url,
+        is_admin=is_admin
+    )
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
 
     skill = await repository.add_skill(
         name=req.name.strip(),

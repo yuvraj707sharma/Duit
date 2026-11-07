@@ -695,6 +695,111 @@
         },
         "security": [{ "gatewaySecret": [] }]
       }
+    },
+    "/api/privacy/export": {
+      "get": {
+        "summary": "Export User Personal Data",
+        "description": "Exports all data associated with the authenticated user across tenants, messages, devices, and executions.",
+        "responses": {
+          "200": { "description": "Complete user data export payload" },
+          "401": { "description": "Unauthorized: user authentication required" }
+        },
+        "security": [{ "userAuth": [] }]
+      }
+    },
+    "/api/privacy/purge": {
+      "post": {
+        "summary": "Purge User Personal Data",
+        "description": "Permanently purges or redacts data belonging to the user with explicit confirmation flag.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["confirm"],
+                "properties": {
+                  "confirm": { "type": "boolean" },
+                  "purge_messages": { "type": "boolean", "default": true },
+                  "purge_approvals": { "type": "boolean", "default": true },
+                  "purge_executions": { "type": "boolean", "default": true },
+                  "revoke_tokens": { "type": "boolean", "default": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "User data successfully purged" },
+          "400": { "description": "Missing confirmation flag" },
+          "401": { "description": "Unauthorized: user authentication required" }
+        },
+        "security": [{ "userAuth": [] }]
+      }
+    },
+    "/api/privacy/retention/cleanup": {
+      "post": {
+        "summary": "Execute Data Retention Cleanup",
+        "description": "Cleans up archived messages and execution logs older than the tenant retention window.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["retention_days"],
+                "properties": {
+                  "tenant_id": { "type": "string" },
+                  "retention_days": { "type": "integer", "minimum": 1 },
+                  "purge_messages": { "type": "boolean", "default": true },
+                  "purge_executions": { "type": "boolean", "default": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Retention policy executed" },
+          "401": { "description": "Unauthorized: admin access required" }
+        },
+        "security": [{ "gatewaySecret": [] }]
+      }
+    },
+    "/api/auth/revoke-all": {
+      "post": {
+        "summary": "Global Session and Credential Revocation",
+        "description": "Globally revokes all active WhatsApp accounts, desktop devices, and OAuth tokens for the authenticated user.",
+        "responses": {
+          "200": { "description": "All sessions and credentials revoked" },
+          "401": { "description": "Unauthorized: user authentication required" }
+        },
+        "security": [{ "userAuth": [] }]
+      }
+    },
+    "/api/security/validate-url": {
+      "post": {
+        "summary": "Validate URL against SSRF and Internal Network Subnets",
+        "description": "Verifies that an outbound URL does not target loopback, private, carrier-grade NAT, or cloud metadata networks.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": { "type": "string" },
+                  "allowed_domains": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "URL safety check result" },
+          "400": { "description": "Unsafe or prohibited URL" }
+        }
+      }
     }
   },
   "components": {
@@ -713,5 +818,6 @@
       }
     }
   }
+}
 }
 

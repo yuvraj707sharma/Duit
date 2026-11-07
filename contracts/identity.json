@@ -258,6 +258,55 @@
         "published_at": { "type": ["string", "null"], "format": "date-time" },
         "delivered_at": { "type": ["string", "null"], "format": "date-time" }
       }
+    },
+    "UserDataExport": {
+      "type": "object",
+      "required": ["user", "tenant_id", "exported_at"],
+      "properties": {
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user": { "type": "object" },
+        "whatsapp_accounts": { "type": "array", "items": { "type": "object" } },
+        "desktop_devices": { "type": "array", "items": { "type": "object" } },
+        "messages": { "type": "array", "items": { "type": "object" } },
+        "approvals": { "type": "array", "items": { "type": "object" } },
+        "executions": { "type": "array", "items": { "type": "object" } },
+        "audit_events": { "type": "array", "items": { "type": "object" } },
+        "exported_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "DataPurgeRequest": {
+      "type": "object",
+      "required": ["confirm"],
+      "properties": {
+        "confirm": { "type": "boolean" },
+        "purge_messages": { "type": "boolean", "default": true },
+        "purge_approvals": { "type": "boolean", "default": true },
+        "purge_executions": { "type": "boolean", "default": true },
+        "revoke_tokens": { "type": "boolean", "default": true }
+      }
+    },
+    "RetentionPolicy": {
+      "type": "object",
+      "required": ["tenant_id", "retention_days"],
+      "properties": {
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "retention_days": { "type": "integer", "minimum": 1 },
+        "purge_messages": { "type": "boolean", "default": true },
+        "purge_executions": { "type": "boolean", "default": true },
+        "purge_audit_logs": { "type": "boolean", "default": false }
+      }
+    },
+    "GlobalRevocationResult": {
+      "type": "object",
+      "required": ["user_id", "tenant_id", "revoked_at", "devices_disconnected", "oauth_connections_revoked", "sessions_invalidated"],
+      "properties": {
+        "user_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "revoked_at": { "type": "string", "format": "date-time" },
+        "devices_disconnected": { "type": "integer" },
+        "oauth_connections_revoked": { "type": "integer" },
+        "sessions_invalidated": { "type": "integer" }
+      }
     }
   }
 }
