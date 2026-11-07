@@ -117,6 +117,10 @@ async def receive_whatsapp_gateway_message(
     if not clean_phone:
         raise HTTPException(status_code=400, detail="Invalid phone number.")
 
+    from backend.app.db.repository import repository
+    if not await repository.is_user_registered(clean_phone):
+        await repository.register_user(phone=clean_phone)
+
     res = await cascade_orchestrator.handle_message(
         user_id=clean_phone,
         message_text=payload.text,

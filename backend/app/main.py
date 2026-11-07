@@ -160,8 +160,34 @@ async def download_desktop_app():
 
 @app.get("/health")
 async def health_check():
+    db_status = "ok"
+    try:
+        from backend.app.db.database import engine
+        from sqlalchemy import text
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "unreachable"
+
+    from backend.app.desktop.presence import presence_manager
+    active_desktops = len(presence_manager._connections)
+
+    llm_status = "live" if (settings.meta_api_key or settings.GEMINI_API_KEY) and not settings.USE_MOCK_LLM else "mock"
+    router_status = "live" if not settings.USE_MOCK_LLM else "degraded"
+
     return {
-        "status": "healthy",
+        "status": "healthy" if db_status == "ok" else "degraded",
         "env": settings.APP_ENV,
-        "decision_layer": "laya-multilingual"
+        "decision_layer": "laya-multilingual",
+        "services": {
+            "database": db_status,
+            "llm_provider": {
+                "active": settings.DEFAULT_LLM_PROVIDER,
+                "status": llm_status
+            },
+            "decision_router": router_status,
+            "google_oauth": "configured" if bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET) else "unconfigured",
+            "gateway_auth": "configured" if bool(settings.GATEWAY_SHARED_SECRET) else "missing",
+            "active_desktop_connections": active_desktops
+        }
     }

@@ -67,15 +67,16 @@ const USE_CASE_MAP = { '1': 'Personal productivity', '2': 'Business & work', '3'
 
 // ── Backend API Call ─────────────────────────────────────────────────────────
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
-const GATEWAY_SHARED_SECRET = process.env.GATEWAY_SHARED_SECRET || 'duit_secret_wa_prod_2026';
+const GATEWAY_SHARED_SECRET = process.env.GATEWAY_SHARED_SECRET || '';
 
-async function callFastAgentBackend(phoneNumber, message) {
+async function callFastAgentBackend(phoneNumber, message, msgId = null) {
   try {
     const headers = { 'Content-Type': 'application/json' };
     if (GATEWAY_SHARED_SECRET) {
       headers['x-gateway-secret'] = GATEWAY_SHARED_SECRET;
     }
 
+    const idempotencyKey = msgId ? `wa_${phoneNumber}_${msgId}` : `wa_${phoneNumber}_${Date.now()}`;
     const resp = await fetch(`${BACKEND_URL}/api/webhooks/whatsapp`, {
       method: 'POST',
       headers,
@@ -83,7 +84,7 @@ async function callFastAgentBackend(phoneNumber, message) {
         from: phoneNumber,
         text: message,
         channel: 'whatsapp',
-        idempotency_key: `wa_${phoneNumber}_${Date.now()}`
+        idempotency_key: idempotencyKey
       })
     });
 
@@ -241,7 +242,7 @@ async function sendMessage(jid, text) {
 }
 
 // ── Main Message Handler ─────────────────────────────────────────────────────
-async function handleFastAgentMessage(jid, phone, text) {
+async function handleFastAgentMessage(jid, phone, text, msgId = null) {
   const cleanPhone = phone.replace(/[^0-9]/g, '');
   const trimmedText = text.trim();
 
@@ -580,8 +581,8 @@ Please summarize these messages clearly and concisely for an executive. Highligh
 
     }
 
-    // Route directly to FastAgent backend without intermediate thinking message
-    const reply = await callFastAgentBackend(cleanPhone, trimmedText);
+    // Route directly to FastAgent backend with durable message ID for end-to-end idempotency
+    const reply = await callFastAgentBackend(cleanPhone, trimmedText, msgId);
 
     if (reply) {
       await sendMessage(jid, reply);
@@ -802,8 +803,8 @@ export async function startBotSession() {
         [rawJid, phone, senderName, senderName]
       ).catch(err => console.error('[DB] Archive contact error:', err.message));
 
-      // Handle message asynchronously so we don't block the event loop
-      handleFastAgentMessage(replyJid, phone, text).catch(err => {
+      // Handle message asynchronously with durable message ID so we don't block the event loop
+      handleFastAgentMessage(replyJid, phone, text, uniqueMsgId).catch(err => {
         console.error(`[FastAgent] Unhandled error for ${phone}:`, err.message);
       });
     }

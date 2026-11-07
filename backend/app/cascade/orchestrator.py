@@ -373,11 +373,14 @@ class CascadeOrchestrator:
                 )
 
                 history = self.conversation_history.get(user_id, [])
-                conversational_reply = await self.llm_provider.generate_response(
-                    system_prompt=system_prompt,
-                    user_message=message_text,
-                    context={"history": history[-8:]}
-                )
+                try:
+                    conversational_reply = await self.llm_provider.generate_response(
+                        system_prompt=system_prompt,
+                        user_message=message_text,
+                        context={"history": history[-8:]}
+                    )
+                except Exception:
+                    conversational_reply = "I hear you, but my AI language model provider is currently experiencing downtime. No action was taken. Please try again in a moment."
                 self._append_history(user_id, message_text, conversational_reply)
             stage_latencies["stage_3_llm_extraction"] = (time.perf_counter() - t0) * 1000
             await self.messaging_channel.send_text(user_id, conversational_reply)
