@@ -80,6 +80,14 @@ class DesktopPolicyEngine:
                     return violation
         return None
 
+    def validate_file_path(self, path: str) -> bool:
+        """Validates that a file path does not access prohibited or sensitive locations."""
+        return self._inspect_arguments(path) is None
+
+    def validate_command(self, cmd: str) -> bool:
+        """Validates that a command does not contain prohibited or destructive patterns."""
+        return self._inspect_arguments(cmd) is None
+
     def hash_arguments(self, arguments: Dict[str, Any]) -> str:
         """Computes deterministic SHA256 digest of normalized arguments."""
         raw = json.dumps(arguments, sort_keys=True, separators=(",", ":")).encode("utf-8")

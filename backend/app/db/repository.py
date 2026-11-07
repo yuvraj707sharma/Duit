@@ -1449,6 +1449,7 @@ class DatabaseRepository:
         return {
             "status": "killed",
             "device_id": device_id,
+            "is_online": False,
             "revoked_at": now,
             "reason": reason or "Emergency kill switch invoked"
         }
@@ -2410,22 +2411,26 @@ class DatabaseRepository:
 
     async def mark_outbox_event_delivered(
         self,
-        idempotency_key_or_id: str,
-        provider_message_id: Optional[str] = None
+        idempotency_key_or_id: Optional[str] = None,
+        provider_message_id: Optional[str] = None,
+        event_id: Optional[str] = None,
+        delivery_receipt_id: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """Marks an outbox event as delivered following gateway acknowledgment receipt."""
+        key = event_id or idempotency_key_or_id
+        receipt = delivery_receipt_id or provider_message_id
         now_dt = datetime.now(timezone.utc)
         target = None
         for evt in self.outbox_store:
-            if evt.get("id") == idempotency_key_or_id or evt.get("idempotency_key") == idempotency_key_or_id:
+            if evt.get("id") == key or evt.get("idempotency_key") == key:
                 evt["status"] = "delivered"
                 evt["delivered_at"] = now_dt
-                if provider_message_id and isinstance(evt.get("payload"), dict):
-                    evt["payload"]["provider_delivery_id"] = provider_message_id
+                if receipt and isinstance(evt.get("payload"), dict):
+                    evt["payload"]["provider_delivery_id"] = receipt
                 target = evt
                 break
 
-        if self.session_factory:
+        if self.session_factory and key:
             try:
                 from backend.app.db.models import OutboxEvent as OutboxModel
                 from sqlalchemy import or_
@@ -2433,8 +2438,8 @@ class DatabaseRepository:
                     async with session.begin():
                         stmt = select(OutboxModel).where(
                             or_(
-                                OutboxModel.id == idempotency_key_or_id,
-                                OutboxModel.idempotency_key == idempotency_key_or_id
+                                OutboxModel.id == key,
+                                OutboxModel.idempotency_key == key
                             )
                         )
                         res = await session.execute(stmt)
@@ -2442,9 +2447,9 @@ class DatabaseRepository:
                         if m:
                             m.status = "delivered"
                             m.delivered_at = now_dt
-                            if provider_message_id and isinstance(m.payload, dict):
+                            if receipt and isinstance(m.payload, dict):
                                 pl = dict(m.payload)
-                                pl["provider_delivery_id"] = provider_message_id
+                                pl["provider_delivery_id"] = receipt
                                 m.payload = pl
             except Exception:
                 pass

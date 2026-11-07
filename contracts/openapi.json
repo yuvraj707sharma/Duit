@@ -800,6 +800,24 @@
           "400": { "description": "Unsafe or prohibited URL" }
         }
       }
+    },
+    "/api/metrics/telemetry": {
+      "get": {
+        "summary": "Retrieve OpenTelemetry-Compatible System Metrics",
+        "description": "Exposes latency percentiles, error rates, queue depths, and operational metrics.",
+        "responses": {
+          "200": { "description": "System telemetry and performance metrics" }
+        }
+      }
+    },
+    "/api/metrics/alerts": {
+      "get": {
+        "summary": "Retrieve Active Operational Alerts",
+        "description": "Reports threshold violations including abnormal pairing attempts, delivery backlogs, and auth errors.",
+        "responses": {
+          "200": { "description": "List of active alert conditions" }
+        }
+      }
     }
   },
   "components": {

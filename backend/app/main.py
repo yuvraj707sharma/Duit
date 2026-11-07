@@ -21,6 +21,7 @@ from backend.app.api.outbox import router as outbox_router
 from backend.app.api.privacy import router as privacy_router
 from backend.app.security.payload_limit import RequestSizeLimitMiddleware
 from backend.app.security.rate_limiter import rate_limiter, extract_client_ip
+from backend.app.observability.tracing import OpenTelemetryTracingMiddleware
 
 
 @asynccontextmanager
@@ -62,6 +63,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(OpenTelemetryTracingMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware, max_bytes=5 * 1024 * 1024)
 
 
