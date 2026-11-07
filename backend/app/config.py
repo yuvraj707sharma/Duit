@@ -110,7 +110,7 @@ class Settings(BaseSettings):
     DESKTOP_HEARTBEAT_TIMEOUT_SECONDS: float = 30.0
 
     # Internal gateway shared secret (server-to-server auth for /save-token, /whatsapp webhook, etc.)
-    GATEWAY_SHARED_SECRET: str = "duit_secret_wa_prod_2026"
+    GATEWAY_SHARED_SECRET: str = ""
 
     @property
     def is_production(self) -> bool:
@@ -122,21 +122,21 @@ class Settings(BaseSettings):
             return
 
         insecure_defaults = {
-            "SECRET_KEY": "fastagent_super_secret_development_key_32bytes_len!!",
-            "TOKEN_ENCRYPTION_KEY": "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
-            "DESKTOP_SHARED_SECRET": "fastagent_desktop_secret_2026_dev",
-            "GATEWAY_SHARED_SECRET": "duit_gateway_secret_2026_dev",
+            "SECRET_KEY": ["fastagent_super_secret_development_key_32bytes_len!!"],
+            "TOKEN_ENCRYPTION_KEY": ["MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="],
+            "DESKTOP_SHARED_SECRET": ["fastagent_desktop_secret_2026_dev"],
+            "GATEWAY_SHARED_SECRET": ["duit_gateway_secret_2026_dev", "duit_secret_wa_prod_2026"],
         }
         if self.MESSAGING_CHANNEL == "evolution":
-            insecure_defaults["EVOLUTION_GLOBAL_API_KEY"] = "evolution_dev_api_key_12345"
-            insecure_defaults["EVOLUTION_WEBHOOK_SECRET"] = "webhook_secret_key_fastagent_2026"
+            insecure_defaults["EVOLUTION_GLOBAL_API_KEY"] = ["evolution_dev_api_key_12345"]
+            insecure_defaults["EVOLUTION_WEBHOOK_SECRET"] = ["webhook_secret_key_fastagent_2026"]
 
         errors = []
-        for name, bad_val in insecure_defaults.items():
+        for name, bad_vals in insecure_defaults.items():
             current_val = getattr(self, name, "")
             if not current_val:
                 errors.append(f"{name} is missing")
-            elif current_val == bad_val:
+            elif current_val in bad_vals:
                 errors.append(f"{name} is using insecure development default")
 
         if "*" in self.WHATSAPP_AUTHORIZED_NUMBERS:

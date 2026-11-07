@@ -37,18 +37,16 @@ class DesktopPresenceManager:
             rec["last_heartbeat"] = time.time()
 
     def is_online(self, user_id: str) -> bool:
+        """Check if the specific user's desktop sidecar is connected. Strictly no cross-user fallback."""
         rec = self._connections.get(user_id)
-        if not rec and ("default_user" in self._connections or len(self._connections) == 1):
-            rec = self._connections.get("default_user") or next(iter(self._connections.values()), None)
         if not rec:
             return False
         elapsed = time.time() - rec.get("last_heartbeat", 0.0)
         return elapsed <= self.heartbeat_timeout
 
     def get_presence(self, user_id: str) -> Dict[str, Any]:
+        """Get presence for the specific user only. Strictly no cross-user fallback."""
         rec = self._connections.get(user_id)
-        if not rec and ("default_user" in self._connections or len(self._connections) == 1):
-            rec = self._connections.get("default_user") or next(iter(self._connections.values()), None)
         if not rec:
             return {
                 "user_id": user_id,
@@ -79,8 +77,12 @@ class DesktopPresenceManager:
             }
 
         rec = self._connections.get(user_id)
-        if not rec and ("default_user" in self._connections or len(self._connections) == 1):
-            rec = self._connections.get("default_user") or next(iter(self._connections.values()), None)
+        if not rec:
+            return {
+                "success": False,
+                "status": "offline",
+                "error": "laptop offline"
+            }
 
         ws: WebSocket = rec["socket"]
         action_id = command_payload.get("action_id") or f"act_{int(time.time()*1000)}"

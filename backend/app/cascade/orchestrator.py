@@ -653,8 +653,8 @@ class CascadeOrchestrator:
             return await self.gmail_tool.execute(user_id, args)
         elif intent == "book_something":
             return ToolResult(
-                success=True,
-                data={"status": "confirmed", "booking_id": "bk_mock_101", "details": args.get("details", "")}
+                success=False,
+                error="Live booking integration is currently under development. No booking was created."
             )
         elif intent == "shed_status":
             from backend.app.desktop.shed_bridge import shed_bridge

@@ -25,9 +25,50 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1') || origin.endsWith('.onrender.com') || (process.env.APP_PUBLIC_URL && origin.startsWith(process.env.APP_PUBLIC_URL))) {
+        callback(null, true);
+      } else {
+        callback(new Error('Socket.IO connection blocked by CORS policy'));
+      }
+    },
+    credentials: true
+  }
+});
+
+// Require authenticated session for Socket.IO in production
+io.use(async (socket, next) => {
+  const cookieHeader = socket.request.headers.cookie || '';
+  const parsedCookies = {};
+  cookieHeader.split(';').forEach(c => {
+    const [k, v] = c.trim().split('=');
+    if (k && v) parsedCookies[k] = decodeURIComponent(v);
+  });
+  const token = socket.handshake.auth?.token || socket.handshake.headers['x-auth-token'] || parsedCookies['auth_token'];
+  const user = token ? await validateSession(token) : null;
+  if (user) {
+    socket.user = user;
+    return next();
+  }
+  if (process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production') {
+    return next(new Error('Authentication required for socket connection'));
+  }
+  return next();
+});
 
 setSocketIO(io);
 
@@ -161,8 +202,8 @@ app.get(['/', '/index.html'], async (req, res) => {
 });
 
 // Static files (explicitly excluding auto-serving index.html so / is guarded)
+// NOTE: /storage is strictly NOT served statically to protect Baileys auth credentials and keys
 app.use(express.static(path.join(__dirname, 'src/public'), { index: false }));
-app.use('/storage', express.static(path.join(__dirname, 'storage')));
 
 // Helper to get dashboard root URL for redirects
 async function getDashboardRedirectUrl() {
@@ -257,7 +298,7 @@ app.get('/auth/google', async (req, res) => {
 
     res.redirect(authUrl);
   } catch (err) {
-    res.status(500).send(`<h3>Google OAuth Error</h3><p>${err.message}</p>`);
+    res.status(500).send(`<h3>Google OAuth Error</h3><p>${escapeHtml(err.message)}</p>`);
   }
 });
 
@@ -265,10 +306,10 @@ app.get('/auth/google/callback', async (req, res) => {
   const { code, error, state } = req.query;
 
   if (error) {
-    return res.send(`<h3>Auth failed: ${error}</h3><p>You can close this window and try again on WhatsApp.</p>`);
+    return res.status(400).send(`<h3>Auth failed: ${escapeHtml(error)}</h3><p>You can close this window and try again on WhatsApp.</p>`);
   }
   if (!code) {
-    return res.send('<h3>Missing authorization code.</h3>');
+    return res.status(400).send('<h3>Missing authorization code.</h3>');
   }
 
   // Validate state token against server-side session cache (one-time use)
@@ -370,12 +411,12 @@ app.get('/auth/google/callback', async (req, res) => {
   <div class="check">✅</div>
   <div class="title">Google Connected!</div>
   <div class="sub">Your account is now linked to FastAgent</div>
-  <div class="email">${googleEmail}</div>
-  <div class="tip">You can close this window.<br/>Go back to WhatsApp to continue chatting! 🚀</div>
+  <div class="email">${escapeHtml(googleEmail)}</div>
+  <div class="tip">You can close this window.<br/>Go back to WhatsApp to continue chatting!</div>
 </div></body></html>`);
   } catch (err) {
     console.error('[Google OAuth Callback Error]:', err.message);
-    res.send(`<h3>Auth failed</h3><p>${err.message}</p><p>Close this window and try again on WhatsApp.</p>`);
+    res.status(500).send(`<h3>Auth failed</h3><p>${escapeHtml(err.message)}</p><p>Close this window and try again on WhatsApp.</p>`);
   }
 });
 

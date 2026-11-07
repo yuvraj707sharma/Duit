@@ -483,16 +483,17 @@ async function handleFastAgentMessage(jid, phone, text) {
           chatRows = await query(
             `SELECT sender_name, sender_phone, message_text, timestamp 
              FROM whatsapp_chats 
-             WHERE (sender_name LIKE ? OR sender_phone LIKE ?) AND is_from_me = 0
+             WHERE (sender_phone = ? OR chat_jid LIKE ?) AND (sender_name LIKE ? OR sender_phone LIKE ?) AND is_from_me = 0
              ORDER BY timestamp DESC LIMIT 15`,
-            [`%${contactFilter}%`, `%${contactFilter}%`]
+            [cleanPhone, `%${cleanPhone}%`, `%${contactFilter}%`, `%${contactFilter}%`]
           );
         } else {
           chatRows = await query(
             `SELECT sender_name, sender_phone, message_text, timestamp 
              FROM whatsapp_chats 
-             WHERE is_from_me = 0
-             ORDER BY timestamp DESC LIMIT 15`
+             WHERE (sender_phone = ? OR chat_jid LIKE ?) AND is_from_me = 0
+             ORDER BY timestamp DESC LIMIT 15`,
+            [cleanPhone, `%${cleanPhone}%`]
           );
         }
       } catch (dbErr) {
@@ -501,9 +502,9 @@ async function handleFastAgentMessage(jid, phone, text) {
 
       if (!chatRows || chatRows.length === 0) {
         if (contactFilter) {
-          chatRows = inMemoryChats.filter(c => !c.is_from_me && ((c.sender_name && c.sender_name.toLowerCase().includes(contactFilter.toLowerCase())) || c.sender_phone.includes(contactFilter))).slice(0, 15);
+          chatRows = inMemoryChats.filter(c => (c.owner_phone === cleanPhone || c.sender_phone === cleanPhone) && !c.is_from_me && ((c.sender_name && c.sender_name.toLowerCase().includes(contactFilter.toLowerCase())) || c.sender_phone.includes(contactFilter))).slice(0, 15);
         } else {
-          chatRows = inMemoryChats.filter(c => !c.is_from_me).slice(0, 15);
+          chatRows = inMemoryChats.filter(c => (c.owner_phone === cleanPhone || c.sender_phone === cleanPhone) && !c.is_from_me).slice(0, 15);
         }
       }
 
@@ -746,6 +747,7 @@ export async function startBotSession() {
       const uniqueMsgId = msgId || `msg_${Date.now()}_${Math.random()}`;
 
       inMemoryChats.unshift({
+        owner_phone: phone,
         msg_id: uniqueMsgId,
         sender_name: senderName,
         sender_phone: phone,

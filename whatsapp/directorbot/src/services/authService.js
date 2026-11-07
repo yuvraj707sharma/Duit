@@ -3,8 +3,15 @@ import path from 'path';
 import crypto from 'crypto';
 import { query, logActivity } from '../database/db.js';
 
+const isProd = process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production';
 const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@fastagent.ai';
-const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+
+if (isProd && (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD === 'admin123' || process.env.ADMIN_PASSWORD.length < 12)) {
+  console.error('[SECURITY FATAL] In production, ADMIN_PASSWORD must be explicitly configured with at least 12 characters.');
+  throw new Error('ADMIN_PASSWORD must be explicitly configured with at least 12 characters in production.');
+}
+
+const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (isProd ? '' : 'admin123');
 const DEFAULT_ADMIN_NAME = 'DUIT Admin';
 
 // In-memory session store fallback for cloud stateless deployments
@@ -71,17 +78,7 @@ export async function seedDefaultAdmin() {
     );
 
     if (!DEFAULT_ADMIN_PASSWORD) {
-      const storageDir = path.resolve('storage');
-      try {
-        if (!fs.existsSync(storageDir)) {
-          fs.mkdirSync(storageDir, { recursive: true });
-        }
-        const tokenFile = path.join(storageDir, '.initial_admin_password');
-        fs.writeFileSync(tokenFile, adminPassword, { mode: 0o600 });
-        console.warn(`[SECURITY NOTICE] ADMIN_PASSWORD was not set. Initial bootstrap password written to secure local file: ${tokenFile}`);
-      } catch (fErr) {
-        console.warn(`[SECURITY NOTICE] ADMIN_PASSWORD was not set. Please set ADMIN_PASSWORD in environment.`);
-      }
+      console.warn(`[SECURITY NOTICE] ADMIN_PASSWORD was not set. Generated temporary development password.`);
     } else {
       console.log(`[Auth] Admin account verified for: ${DEFAULT_ADMIN_EMAIL}`);
     }
@@ -102,8 +99,9 @@ export async function loginUser(email, password, userAgent = '', ipAddress = '')
   const rows = await query('SELECT * FROM admin_users WHERE LOWER(email) = ? LIMIT 1', [cleanEmail]);
 
   if (!rows || rows.length === 0) {
-    // Fallback: check against environment admin credentials in cloud mode
-    if (cleanEmail === DEFAULT_ADMIN_EMAIL.toLowerCase() && password === DEFAULT_ADMIN_PASSWORD) {
+    // Fallback: check against environment admin credentials in cloud mode (production requires non-default, >=12 char password)
+    const isSafePassword = DEFAULT_ADMIN_PASSWORD && (!isProd || (DEFAULT_ADMIN_PASSWORD !== 'admin123' && DEFAULT_ADMIN_PASSWORD.length >= 12));
+    if (isSafePassword && cleanEmail === DEFAULT_ADMIN_EMAIL.toLowerCase() && password === DEFAULT_ADMIN_PASSWORD) {
       const token = crypto.randomBytes(32).toString('hex');
       const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
       inMemorySessions.set(token, {

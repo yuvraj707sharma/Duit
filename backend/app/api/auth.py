@@ -65,12 +65,17 @@ async def google_oauth_callback(
         encrypted_access = encrypt_token(credentials.token, user_id=resolved_user)
         encrypted_refresh = encrypt_token(credentials.refresh_token or "", user_id=resolved_user)
     except Exception as exc:
-        if not settings.is_production:
-            # Safe mock fallback for local testing and dev
+        if settings.is_production:
+            raise HTTPException(status_code=502, detail="OAuth token exchange failed") from exc
+        elif settings.USE_MOCK_TOOLS or settings.APP_ENV in ("test", "testing"):
+            # Explicit test harness mode only
             encrypted_access = encrypt_token(f"mock_access_token_for_{resolved_user}", user_id=resolved_user)
             encrypted_refresh = encrypt_token(f"mock_refresh_token_for_{resolved_user}", user_id=resolved_user)
         else:
-            raise HTTPException(status_code=502, detail="OAuth token exchange failed") from exc
+            raise HTTPException(
+                status_code=502,
+                detail="Google account connection failed. No account was linked. Please retry."
+            ) from exc
 
     # 2. Persist encrypted tokens securely in repository
     await repository.save_user_oauth_tokens(
