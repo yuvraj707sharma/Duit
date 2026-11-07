@@ -1,6 +1,8 @@
 """FastAgent Backend Configuration using Pydantic Settings."""
 import sys
-from typing import List, Set
+import json
+from typing import List, Set, Union
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,12 +19,27 @@ class Settings(BaseSettings):
     PORT: int = 8000
     SECRET_KEY: str = "fastagent_super_secret_development_key_32bytes_len!!"
     TOKEN_ENCRYPTION_KEY: str = "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="  # 32 bytes base64 encoded AES key
-    CORS_ORIGINS: List[str] = [
+    CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:5173",
         "http://localhost:3000",
         "http://localhost",
         "capacitor://localhost"
     ]
+
+    @field_validator("CORS_ORIGINS")
+    @classmethod
+    def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return []
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     # Database & Redis
     DATABASE_URL: str = "postgresql+asyncpg://fastagent:fastagent_dev_password@localhost:5432/fastagent"
@@ -63,8 +80,23 @@ class Settings(BaseSettings):
     EVOLUTION_INSTANCE_NAME: str = "fastagent-primary"
     EVOLUTION_WEBHOOK_SECRET: str = "webhook_secret_key_fastagent_2026"
     WHATSAPP_REQUIRE_REGISTRATION: bool = False
-    WHATSAPP_AUTHORIZED_NUMBERS: List[str] = ["*"]  # In dev allows all, blocked in production
+    WHATSAPP_AUTHORIZED_NUMBERS: Union[List[str], str] = ["*"]  # In dev allows all, blocked in production
     APP_WEB_URL: str = "http://localhost:5173"
+
+    @field_validator("WHATSAPP_AUTHORIZED_NUMBERS")
+    @classmethod
+    def parse_whatsapp_numbers(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return []
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
+            return [num.strip() for num in v.split(",") if num.strip()]
+        return v
 
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
