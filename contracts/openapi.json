@@ -344,6 +344,72 @@
         }
       }
     },
+    "/api/outbox/publish": {
+      "post": {
+        "summary": "Dispatch Pending Outbox Events",
+        "description": "Polls, transitions, and dispatches pending transactional outbox events with exponential backoff.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "batch_size": { "type": "integer", "default": 20 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Batch dispatch results including processed, failed, and dead-letter counts" }
+        }
+      }
+    },
+    "/api/outbox/acknowledge": {
+      "post": {
+        "summary": "Acknowledge Outbound Delivery Receipt",
+        "description": "Records gateway delivery confirmation (e.g. from WhatsApp/Baileys) matching idempotency key.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["idempotency_key"],
+                "properties": {
+                  "idempotency_key": { "type": "string" },
+                  "provider_message_id": { "type": "string" },
+                  "delivered_at": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Delivery acknowledged and recorded" },
+          "404": { "description": "Outbox event not found" }
+        }
+      }
+    },
+    "/api/outbox/status/{idempotency_key}": {
+      "get": {
+        "summary": "Get Outbox Event Status",
+        "description": "Queries the real-time delivery status and lifecycle stage of an outbound event.",
+        "parameters": [
+          {
+            "name": "idempotency_key",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Current outbox event lifecycle status" },
+          "404": { "description": "Event not found" }
+        }
+      }
+    },
     "/api/users/onboard": {
       "post": {
         "summary": "Register or Onboard User Phone Number",

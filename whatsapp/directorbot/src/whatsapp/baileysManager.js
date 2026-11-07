@@ -235,6 +235,18 @@ async function sendMessage(jid, text) {
     if (sent?.key && sent.message) {
       saveMessageToStore(sent.key, sent.message);
     }
+    if (sent?.key?.id) {
+      const fastAgentUrl = process.env.FASTAGENT_BASE_URL || 'http://127.0.0.1:8000';
+      fetch(`${fastAgentUrl}/api/outbox/acknowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idempotency_key: sent.key.id,
+          provider_message_id: sent.key.id,
+          delivered_at: new Date().toISOString()
+        })
+      }).catch(() => {});
+    }
     return sent;
   } catch (err) {
     console.error(`[Bot Send Error] jid=${jid}:`, err.message);

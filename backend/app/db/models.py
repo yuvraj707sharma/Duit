@@ -341,3 +341,28 @@ class WhatsAppSessionFile(Base):
     file_name = Column(String(255), index=True, nullable=False)
     file_content = Column(Text, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class OutboxEvent(Base):
+    __tablename__ = "outbox_events"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(36), ForeignKey("tenants.id", ondelete="CASCADE"), index=True, nullable=False)
+    aggregate_type = Column(String(64), index=True, nullable=False)
+    aggregate_id = Column(String(64), index=True, nullable=False)
+    event_type = Column(String(64), index=True, nullable=False)
+    payload = Column(JSON, nullable=False, default=dict)
+    status = Column(String(24), index=True, nullable=False, default="pending")
+    retry_count = Column(Integer, nullable=False, default=0)
+    max_retries = Column(Integer, nullable=False, default=5)
+    idempotency_key = Column(String(64), index=True, nullable=False)
+    error_message = Column(Text, nullable=True)
+    scheduled_at = Column(DateTime(timezone=True), index=True, default=utc_now)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    published_at = Column(DateTime(timezone=True), nullable=True)
+    delivered_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "idempotency_key", name="uq_outbox_tenant_idempotency"),
+        Index("ix_outbox_status_scheduled", "status", "scheduled_at"),
+    )

@@ -25,6 +25,7 @@ class DatabaseRepository:
         self.devices_store: Dict[str, Dict[str, Any]] = {}
         self.executions_store: Dict[str, Dict[str, Any]] = {}
         self.messages_store: List[Dict[str, Any]] = []
+        self.outbox_store: List[Dict[str, Any]] = []
         self.linking_sessions_store: Dict[str, Dict[str, Any]] = {}
         self.whatsapp_sessions_store: Dict[str, Dict[str, Any]] = {}
         self.approvals_store: Dict[str, Dict[str, Any]] = {}
@@ -1693,6 +1694,327 @@ class DatabaseRepository:
             "account_id": account_id,
             "revoked_at": now
         }
+
+    async def create_outbox_event(
+        self,
+        tenant_id: str,
+        aggregate_type: str,
+        aggregate_id: str,
+        event_type: str,
+        payload: Dict[str, Any],
+        idempotency_key: str,
+        scheduled_at: Optional[datetime] = None,
+        max_retries: int = 5
+    ) -> Dict[str, Any]:
+        """Creates a durable outbox event with tenant scoping and deduplication via idempotency key."""
+        # Check in-memory store for idempotency
+        for evt in self.outbox_store:
+            if evt.get("tenant_id") == tenant_id and evt.get("idempotency_key") == idempotency_key:
+                return evt
+
+        now_dt = datetime.now(timezone.utc)
+        sched_dt = scheduled_at or now_dt
+        eid = str(uuid.uuid4())
+
+        record = {
+            "id": eid,
+            "tenant_id": tenant_id,
+            "aggregate_type": aggregate_type,
+            "aggregate_id": aggregate_id,
+            "event_type": event_type,
+            "payload": payload,
+            "status": "pending",
+            "retry_count": 0,
+            "max_retries": max_retries,
+            "idempotency_key": idempotency_key,
+            "error_message": None,
+            "scheduled_at": sched_dt,
+            "created_at": now_dt,
+            "published_at": None,
+            "delivered_at": None
+        }
+        self.outbox_store.append(record)
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import OutboxEvent as OutboxModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        session.add(OutboxModel(
+                            id=eid,
+                            tenant_id=tenant_id,
+                            aggregate_type=aggregate_type,
+                            aggregate_id=aggregate_id,
+                            event_type=event_type,
+                            payload=payload,
+                            status="pending",
+                            retry_count=0,
+                            max_retries=max_retries,
+                            idempotency_key=idempotency_key,
+                            scheduled_at=sched_dt
+                        ))
+            except Exception:
+                pass
+
+        return record
+
+    async def fetch_pending_outbox_events(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Fetches pending and failed events ready for dispatch (scheduled_at <= now, retry_count < max_retries)."""
+        now_dt = datetime.now(timezone.utc)
+        ready = []
+        for evt in self.outbox_store:
+            if evt.get("status") in ("pending", "failed"):
+                if evt.get("retry_count", 0) < evt.get("max_retries", 5):
+                    sched = evt.get("scheduled_at")
+                    if sched is None or sched <= now_dt:
+                        ready.append(evt)
+                        if len(ready) >= limit:
+                            break
+
+        if ready:
+            return ready
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import OutboxEvent as OutboxModel
+                from sqlalchemy import and_, or_
+                async with self.session_factory() as session:
+                    stmt = (
+                        select(OutboxModel)
+                        .where(
+                            and_(
+                                OutboxModel.status.in_(["pending", "failed"]),
+                                OutboxModel.retry_count < OutboxModel.max_retries,
+                                OutboxModel.scheduled_at <= now_dt
+                            )
+                        )
+                        .order_by(OutboxModel.scheduled_at.asc())
+                        .limit(limit)
+                    )
+                    res = await session.execute(stmt)
+                    rows = res.scalars().all()
+                    for r in rows:
+                        ready.append({
+                            "id": r.id,
+                            "tenant_id": r.tenant_id,
+                            "aggregate_type": r.aggregate_type,
+                            "aggregate_id": r.aggregate_id,
+                            "event_type": r.event_type,
+                            "payload": r.payload,
+                            "status": r.status,
+                            "retry_count": r.retry_count,
+                            "max_retries": r.max_retries,
+                            "idempotency_key": r.idempotency_key,
+                            "error_message": r.error_message,
+                            "scheduled_at": r.scheduled_at,
+                            "created_at": r.created_at,
+                            "published_at": r.published_at,
+                            "delivered_at": r.delivered_at
+                        })
+            except Exception:
+                pass
+
+        return ready
+
+    async def mark_outbox_event_published(self, event_id: str) -> Optional[Dict[str, Any]]:
+        """Marks an outbox event as successfully published to message broker/channel."""
+        now_dt = datetime.now(timezone.utc)
+        target = None
+        for evt in self.outbox_store:
+            if evt.get("id") == event_id:
+                evt["status"] = "published"
+                evt["published_at"] = now_dt
+                target = evt
+                break
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import OutboxEvent as OutboxModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = select(OutboxModel).where(OutboxModel.id == event_id)
+                        res = await session.execute(stmt)
+                        m = res.scalar_one_or_none()
+                        if m:
+                            m.status = "published"
+                            m.published_at = now_dt
+            except Exception:
+                pass
+
+        return target
+
+    async def mark_outbox_event_delivered(
+        self,
+        idempotency_key_or_id: str,
+        provider_message_id: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Marks an outbox event as delivered following gateway acknowledgment receipt."""
+        now_dt = datetime.now(timezone.utc)
+        target = None
+        for evt in self.outbox_store:
+            if evt.get("id") == idempotency_key_or_id or evt.get("idempotency_key") == idempotency_key_or_id:
+                evt["status"] = "delivered"
+                evt["delivered_at"] = now_dt
+                if provider_message_id and isinstance(evt.get("payload"), dict):
+                    evt["payload"]["provider_delivery_id"] = provider_message_id
+                target = evt
+                break
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import OutboxEvent as OutboxModel
+                from sqlalchemy import or_
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = select(OutboxModel).where(
+                            or_(
+                                OutboxModel.id == idempotency_key_or_id,
+                                OutboxModel.idempotency_key == idempotency_key_or_id
+                            )
+                        )
+                        res = await session.execute(stmt)
+                        m = res.scalar_one_or_none()
+                        if m:
+                            m.status = "delivered"
+                            m.delivered_at = now_dt
+                            if provider_message_id and isinstance(m.payload, dict):
+                                pl = dict(m.payload)
+                                pl["provider_delivery_id"] = provider_message_id
+                                m.payload = pl
+            except Exception:
+                pass
+
+        return target
+
+    async def mark_outbox_event_failed(
+        self,
+        event_id: str,
+        error_message: str,
+        backoff_seconds: int = 10
+    ) -> Optional[Dict[str, Any]]:
+        """Handles outbox event dispatch failure with exponential backoff and dead-letter routing."""
+        now_dt = datetime.now(timezone.utc)
+        target = None
+        for evt in self.outbox_store:
+            if evt.get("id") == event_id:
+                evt["retry_count"] = evt.get("retry_count", 0) + 1
+                evt["error_message"] = error_message
+                if evt["retry_count"] >= evt.get("max_retries", 5):
+                    evt["status"] = "dead_letter"
+                else:
+                    evt["status"] = "failed"
+                    evt["scheduled_at"] = now_dt + timedelta(seconds=backoff_seconds)
+                target = evt
+                break
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import OutboxEvent as OutboxModel
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        stmt = select(OutboxModel).where(OutboxModel.id == event_id)
+                        res = await session.execute(stmt)
+                        m = res.scalar_one_or_none()
+                        if m:
+                            m.retry_count = (m.retry_count or 0) + 1
+                            m.error_message = error_message
+                            if m.retry_count >= (m.max_retries or 5):
+                                m.status = "dead_letter"
+                            else:
+                                m.status = "failed"
+                                m.scheduled_at = now_dt + timedelta(seconds=backoff_seconds)
+            except Exception:
+                pass
+
+        return target
+
+    async def get_outbox_event_by_idempotency_key(
+        self,
+        tenant_id: str,
+        idempotency_key: str
+    ) -> Optional[Dict[str, Any]]:
+        """Retrieves an outbox event scoped strictly to tenant and idempotency key."""
+        for evt in self.outbox_store:
+            if evt.get("tenant_id") == tenant_id and evt.get("idempotency_key") == idempotency_key:
+                return evt
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import OutboxEvent as OutboxModel
+                from sqlalchemy import and_
+                async with self.session_factory() as session:
+                    stmt = select(OutboxModel).where(
+                        and_(
+                            OutboxModel.tenant_id == tenant_id,
+                            OutboxModel.idempotency_key == idempotency_key
+                        )
+                    )
+                    res = await session.execute(stmt)
+                    r = res.scalar_one_or_none()
+                    if r:
+                        rec = {
+                            "id": r.id,
+                            "tenant_id": r.tenant_id,
+                            "aggregate_type": r.aggregate_type,
+                            "aggregate_id": r.aggregate_id,
+                            "event_type": r.event_type,
+                            "payload": r.payload,
+                            "status": r.status,
+                            "retry_count": r.retry_count,
+                            "max_retries": r.max_retries,
+                            "idempotency_key": r.idempotency_key,
+                            "error_message": r.error_message,
+                            "scheduled_at": r.scheduled_at,
+                            "created_at": r.created_at,
+                            "published_at": r.published_at,
+                            "delivered_at": r.delivered_at
+                        }
+                        self.outbox_store.append(rec)
+                        return rec
+            except Exception:
+                pass
+
+        return None
+
+    async def get_outbox_event(self, event_id: str, tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Retrieves an outbox event by UUID."""
+        for evt in self.outbox_store:
+            if evt.get("id") == event_id:
+                if tenant_id and evt.get("tenant_id") != tenant_id:
+                    return None
+                return evt
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import OutboxEvent as OutboxModel
+                async with self.session_factory() as session:
+                    stmt = select(OutboxModel).where(OutboxModel.id == event_id)
+                    res = await session.execute(stmt)
+                    r = res.scalar_one_or_none()
+                    if r:
+                        if tenant_id and r.tenant_id != tenant_id:
+                            return None
+                        return {
+                            "id": r.id,
+                            "tenant_id": r.tenant_id,
+                            "aggregate_type": r.aggregate_type,
+                            "aggregate_id": r.aggregate_id,
+                            "event_type": r.event_type,
+                            "payload": r.payload,
+                            "status": r.status,
+                            "retry_count": r.retry_count,
+                            "max_retries": r.max_retries,
+                            "idempotency_key": r.idempotency_key,
+                            "error_message": r.error_message,
+                            "scheduled_at": r.scheduled_at,
+                            "created_at": r.created_at,
+                            "published_at": r.published_at,
+                            "delivered_at": r.delivered_at
+                        }
+            except Exception:
+                pass
+
+        return None
 
 
 from backend.app.db.database import AsyncSessionLocal

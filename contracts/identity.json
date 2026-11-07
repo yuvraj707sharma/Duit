@@ -172,6 +172,27 @@
         "device_id": { "type": ["string", "null"], "format": "uuid" },
         "request_id": { "type": "string" }
       }
+    },
+    "OutboxEvent": {
+      "type": "object",
+      "required": ["id", "tenant_id", "aggregate_type", "aggregate_id", "event_type", "status", "idempotency_key", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "aggregate_type": { "type": "string" },
+        "aggregate_id": { "type": "string" },
+        "event_type": { "type": "string" },
+        "payload": { "type": "object" },
+        "status": { "type": "string", "enum": ["pending", "processing", "published", "delivered", "failed", "dead_letter"] },
+        "retry_count": { "type": "integer", "default": 0 },
+        "max_retries": { "type": "integer", "default": 5 },
+        "idempotency_key": { "type": "string" },
+        "error_message": { "type": ["string", "null"] },
+        "scheduled_at": { "type": "string", "format": "date-time" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "published_at": { "type": ["string", "null"], "format": "date-time" },
+        "delivered_at": { "type": ["string", "null"], "format": "date-time" }
+      }
     }
   }
 }
