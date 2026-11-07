@@ -138,6 +138,22 @@
         "revoked_at": { "type": ["string", "null"], "format": "date-time" }
       }
     },
+    "CapabilityToken": {
+      "type": "object",
+      "required": ["id", "tenant_id", "user_id", "provider", "scopes", "status", "expires_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "provider": { "type": "string", "enum": ["google", "microsoft"] },
+        "scopes": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["active", "expired", "revoked"] },
+        "token_hash": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "revoked_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
     "Conversation": {
       "type": "object",
       "required": ["id", "tenant_id", "user_id", "channel"],

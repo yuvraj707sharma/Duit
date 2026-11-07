@@ -137,6 +137,70 @@
         }
       }
     },
+    "/api/auth/google/initiate": {
+      "post": {
+        "summary": "Initiate Server-Verified Google OAuth Flow",
+        "description": "Generates a signed, tamper-proof state token bound to tenant and user identity, returning OAuth authorization URL.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tenant_id", "user_id"],
+                "properties": {
+                  "tenant_id": { "type": "string" },
+                  "user_id": { "type": "string" },
+                  "scopes": { "type": "array", "items": { "type": "string" } },
+                  "ttl_seconds": { "type": "integer", "default": 600 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Signed state token and Google OAuth URL" },
+          "400": { "description": "Invalid tenant or user identity" }
+        }
+      }
+    },
+    "/api/auth/google/revoke": {
+      "post": {
+        "summary": "Revoke Google OAuth Connection",
+        "description": "Cryptographically revokes stored Google access and refresh tokens for the authenticated user and tenant.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tenant_id", "user_id"],
+                "properties": {
+                  "tenant_id": { "type": "string" },
+                  "user_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OAuth connection and capability tokens revoked" }
+        }
+      }
+    },
+    "/api/auth/tokens/status": {
+      "get": {
+        "summary": "Get OAuth Connection and Capability Scopes Status",
+        "description": "Returns connection status and active capability scopes for user.",
+        "parameters": [
+          { "name": "user_id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "tenant_id", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "OAuth connection status and scopes" }
+        }
+      }
+    },
     "/connect": {
       "get": {
         "summary": "Mobile Onboarding Web Portal",

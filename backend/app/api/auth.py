@@ -1,8 +1,9 @@
 """Google OAuth 2.0 Auth API with AES-GCM Encrypted Token Storage and CSRF Protection."""
 import hmac
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Query, Request, Header, Depends
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, Field
 from backend.app.security.oauth import generate_auth_url, get_oauth_flow, oauth_state_store
 from backend.app.security.crypto import encrypt_token
 from backend.app.security.auth_deps import get_optional_current_user, AuthenticatedUser
@@ -48,14 +49,24 @@ async def google_oauth_callback(
     state: str = Query(...)
 ):
     # 1. Server-side CSRF State Verification
-    bound_user_id = oauth_state_store.validate_and_consume(state)
-    if not bound_user_id:
-        if settings.is_production:
-            raise HTTPException(status_code=400, detail="Invalid, expired, or reused OAuth state")
-        # Non-production backward compatibility for testing fixtures
-        bound_user_id = state
+    if oauth_state_store.is_consumed(state):
+        raise HTTPException(status_code=400, detail="Invalid, expired, or reused OAuth state")
 
-    resolved_user = bound_user_id.strip()
+    state_payload = oauth_state_store.validate_and_consume_payload(state)
+    if state_payload:
+        resolved_user = state_payload["user_id"]
+        tenant_id = state_payload.get("tenant_id", "tenant_default_duit")
+        scopes = state_payload.get("scopes")
+    else:
+        bound_user_id = oauth_state_store.validate_and_consume(state)
+        if not bound_user_id:
+            if settings.is_production:
+                raise HTTPException(status_code=400, detail="Invalid, expired, or reused OAuth state")
+            # Non-production backward compatibility for testing fixtures
+            bound_user_id = state
+        resolved_user = bound_user_id.strip()
+        tenant_id = "tenant_default_duit"
+        scopes = None
 
     try:
         flow = get_oauth_flow(state=state)
@@ -82,13 +93,15 @@ async def google_oauth_callback(
         user_id=resolved_user,
         provider="google",
         encrypted_access_token=encrypted_access,
-        encrypted_refresh_token=encrypted_refresh
+        encrypted_refresh_token=encrypted_refresh,
+        tenant_id=tenant_id,
+        scopes=scopes
     )
 
     # 3. Check if user is known by state (UUID or phone) and send WhatsApp notification
-    user = await repository.get_user(resolved_user)
+    user = await repository.get_user(resolved_user, tenant_id=tenant_id)
     if not user and resolved_user.replace("+", "").isdigit():
-        user = await repository.register_user(phone=resolved_user)
+        user = await repository.register_user(phone=resolved_user, tenant_id=tenant_id)
 
     user_phone = user.get("phone_number") if user else (resolved_user if resolved_user.replace("+", "").isdigit() else None)
     if user_phone:
@@ -117,7 +130,99 @@ async def google_oauth_callback(
     }
 
 
-from pydantic import BaseModel
+class InitiateOAuthRequest(BaseModel):
+    tenant_id: str = Field(..., description="Organizational tenant UUID")
+    user_id: str = Field(..., description="Target user UUID")
+    scopes: Optional[List[str]] = Field(None, description="Requested capability scopes")
+    ttl_seconds: int = Field(600, description="OAuth state TTL in seconds")
+
+
+class RevokeOAuthRequest(BaseModel):
+    tenant_id: str = Field(..., description="Organizational tenant UUID")
+    user_id: str = Field(..., description="Target user UUID")
+
+
+@router.post("/google/initiate")
+async def initiate_google_oauth(req: InitiateOAuthRequest):
+    """Generates signed state token and Google OAuth authorization URL bound to tenant and user identity."""
+    user = await repository.get_user(req.user_id, tenant_id=req.tenant_id)
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail=f"User {req.user_id} not found in tenant {req.tenant_id}"
+        )
+
+    try:
+        url, state = generate_auth_url(user_id=req.user_id)
+    except Exception:
+        state = oauth_state_store.create_state(
+            user_id=req.user_id,
+            tenant_id=req.tenant_id,
+            scopes=req.scopes
+        )
+        url = f"https://accounts.google.com/o/oauth2/auth?state={state}"
+
+    return {
+        "status": "initiated",
+        "auth_url": url,
+        "state": state,
+        "tenant_id": req.tenant_id,
+        "user_id": req.user_id
+    }
+
+
+@router.post("/google/revoke")
+async def revoke_google_oauth(req: RevokeOAuthRequest):
+    """Cryptographically revokes Google access and refresh tokens for user in tenant."""
+    user = await repository.get_user(req.user_id, tenant_id=req.tenant_id)
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail=f"User {req.user_id} not found in tenant {req.tenant_id}"
+        )
+
+    await repository.revoke_user_oauth_tokens(
+        user_id=req.user_id,
+        provider="google",
+        tenant_id=req.tenant_id
+    )
+
+    return {
+        "status": "revoked",
+        "tenant_id": req.tenant_id,
+        "user_id": req.user_id,
+        "provider": "google"
+    }
+
+
+@router.get("/tokens/status")
+async def get_oauth_tokens_status(
+    user_id: str = Query(...),
+    tenant_id: Optional[str] = Query(None)
+):
+    """Returns active OAuth connection status and capability scopes for user."""
+    conn = await repository.get_user_oauth_connection(
+        user_id=user_id,
+        provider="google",
+        tenant_id=tenant_id
+    )
+    if not conn or conn.get("status") == "revoked":
+        return {
+            "connected": False,
+            "provider": "google",
+            "user_id": user_id,
+            "scopes": []
+        }
+
+    return {
+        "connected": True,
+        "provider": "google",
+        "user_id": user_id,
+        "tenant_id": conn.get("tenant_id"),
+        "scopes": conn.get("scopes", []),
+        "expires_at": conn.get("expires_at"),
+        "status": conn.get("status")
+    }
 
 
 class SaveTokenRequest(BaseModel):

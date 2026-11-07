@@ -37,6 +37,7 @@ class DatabaseRepository:
         self.idempotency_store: Dict[str, Dict[str, Any]] = {}
         self.webhook_dedupe_store: Dict[str, Dict[str, Any]] = {}
         self.tokens_store: Dict[str, Dict[str, Any]] = {}
+        self.oauth_connections_store: Dict[str, Dict[str, Any]] = {}
         self.users_store: Dict[str, Dict[str, Any]] = {
             "919876543210": {
                 "id": "f902526d-66d8-49c3-b2b5-5fe95c870be6",
@@ -363,34 +364,54 @@ class DatabaseRepository:
         provider: str,
         encrypted_access_token: str,
         encrypted_refresh_token: Optional[str] = None,
-        expires_at: Optional[Any] = None
+        expires_at: Optional[Any] = None,
+        tenant_id: Optional[str] = None,
+        scopes: Optional[List[str]] = None
     ) -> Dict[str, Any]:
-        """Saves encrypted OAuth tokens in memory and PostgreSQL OAuthToken table."""
+        """Saves encrypted OAuth tokens in memory and database with tenant scoping and capability tracking."""
         record = {
             "user_id": user_id,
             "provider": provider,
             "encrypted_access_token": encrypted_access_token,
             "encrypted_refresh_token": encrypted_refresh_token,
             "expires_at": expires_at,
+            "scopes": scopes or ["calendar.read", "calendar.write", "gmail.read", "gmail.send"],
+            "tenant_id": tenant_id or "tenant_default_duit",
             "updated_at": time.time()
         }
         self.tokens_store[user_id] = record
 
+        # Link connection
+        conn_rec = {
+            "id": str(uuid.uuid4()),
+            "tenant_id": record["tenant_id"],
+            "user_id": user_id,
+            "provider": provider,
+            "scopes": record["scopes"],
+            "status": "active",
+            "expires_at": expires_at,
+            "created_at": time.time(),
+            "revoked_at": None
+        }
+        self.oauth_connections_store[f"{user_id}:{provider}"] = conn_rec
+
         # Link to user and mark Google connected
-        user = await self.get_user(user_id)
+        user = await self.get_user(user_id, tenant_id=tenant_id)
         if user:
             user_uuid = user.get("id")
             phone = user.get("phone_number")
             if user_uuid:
                 self.tokens_store[user_uuid] = record
+                self.oauth_connections_store[f"{user_uuid}:{provider}"] = conn_rec
             if phone:
                 self.tokens_store[phone] = record
-            user.setdefault("services_connected", {})["google"] = True
+                self.oauth_connections_store[f"{phone}:{provider}"] = conn_rec
+            user.setdefault("services_connected", {})[provider] = True
 
         # If PostgreSQL session factory is configured, persist to database
         if self.session_factory:
             try:
-                from backend.app.db.models import OAuthToken, User as UserModel
+                from backend.app.db.models import OAuthToken, OAuthConnection, User as UserModel
                 async with self.session_factory() as session:
                     async with session.begin():
                         # Find or create user record
@@ -400,6 +421,7 @@ class DatabaseRepository:
                         if not db_user and user:
                             db_user = UserModel(
                                 id=user.get("id", user_id),
+                                tenant_id=record["tenant_id"],
                                 phone_number=user.get("phone_number"),
                                 email=user.get("email")
                             )
@@ -425,10 +447,112 @@ class DatabaseRepository:
                                 expires_at=expires_at
                             )
                             session.add(token_obj)
+
+                        # Upsert connection
+                        conn_stmt = select(OAuthConnection).where(
+                            and_(OAuthConnection.user_id == user_id, OAuthConnection.provider == provider)
+                        )
+                        c_res = await session.execute(conn_stmt)
+                        c_obj = c_res.scalar_one_or_none()
+                        if c_obj:
+                            c_obj.scopes = record["scopes"]
+                            c_obj.expires_at = expires_at
+                            c_obj.revoked_at = None
+                        else:
+                            session.add(OAuthConnection(
+                                id=conn_rec["id"],
+                                tenant_id=record["tenant_id"],
+                                user_id=user_id,
+                                provider=provider,
+                                scopes=record["scopes"],
+                                expires_at=expires_at
+                            ))
             except Exception:
                 pass  # Fallback to in-memory store if DB is offline
 
         return record
+
+    async def revoke_user_oauth_tokens(
+        self,
+        user_id: str,
+        provider: str = "google",
+        tenant_id: Optional[str] = None
+    ) -> bool:
+        """Cryptographically revokes OAuth connection and deletes stored tokens."""
+        from sqlalchemy import delete
+        now = time.time()
+        self.tokens_store.pop(user_id, None)
+        user = await self.get_user(user_id, tenant_id=tenant_id)
+        if user:
+            u_uuid = user.get("id")
+            phone = user.get("phone_number")
+            if u_uuid:
+                self.tokens_store.pop(u_uuid, None)
+            if phone:
+                self.tokens_store.pop(phone, None)
+            if isinstance(user.get("services_connected"), dict):
+                user["services_connected"][provider] = False
+
+        conn_key = f"{user_id}:{provider}"
+        if conn_key in self.oauth_connections_store:
+            self.oauth_connections_store[conn_key]["status"] = "revoked"
+            self.oauth_connections_store[conn_key]["revoked_at"] = now
+
+        if self.session_factory:
+            try:
+                from backend.app.db.models import OAuthToken, OAuthConnection
+                async with self.session_factory() as session:
+                    async with session.begin():
+                        del_stmt = delete(OAuthToken).where(
+                            and_(OAuthToken.user_id == user_id, OAuthToken.provider == provider)
+                        )
+                        await session.execute(del_stmt)
+
+                        conn_stmt = select(OAuthConnection).where(
+                            and_(OAuthConnection.user_id == user_id, OAuthConnection.provider == provider)
+                        )
+                        res = await session.execute(conn_stmt)
+                        c = res.scalar_one_or_none()
+                        if c:
+                            c.revoked_at = datetime.fromtimestamp(now, timezone.utc)
+            except Exception:
+                pass
+
+        return True
+
+    async def get_user_oauth_connection(
+        self,
+        user_id: str,
+        provider: str = "google",
+        tenant_id: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Retrieves active OAuth connection details and capability scopes for user."""
+        conn_key = f"{user_id}:{provider}"
+        rec = self.oauth_connections_store.get(conn_key)
+        if rec and rec.get("status") == "active":
+            if tenant_id and rec.get("tenant_id") != tenant_id:
+                return None
+            return rec
+
+        tokens = await self.get_user_oauth_tokens(user_id, provider=provider)
+        if tokens and (tokens.get("encrypted_access_token") or tokens.get("access_token")):
+            user = await self.get_user(user_id, tenant_id=tenant_id)
+            t_id = tenant_id or (user.get("tenant_id") if user else "tenant_default_duit")
+            default_conn = {
+                "id": str(uuid.uuid4()),
+                "tenant_id": t_id,
+                "user_id": user_id,
+                "provider": provider,
+                "scopes": tokens.get("scopes") or ["calendar.read", "calendar.write", "gmail.read", "gmail.send"],
+                "status": "active",
+                "expires_at": tokens.get("expires_at"),
+                "created_at": time.time(),
+                "revoked_at": None
+            }
+            self.oauth_connections_store[conn_key] = default_conn
+            return default_conn
+
+        return None
 
     async def get_user_oauth_tokens(
         self,
