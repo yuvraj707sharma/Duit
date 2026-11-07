@@ -350,22 +350,13 @@ async function handleFastAgentMessage(jid, phone, text) {
   if (user.state === 'ACTIVE') {
     const lower = trimmedText.toLowerCase();
 
-    // Re-connect Google (strictly guarded against negation/clarifications)
-    const hasNegation = /\b(not|no|don't|dont|never|nahi|mat|instead of|bina)\b/i.test(lower);
-    const isGoogleConnect = !hasNegation && (
-      lower === 'google' ||
+    // Re-connect Google: Only trigger on explicit commands, never conversational sentences
+    const isGoogleConnect =
+      /^(connect|link|login|reconnect)\s+(my\s+)?google(\s+account|\s+calendar|\s+services)?$/i.test(trimmedText) ||
+      /^google\s+(connect|link|login)$/i.test(trimmedText) ||
       lower === 'connect google' ||
-      lower === 'connect to google' ||
       lower === 'link google' ||
-      lower === 'link to google' ||
-      lower === 'link my google' ||
-      lower === 'connect my google' ||
-      lower === 'google connect' ||
-      lower === 'google link' ||
-      lower === 'google login' ||
-      lower === 'login google' ||
-      (lower.includes('google') && (lower.includes('connect') || lower.includes('link') || lower.includes('auth') || lower.includes('login') || lower.includes('account')))
-    );
+      lower === 'google';
 
     if (isGoogleConnect) {
       const authLink = generateAuthLink(cleanPhone);

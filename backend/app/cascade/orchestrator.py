@@ -305,6 +305,25 @@ class CascadeOrchestrator:
                     "and organize tasks. When asked about reading WhatsApp messages, confirm that you securely archive and can search/summarize "
                     "their messages and commitments whenever asked."
                 )
+                # Real-time user profile and connection awareness
+                google_tokens = await self.repo.get_user_oauth_tokens(user_id, "google")
+                has_google = bool(google_tokens and (google_tokens.get("access_token") or google_tokens.get("encrypted_access_token")))
+
+                from backend.app.desktop.presence import presence_manager
+                is_desktop = presence_manager.is_online(user_id)
+
+                system_prompt += (
+                    f"\n\n[Real-time User Connection Status]\n"
+                    f"- User Phone: {user_id}\n"
+                    f"- WhatsApp Interface: Live and Active (the user is currently messaging you here)\n"
+                    f"- Google Services (Gmail & Calendar): {'Connected' if has_google else 'Not connected yet'}\n"
+                    f"- Workstation / Desktop: {'Online' if is_desktop else 'Offline'}\n"
+                    f"Rules for answering status and capabilities:\n"
+                    f"1. When the user asks about WhatsApp messages or chats, remember their WhatsApp is ALREADY live and connected. Do not ask them to connect Google unless they explicitly mention Gmail or Google Calendar.\n"
+                    f"2. When the user asks 'are my services connected' or checks status, report the exact status above accurately.\n"
+                    f"3. If the user corrects you or mentions 'not google', acknowledge smoothly and focus on their specific request.\n"
+                )
+
                 history = self.conversation_history.get(user_id, [])
                 conversational_reply = await self.llm_provider.generate_response(
                     system_prompt=system_prompt,
