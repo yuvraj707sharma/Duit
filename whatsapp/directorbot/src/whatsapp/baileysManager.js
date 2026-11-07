@@ -67,7 +67,7 @@ const USE_CASE_MAP = { '1': 'Personal productivity', '2': 'Business & work', '3'
 
 // ── Backend API Call ─────────────────────────────────────────────────────────
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
-const GATEWAY_SHARED_SECRET = process.env.GATEWAY_SHARED_SECRET || '';
+const GATEWAY_SHARED_SECRET = process.env.GATEWAY_SHARED_SECRET || 'duit_secret_wa_prod_2026';
 
 async function callFastAgentBackend(phoneNumber, message) {
   try {
@@ -101,36 +101,42 @@ async function callFastAgentBackend(phoneNumber, message) {
   }
 }
 
+// In-memory fallback for user states and chat transcripts when running in cloud mode without MySQL
+const inMemoryUsers = new Map();
+const inMemoryChats = [];
+
 // ── User DB Helpers ──────────────────────────────────────────────────────────
 async function getUser(phone) {
   try {
     const rows = await query('SELECT * FROM fastagent_users WHERE phone = ?', [phone]);
-    return rows.length > 0 ? rows[0] : null;
-  } catch { return null; }
+    if (rows && rows.length > 0) return rows[0];
+  } catch {}
+  return inMemoryUsers.get(phone) || null;
 }
 
 async function createUser(phone) {
+  const newUser = { phone, state: 'ACTIVE', name: '', use_case: '', google_connected: 0 };
+  inMemoryUsers.set(phone, newUser);
   try {
     await query(
-      `INSERT INTO fastagent_users (phone, state) VALUES (?, 'NEW')
+      `INSERT INTO fastagent_users (phone, state) VALUES (?, 'ACTIVE')
        ON DUPLICATE KEY UPDATE state = state`,
       [phone]
     );
-    return await getUser(phone);
-  } catch (err) {
-    console.error('[DB] createUser error:', err.message);
-    return null;
-  }
+    const rows = await query('SELECT * FROM fastagent_users WHERE phone = ?', [phone]);
+    if (rows && rows.length > 0) return rows[0];
+  } catch (err) {}
+  return newUser;
 }
 
 async function updateUser(phone, fields) {
+  const existing = inMemoryUsers.get(phone) || { phone, state: 'ACTIVE' };
+  inMemoryUsers.set(phone, { ...existing, ...fields });
   try {
     const setClauses = Object.keys(fields).map(k => `\`${k}\` = ?`).join(', ');
     const values = [...Object.values(fields), phone];
     await query(`UPDATE fastagent_users SET ${setClauses} WHERE phone = ?`, values);
-  } catch (err) {
-    console.error('[DB] updateUser error:', err.message);
-  }
+  } catch (err) {}
 }
 
 // ── Generate Google OAuth Onboarding Link ────────────────────────────────────
@@ -431,6 +437,14 @@ async function handleFastAgentMessage(jid, phone, text) {
       }
 
       if (!chatRows || chatRows.length === 0) {
+        if (contactFilter) {
+          chatRows = inMemoryChats.filter(c => !c.is_from_me && ((c.sender_name && c.sender_name.toLowerCase().includes(contactFilter.toLowerCase())) || c.sender_phone.includes(contactFilter))).slice(0, 15);
+        } else {
+          chatRows = inMemoryChats.filter(c => !c.is_from_me).slice(0, 15);
+        }
+      }
+
+      if (!chatRows || chatRows.length === 0) {
         await sendMessage(jid,
           contactFilter
             ? `No archived WhatsApp messages found from *${contactFilter}* yet. As messages arrive from contacts, they are archived automatically for instant lookup.`
@@ -655,11 +669,21 @@ export async function startBotSession() {
 
       if (!text.trim()) continue;
 
-      // Automatically archive every incoming message from all contacts into MySQL
+      // Archive incoming message in memory and MySQL
       const senderName = msg.pushName || (msg.key.fromMe ? 'Me' : phone);
       const isFromMe = msg.key.fromMe ? 1 : 0;
       const ts = msg.messageTimestamp ? Number(msg.messageTimestamp) * 1000 : Date.now();
       const uniqueMsgId = msgId || `msg_${Date.now()}_${Math.random()}`;
+
+      inMemoryChats.unshift({
+        msg_id: uniqueMsgId,
+        sender_name: senderName,
+        sender_phone: phone,
+        message_text: text.trim(),
+        timestamp: ts,
+        is_from_me: isFromMe
+      });
+      if (inMemoryChats.length > 200) inMemoryChats.pop();
 
       query(
         `INSERT INTO whatsapp_chats (msg_id, chat_jid, sender_name, sender_phone, message_text, timestamp, is_from_me)

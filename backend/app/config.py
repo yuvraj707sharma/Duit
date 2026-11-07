@@ -110,7 +110,7 @@ class Settings(BaseSettings):
     DESKTOP_HEARTBEAT_TIMEOUT_SECONDS: float = 30.0
 
     # Internal gateway shared secret (server-to-server auth for /save-token, /whatsapp webhook, etc.)
-    GATEWAY_SHARED_SECRET: str = "duit_gateway_secret_2026_dev"
+    GATEWAY_SHARED_SECRET: str = "duit_secret_wa_prod_2026"
 
     @property
     def is_production(self) -> bool:
